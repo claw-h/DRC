@@ -42,10 +42,13 @@ export const POST: APIRoute = async ({ request, cookies }) => {
   indexData.total = indexData.catalog.length;
   await fs.writeFile(indexPath, JSON.stringify(indexData, null, 2), 'utf8');
 
-  const shardId = String(entry.shard).padStart(2, '0');
+  const rawShard = String(entry.shard || 'shard-00.json');
+  const shardFile = rawShard.endsWith('.json')
+    ? rawShard
+    : `shard-${rawShard.padStart(2, '0')}.json`;
   const shardPath = path.resolve(
     process.cwd(),
-    `public/data/sky/shards/shard-${shardId}.json`
+    `public/data/sky/shards/${shardFile}`
   );
   try {
     const shardRaw = await fs.readFile(shardPath, 'utf8');

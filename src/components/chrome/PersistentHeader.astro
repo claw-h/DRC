@@ -16,24 +16,16 @@ const { profile, pubCount, bookCount, classCount } = Astro.props;
 
 <div class="persistent-chrome">
   <header class="persistent-header">
-    <!-- Left-docking / Center-origin Brand Lockup: DRC (Center) -> Slides Left -> Duncan R. Cordry (Serif) -->
+    <!-- Left-docking / Center-origin Brand Lockup: DRC (Dead-Center) -> Glides Left -> Duncan R. Cordry (Serif) -->
     <a
       href="#stage-1"
       class="brand-lockup"
       id="header-brand-lockup"
       aria-label={`${profile.name} — Return to Constellation Sky`}
     >
-      <!-- Miniature Rotating CoreNebula Astrolabe Emblem (inspired by Lovesite CoreNebula) -->
-      <span class="core-nebula-emblem" aria-hidden="true">
-        <span class="nebula-ring nebula-ring--outer"></span>
-        <span class="nebula-ring nebula-ring--inner"></span>
-        <span class="nebula-core-dot"></span>
-      </span>
-
       <span class="brand-text-stage">
         <span class="header-title-drc">{profile.monogram}</span>
         <span class="header-title-full" aria-hidden="true">{profile.name}</span>
-        <span class="header-scanner-beam" aria-hidden="true"></span>
       </span>
     </a>
 

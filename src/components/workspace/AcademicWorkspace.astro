@@ -44,8 +44,8 @@ const { publications, books, classes } = Astro.props;
         clearInterval(interval);
         el.textContent = target;
       }
-      iter += 0.8;
-    }, 22);
+      iter += 0.65;
+    }, 36);
   }
 
   class DrcWorkspace extends HTMLElement {
@@ -85,7 +85,7 @@ const { publications, books, classes } = Astro.props;
       // Update NavStrip horizontal scrub & cathode channel readout
       const navTrack = document.getElementById('nav-strip-track');
       if (navTrack) {
-        const scrubPx = -nextIndex * 28;
+        const scrubPx = -nextIndex * 24;
         navTrack.style.setProperty('--nav-scrub-offset', `${scrubPx}px`);
       }
 
@@ -109,12 +109,6 @@ const { publications, books, classes } = Astro.props;
             if (direction === 'down' || direction === 'jump') {
               primaryReader.scrollTop = 0;
             }
-          }
-          const activeEyebrow = view.querySelector<HTMLElement>(
-            ':not(.entry-hidden) [data-scramble-eyebrow]'
-          );
-          if (activeEyebrow && activeEyebrow.textContent) {
-            scrambleElementText(activeEyebrow, activeEyebrow.textContent.trim());
           }
         }
       });
@@ -157,7 +151,7 @@ const { publications, books, classes } = Astro.props;
 
     // 2. Seamless Scroll Progression (Publications -> Books -> Classes & back up without clicking)
     private initSeamlessSectionScroll() {
-      const THRESHOLD = 95;
+      const THRESHOLD = 165;
 
       this.addEventListener(
         'wheel',
@@ -201,14 +195,14 @@ const { publications, books, classes } = Astro.props;
             this.chargeDecayTimer = window.setTimeout(() => {
               this.scrollCharge = 0;
               this.updateChargeMeters(0);
-            }, 320);
+            }, 520);
 
             if (this.scrollCharge >= THRESHOLD) {
               this.isTransitionLocked = true;
               this.switchToViewIndex(this.activeViewIndex + 1, 'down');
               setTimeout(() => {
                 this.isTransitionLocked = false;
-              }, 520);
+              }, 1050);
             }
             return;
           }
@@ -223,14 +217,14 @@ const { publications, books, classes } = Astro.props;
             this.chargeDecayTimer = window.setTimeout(() => {
               this.scrollCharge = 0;
               this.updateChargeMeters(0);
-            }, 320);
+            }, 520);
 
             if (Math.abs(this.scrollCharge) >= THRESHOLD) {
               this.isTransitionLocked = true;
               this.switchToViewIndex(this.activeViewIndex - 1, 'up');
               setTimeout(() => {
                 this.isTransitionLocked = false;
-              }, 520);
+              }, 1050);
             }
             return;
           }

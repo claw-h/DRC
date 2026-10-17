@@ -1,6 +1,7 @@
 @layer layout {
   html.portfolio-scroller {
-    scroll-snap-type: y mandatory;
+    scroll-snap-type: y proximity;
+    scroll-behavior: smooth;
     scrollbar-width: none;
     timeline-scope: --stage-sky, --stage-header, --stage-workspace;
   }
@@ -14,7 +15,6 @@
     block-size: 100dvh;
     inline-size: 100%;
     scroll-snap-align: start;
-    scroll-snap-stop: always;
   }
 
   #stage-1 { view-timeline: --stage-sky block; }
@@ -27,15 +27,15 @@
     inset: 0;
     z-index: 0;
     isolation: isolate;
-    transition: opacity 0.45s ease;
+    transition: opacity 1.75s cubic-bezier(0.16, 1, 0.3, 1);
   }
 
   body[data-stage="stage-2"] .sky-backdrop {
-    opacity: 0.25;
+    opacity: 0.28;
     pointer-events: none;
   }
   body[data-stage="stage-3"] .sky-backdrop {
-    opacity: 0.06;
+    opacity: 0.08;
     pointer-events: none;
   }
 
@@ -55,15 +55,17 @@
     align-items: safe center;
     justify-content: flex-end;
     block-size: var(--header-height);
-    padding-inline: clamp(1rem, 3vw, 2.25rem);
-    background: color-mix(in oklab, var(--bg-surface) 78%, transparent);
-    backdrop-filter: blur(14px);
+    padding-inline: clamp(1.25rem, 3vw, 2.25rem);
+    background: color-mix(in oklab, var(--bg-surface) 76%, transparent);
+    backdrop-filter: blur(16px);
     border-block-end: 1px solid var(--border-subtle);
-    transition: background 0.35s ease, border-color 0.35s ease;
+    transition:
+      background 1.2s cubic-bezier(0.16, 1, 0.3, 1),
+      border-color 1.2s cubic-bezier(0.16, 1, 0.3, 1);
   }
 
   /* =====================================================================
-     CENTERED "DRC" -> SLIDES LEFT TO SERIF "Duncan R. Cordry" ON SCROLL
+     DEAD-CENTER "DRC" -> SLOW GLIDE LEFT TO SERIF "Duncan R. Cordry"
      ===================================================================== */
   .brand-lockup {
     position: absolute;
@@ -72,149 +74,81 @@
     transform: translate3d(-50%, 0, 0);
     display: inline-flex;
     align-items: center;
-    gap: 0.7rem;
+    justify-content: center;
     text-decoration: none;
     color: var(--text-primary);
     transition:
-      inset-inline-start 0.55s cubic-bezier(0.22, 1, 0.36, 1),
-      transform 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+      inset-inline-start 1.65s cubic-bezier(0.16, 1, 0.3, 1),
+      transform 1.65s cubic-bezier(0.16, 1, 0.3, 1);
     will-change: inset-inline-start, transform;
   }
 
-  /* When scrolled into Stage 2 or Stage 3, slide from center (50%) to left edge */
+  /* When scrolled into Stage 2 or Stage 3, glide slowly from center (50%) to left edge */
   body[data-stage="stage-2"] .brand-lockup,
   body[data-stage="stage-3"] .brand-lockup {
-    inset-inline-start: clamp(1rem, 3vw, 2.25rem);
+    inset-inline-start: clamp(1.25rem, 3vw, 2.25rem);
     transform: translate3d(0, 0, 0);
-  }
-
-  /* Miniature CoreNebula Emblem (Lovesite vault/page.tsx homage) */
-  .core-nebula-emblem {
-    position: relative;
-    width: 28px;
-    height: 28px;
-    border-radius: 50%;
-    background: #06080f;
-    border: 1px solid rgba(232, 222, 181, 0.28);
-    box-shadow:
-      inset 0 2px 6px rgba(0, 0, 0, 0.95),
-      0 0 12px rgba(232, 222, 181, 0.12);
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-  }
-
-  .nebula-ring {
-    position: absolute;
-    border-radius: 50%;
-    pointer-events: none;
-  }
-
-  .nebula-ring--outer {
-    width: 22px;
-    height: 22px;
-    border: 1px dashed rgba(232, 222, 181, 0.35);
-    border-top-color: var(--accent);
-    border-bottom-color: var(--accent);
-    animation: nebula-spin 14s linear infinite;
-  }
-
-  .nebula-ring--inner {
-    width: 14px;
-    height: 14px;
-    border: 1px solid transparent;
-    border-left-color: #7fd4ff;
-    border-right-color: var(--accent);
-    animation: nebula-spin-rev 9s linear infinite;
-  }
-
-  .nebula-core-dot {
-    width: 4px;
-    height: 4px;
-    border-radius: 50%;
-    background: #fff;
-    box-shadow: 0 0 6px 2px var(--accent);
-  }
-
-  @keyframes nebula-spin {
-    to { transform: rotate(360deg); }
-  }
-  @keyframes nebula-spin-rev {
-    to { transform: rotate(-360deg); }
   }
 
   .brand-text-stage {
     position: relative;
-    display: inline-grid;
+    display: inline-flex;
     align-items: center;
+    justify-content: center;
   }
 
-  /* Stage 1 (Center): "DRC" in engraved Serif */
+  /* Stage 1 (Dead-Center): "DRC" in engraved Classical Serif */
   .header-title-drc {
-    grid-area: 1 / 1;
+    display: inline-block;
     font-family: var(--font-serif);
-    font-size: clamp(1.25rem, 2.2vw, 1.55rem);
+    font-size: clamp(1.3rem, 2.2vw, 1.62rem);
     font-weight: 500;
-    letter-spacing: 0.24em;
+    letter-spacing: 0.26em;
+    /* Offset trailing letter-spacing so D-R-C is optically dead-center at 50vw */
+    padding-inline-start: 0.26em;
     color: var(--accent);
-    text-shadow: 0 0 18px color-mix(in oklab, var(--accent) 45%, transparent);
+    text-shadow: 0 0 22px color-mix(in oklab, var(--accent) 42%, transparent);
     opacity: 1;
     transform: translate3d(0, 0, 0) scale(1);
     transition:
-      opacity 0.42s cubic-bezier(0.22, 1, 0.36, 1),
-      transform 0.42s cubic-bezier(0.22, 1, 0.36, 1);
+      opacity 1.15s cubic-bezier(0.16, 1, 0.3, 1),
+      transform 1.35s cubic-bezier(0.16, 1, 0.3, 1);
   }
 
   /* Stage 2 & 3 (Slid Left): "Duncan R. Cordry" in Classical Serif */
   .header-title-full {
-    grid-area: 1 / 1;
+    position: absolute;
+    inset-inline-start: 0;
+    top: 50%;
     font-family: var(--font-serif);
-    font-size: clamp(1.18rem, 2vw, 1.48rem);
+    font-size: clamp(1.22rem, 2vw, 1.52rem);
     font-weight: 400;
     letter-spacing: 0.03em;
     white-space: nowrap;
     color: var(--text-primary);
     opacity: 0;
-    clip-path: inset(0 100% 0 0);
-    transform: translate3d(0.6rem, 0, 0);
-    transition:
-      opacity 0.48s cubic-bezier(0.22, 1, 0.36, 1),
-      clip-path 0.52s cubic-bezier(0.22, 1, 0.36, 1),
-      transform 0.48s cubic-bezier(0.22, 1, 0.36, 1);
-  }
-
-  /* Optical Scanner Beam (portyxb InstrumentPanel.ts setTitleTransition homage) */
-  .header-scanner-beam {
-    position: absolute;
-    top: 10%;
-    bottom: 10%;
-    left: 0%;
-    width: 2px;
-    background: #7fd4ff;
-    box-shadow: 0 0 8px #7fd4ff, 0 0 14px var(--accent);
-    opacity: 0;
     pointer-events: none;
-    transition: left 0.52s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.25s ease;
+    clip-path: inset(-15% 100% -15% 0);
+    transform: translate3d(0.75rem, -50%, 0);
+    transition:
+      opacity 1.45s cubic-bezier(0.16, 1, 0.3, 1) 0.12s,
+      clip-path 1.65s cubic-bezier(0.16, 1, 0.3, 1) 0.08s,
+      transform 1.65s cubic-bezier(0.16, 1, 0.3, 1) 0.08s;
   }
 
   body[data-stage="stage-2"] .header-title-drc,
   body[data-stage="stage-3"] .header-title-drc {
     opacity: 0;
-    transform: translate3d(-0.65rem, 0, 0) scale(0.86);
+    transform: translate3d(-0.5rem, 0, 0) scale(0.92);
     pointer-events: none;
   }
 
   body[data-stage="stage-2"] .header-title-full,
   body[data-stage="stage-3"] .header-title-full {
     opacity: 1;
-    clip-path: inset(0 0% 0 0);
-    transform: translate3d(0, 0, 0);
-  }
-
-  body[data-stage="stage-2"] .header-scanner-beam {
-    left: 100%;
-    opacity: 0.85;
+    pointer-events: auto;
+    clip-path: inset(-15% 0% -15% 0);
+    transform: translate3d(0, -50%, 0);
   }
 
   /* Right-side Hardware Actions & LED Socket */
@@ -271,22 +205,25 @@
 
   /* Scroll-Linked Horizontal Navigation Strip */
   .nav-strip-wrapper {
-    pointer-events: auto;
+    pointer-events: none;
     block-size: var(--nav-strip-height);
     background: color-mix(in oklab, var(--bg-canvas) 90%, transparent);
-    backdrop-filter: blur(10px);
+    backdrop-filter: blur(12px);
     border-block-end: 1px solid var(--border-subtle);
     overflow: clip;
     display: flex;
     align-items: center;
-    padding-inline: clamp(1rem, 3vw, 2.25rem);
+    padding-inline: clamp(1.25rem, 3vw, 2.25rem);
     opacity: 0;
-    transform: translate3d(0, -0.5rem, 0);
-    transition: opacity 0.35s ease, transform 0.35s ease;
+    transform: translate3d(0, -0.45rem, 0);
+    transition:
+      opacity 1.35s cubic-bezier(0.16, 1, 0.3, 1),
+      transform 1.35s cubic-bezier(0.16, 1, 0.3, 1);
   }
 
   body[data-stage="stage-2"] .nav-strip-wrapper,
   body[data-stage="stage-3"] .nav-strip-wrapper {
+    pointer-events: auto;
     opacity: 1;
     transform: translate3d(0, 0, 0);
   }
@@ -299,80 +236,7 @@
     margin: 0;
     padding: 0;
     transform: translate3d(var(--nav-scrub-offset, 0px), 0, 0);
-    transition: transform 0.38s cubic-bezier(0.22, 1, 0.36, 1);
-  }
-
-  /* Native CSS Scroll-Driven Animations where supported */
-  @keyframes fade-sky {
-    0%   { opacity: 1; }
-    50%  { opacity: 0.25; }
-    100% { opacity: 0.06; }
-  }
-
-  @keyframes slide-brand-center-to-left {
-    from {
-      inset-inline-start: 50%;
-      transform: translate3d(-50%, 0, 0);
-    }
-    to {
-      inset-inline-start: clamp(1rem, 3vw, 2.25rem);
-      transform: translate3d(0, 0, 0);
-    }
-  }
-
-  @keyframes fade-out-monogram {
-    from { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
-    to   { opacity: 0; transform: translate3d(-0.65rem, 0, 0) scale(0.86); }
-  }
-
-  @keyframes reveal-serif-name {
-    from {
-      opacity: 0;
-      clip-path: inset(0 100% 0 0);
-      transform: translate3d(0.6rem, 0, 0);
-    }
-    to {
-      opacity: 1;
-      clip-path: inset(0 0% 0 0);
-      transform: translate3d(0, 0, 0);
-    }
-  }
-
-  @keyframes reveal-nav-strip {
-    from { opacity: 0; transform: translate3d(0, -0.5rem, 0); }
-    to   { opacity: 1; transform: translate3d(0, 0, 0); }
-  }
-
-  @supports ((animation-timeline: scroll()) and (animation-range: 0% 100%)) {
-    html.portfolio-scroller .sky-backdrop {
-      animation: fade-sky auto linear both;
-      animation-timeline: scroll(block root);
-      animation-range: 0dvh 180dvh;
-    }
-
-    html.portfolio-scroller .brand-lockup {
-      animation: slide-brand-center-to-left auto cubic-bezier(0.22, 1, 0.36, 1) both;
-      animation-timeline: scroll(block root);
-      animation-range: 8dvh 110dvh;
-    }
-
-    html.portfolio-scroller .header-title-drc {
-      animation: fade-out-monogram auto linear both;
-      animation-timeline: scroll(block root);
-      animation-range: 18dvh 90dvh;
-    }
-
-    html.portfolio-scroller .header-title-full {
-      animation: reveal-serif-name auto cubic-bezier(0.22, 1, 0.36, 1) both;
-      animation-timeline: scroll(block root);
-      animation-range: 28dvh 110dvh;
-    }
-
-    html.portfolio-scroller .nav-strip-wrapper {
-      animation: reveal-nav-strip auto linear both;
-      animation-timeline: scroll(block root);
-      animation-range: 45dvh 105dvh;
-    }
+    transition: transform 1.15s cubic-bezier(0.16, 1, 0.3, 1);
   }
 
   @media (prefers-reduced-motion: reduce) {
