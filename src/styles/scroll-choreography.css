@@ -104,11 +104,11 @@
 
   .header-neutral-cue {
     position: absolute;
-    inset: 0;
+    inset-block: 0;
+    inset-inline-start: calc(50% + 3.6rem);
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: clamp(5.5rem, 13vw, 11rem);
     pointer-events: none;
     opacity: 0;
   }
@@ -119,7 +119,7 @@
   }
 
   .neutral-arrow-svg {
-    width: clamp(110px, 15vw, 175px);
+    width: 22px;
     height: 38px;
     overflow: visible;
   }
@@ -127,7 +127,7 @@
   .neutral-draw-line,
   .neutral-draw-head {
     stroke: var(--accent);
-    stroke-width: 1.35;
+    stroke-width: 1.45;
     stroke-linecap: round;
     stroke-linejoin: round;
     stroke-dasharray: 100;
@@ -143,19 +143,6 @@
   .persistent-header.is-load-expanding .neutral-draw-head {
     animation: neutral-arrow-head-draw 3.1s cubic-bezier(0.22, 1, 0.36, 1) 0.15s 1 both;
     --animation-reduced: none;
-  }
-
-  .neutral-zone-label {
-    position: absolute;
-    bottom: 0.28rem;
-    left: 50%;
-    transform: translateX(-50%);
-    font-family: var(--font-mono);
-    font-size: 0.54rem;
-    letter-spacing: 0.24em;
-    color: var(--accent);
-    opacity: 0.86;
-    white-space: nowrap;
   }
 
   @keyframes neutral-cue-visibility {
