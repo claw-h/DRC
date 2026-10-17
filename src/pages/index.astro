@@ -125,21 +125,139 @@ const systemState = await getSystemState();
   </section>
 
   <script>
+    const STAGE_IDS = ['stage-1', 'stage-2', 'stage-3'] as const;
+    let currentStageNum: 1 | 2 | 3 = 1;
+    let isStageLocked = false;
+    let stageWheelAccum = 0;
+    let lastStageWheelTime = 0;
+    let stageWheelResetTimer: number | null = null;
+
+    const snapToStage = (stageNum: 1 | 2 | 3) => {
+      const targetId = `stage-${stageNum}`;
+      const targetEl = document.getElementById(targetId);
+      currentStageNum = stageNum;
+      stageWheelAccum = 0;
+      isStageLocked = true;
+      lastStageWheelTime = performance.now();
+
+      document.body.dataset.stage = targetId;
+
+      if (targetEl) {
+        window.scrollTo({ top: targetEl.offsetTop, behavior: 'instant' as ScrollBehavior });
+      }
+
+      window.dispatchEvent(new CustomEvent('drc:stage-snap', { detail: { stage: stageNum } }));
+
+      window.setTimeout(() => {
+        isStageLocked = false;
+      }, 460);
+    };
+
+    (window as any).__drcSnapToStage = snapToStage;
+
     const syncStageFromScroll = () => {
+      if (isStageLocked) return;
       const y = window.scrollY;
       const vh = window.innerHeight || 1;
-      if (y < vh * 0.22) {
+      if (y < vh * 0.45) {
+        currentStageNum = 1;
         document.body.dataset.stage = 'stage-1';
-      } else if (y < vh * 1.45) {
+      } else if (y < vh * 1.55) {
+        currentStageNum = 2;
         document.body.dataset.stage = 'stage-2';
       } else {
+        currentStageNum = 3;
         document.body.dataset.stage = 'stage-3';
       }
     };
 
     syncStageFromScroll();
     window.addEventListener('scroll', syncStageFromScroll, { passive: true });
-    window.addEventListener('resize', syncStageFromScroll, { passive: true });
+    window.addEventListener('resize', () => {
+      const activeEl = document.getElementById(`stage-${currentStageNum}`);
+      if (activeEl) {
+        window.scrollTo({ top: activeEl.offsetTop, behavior: 'instant' as ScrollBehavior });
+      }
+    }, { passive: true });
+
+    // Intercept wheel on Stage 1 (Constellations) & Stage 2 (Info Card) so sections snap in/out cleanly
+    window.addEventListener(
+      'wheel',
+      (e: WheelEvent) => {
+        // Ignore if modal dialog is open
+        const openDialog = document.querySelector('dialog[open]');
+        if (openDialog) return;
+
+        // Stage 3 handles its own internal reader scroll & snaps back to Stage 2 via __drcSnapToStage(2)
+        if (currentStageNum === 3) return;
+
+        e.preventDefault();
+
+        const now = performance.now();
+        if (isStageLocked) {
+          lastStageWheelTime = now;
+          return;
+        }
+
+        // Absorb leftover trackpad inertia from previous stage snap until user pauses briefly
+        if (now - lastStageWheelTime < 220 && stageWheelAccum === 0) {
+          if (Math.abs(e.deltaY) > 6) {
+            lastStageWheelTime = now;
+          }
+          return;
+        }
+
+        stageWheelAccum += e.deltaY;
+        if (stageWheelResetTimer) window.clearTimeout(stageWheelResetTimer);
+        stageWheelResetTimer = window.setTimeout(() => {
+          stageWheelAccum = 0;
+        }, 260);
+
+        const SNAP_THRESHOLD = 42;
+        if (currentStageNum === 1 && stageWheelAccum >= SNAP_THRESHOLD) {
+          snapToStage(2);
+        } else if (currentStageNum === 2 && stageWheelAccum >= SNAP_THRESHOLD) {
+          snapToStage(3);
+        } else if (currentStageNum === 2 && stageWheelAccum <= -SNAP_THRESHOLD) {
+          snapToStage(1);
+        }
+      },
+      { passive: false }
+    );
+
+    // Intercept anchor clicks to #stage-1 and #stage-3 so they snap cleanly too
+    document.querySelectorAll<HTMLAnchorElement>('a[href="#stage-1"], a[href="#stage-2"], a[href="#stage-3"]').forEach((link) => {
+      link.addEventListener('click', (e) => {
+        const href = link.getAttribute('href');
+        if (href === '#stage-1') {
+          e.preventDefault();
+          snapToStage(1);
+        } else if (href === '#stage-2') {
+          e.preventDefault();
+          snapToStage(2);
+        } else if (href === '#stage-3') {
+          e.preventDefault();
+          snapToStage(3);
+        }
+      });
+    });
+
+    // Touch swipe snapping on Stage 1 & Stage 2 for mobile/tablet
+    let touchStartY = 0;
+    window.addEventListener('touchstart', (e: TouchEvent) => {
+      if (currentStageNum === 3) return;
+      touchStartY = e.touches[0]?.clientY ?? 0;
+    }, { passive: true });
+
+    window.addEventListener('touchend', (e: TouchEvent) => {
+      if (currentStageNum === 3 || isStageLocked) return;
+      const endY = e.changedTouches[0]?.clientY ?? touchStartY;
+      const dy = touchStartY - endY;
+      if (Math.abs(dy) < 44) return;
+      if (currentStageNum === 1 && dy > 0) snapToStage(2);
+      else if (currentStageNum === 2 && dy > 0) snapToStage(3);
+      else if (currentStageNum === 2 && dy < 0) snapToStage(1);
+    }, { passive: true });
   </script>
 </BaseLayout>
 
@@ -166,17 +284,29 @@ const systemState = await getSystemState();
     display: flex;
     flex-direction: column;
     gap: 0.85rem;
-    opacity: 0.35;
-    transform: translate3d(0, 28px, 0);
+    opacity: 0;
+    transform: translate3d(0, 14px, 0) scale(0.985);
     transition:
-      opacity 1.5s cubic-bezier(0.16, 1, 0.3, 1),
-      transform 1.5s cubic-bezier(0.16, 1, 0.3, 1);
+      opacity 0.32s cubic-bezier(0.22, 1, 0.36, 1),
+      transform 0.32s cubic-bezier(0.22, 1, 0.36, 1);
   }
 
-  :global(body[data-stage="stage-2"]) .pullup-card,
-  :global(body[data-stage="stage-3"]) .pullup-card {
+  :global(body[data-stage="stage-2"]) .pullup-card {
     opacity: 1;
-    transform: translate3d(0, 0, 0);
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+
+  #stage-3 {
+    opacity: 0;
+    transform: scale(0.992);
+    transition:
+      opacity 0.32s cubic-bezier(0.22, 1, 0.36, 1),
+      transform 0.32s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  :global(body[data-stage="stage-3"]) #stage-3 {
+    opacity: 1;
+    transform: scale(1);
   }
 
   .pullup-header-strip {

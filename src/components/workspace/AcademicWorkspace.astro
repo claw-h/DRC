@@ -124,9 +124,8 @@ const { publications, books, classes } = Astro.props;
           if (idx !== -1) {
             this.switchToViewIndex(idx, 'jump');
           }
-          const stage3 = document.getElementById('stage-3');
-          if (stage3 && document.body.dataset.stage !== 'stage-3') {
-            stage3.scrollIntoView({ behavior: 'smooth' });
+          if (document.body.dataset.stage !== 'stage-3') {
+            (window as any).__drcSnapToStage?.(3);
           }
         });
       });
@@ -140,6 +139,12 @@ const { publications, books, classes } = Astro.props;
           }
         });
       });
+
+      window.addEventListener('drc:stage-snap', () => {
+        this.lastContentScrollTime = performance.now();
+        this.scrollCharge = 0;
+        this.updateChargeMeters(0);
+      });
     }
 
     private updateChargeMeters(ratio: number) {
@@ -149,25 +154,20 @@ const { publications, books, classes } = Astro.props;
       });
     }
 
-    // 2. Seamless Scroll Progression (scrolls publication/book content first; advances only after resting at boundary)
+    // 2. Seamless Scroll Progression (scrolls publication/book content first; snaps cleanly between sections at boundary)
     private initSeamlessSectionScroll() {
-      const THRESHOLD = 280;
-      const REST_GATE_MS = 380;
+      const THRESHOLD = 140;
+      const REST_GATE_MS = 280;
 
       this.addEventListener(
         'wheel',
         (e: WheelEvent) => {
-          if (this.isTransitionLocked) {
-            e.preventDefault();
+          if (document.body.dataset.stage !== 'stage-3') {
             return;
           }
 
-          // If #stage-3 is not yet docked at the top of the viewport while scrolling down, let the window dock first
-          const stageRect = this.getBoundingClientRect();
-          if (stageRect.top > 8 && e.deltaY > 0) {
+          if (this.isTransitionLocked) {
             e.preventDefault();
-            window.scrollBy({ top: e.deltaY, behavior: 'auto' });
-            this.lastContentScrollTime = performance.now();
             return;
           }
 
@@ -240,7 +240,7 @@ const { publications, books, classes } = Astro.props;
             return;
           }
 
-          // Case A: Scrolling down AFTER resting at bottom boundary -> Charge & advance to next section
+          // Case A: Scrolling down AFTER resting at bottom boundary -> Snap into next section (Publications -> Books -> Classes)
           if (e.deltaY > 0 && atBottom && this.activeViewIndex < VIEW_ORDER.length - 1) {
             e.preventDefault();
             this.scrollCharge = Math.max(0, this.scrollCharge) + e.deltaY;
@@ -250,19 +250,19 @@ const { publications, books, classes } = Astro.props;
             this.chargeDecayTimer = window.setTimeout(() => {
               this.scrollCharge = 0;
               this.updateChargeMeters(0);
-            }, 520);
+            }, 380);
 
             if (this.scrollCharge >= THRESHOLD) {
               this.isTransitionLocked = true;
               this.switchToViewIndex(this.activeViewIndex + 1, 'down');
               setTimeout(() => {
                 this.isTransitionLocked = false;
-              }, 1050);
+              }, 460);
             }
             return;
           }
 
-          // Case B: Scrolling up AFTER resting at top boundary of Books or Classes -> Return to previous section
+          // Case B: Scrolling up AFTER resting at top boundary of Books or Classes -> Snap back to previous section
           if (e.deltaY < 0 && atTop && this.activeViewIndex > 0) {
             e.preventDefault();
             this.scrollCharge = Math.min(0, this.scrollCharge) + e.deltaY;
@@ -272,21 +272,32 @@ const { publications, books, classes } = Astro.props;
             this.chargeDecayTimer = window.setTimeout(() => {
               this.scrollCharge = 0;
               this.updateChargeMeters(0);
-            }, 520);
+            }, 380);
 
             if (Math.abs(this.scrollCharge) >= THRESHOLD) {
               this.isTransitionLocked = true;
               this.switchToViewIndex(this.activeViewIndex - 1, 'up');
               setTimeout(() => {
                 this.isTransitionLocked = false;
-              }, 1050);
+              }, 460);
             }
             return;
           }
 
-          // Case C: Scrolling up at top boundary of 01 // PUBLICATIONS -> Scroll window back up to Stage 2 / Stage 1
+          // Case C: Scrolling up at top boundary of 01 // PUBLICATIONS -> Snap cleanly back to Stage 2 (Info Card)
           if (e.deltaY < 0 && atTop && this.activeViewIndex === 0) {
-            window.scrollBy({ top: e.deltaY, behavior: 'auto' });
+            e.preventDefault();
+            this.scrollCharge = Math.min(0, this.scrollCharge) + e.deltaY;
+
+            if (this.chargeDecayTimer) clearTimeout(this.chargeDecayTimer);
+            this.chargeDecayTimer = window.setTimeout(() => {
+              this.scrollCharge = 0;
+            }, 320);
+
+            if (Math.abs(this.scrollCharge) >= 55) {
+              this.scrollCharge = 0;
+              (window as any).__drcSnapToStage?.(2);
+            }
             return;
           }
 

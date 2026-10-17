@@ -27,39 +27,39 @@
     );
   }
 
-  /* View Caching via content-visibility: hidden + Smooth Channel Entry Animation */
+  /* View Caching via content-visibility: hidden + Crisp Channel Snap Animation */
   .spa-view {
     flex: 1 1 0%;
     min-block-size: 0;
     block-size: calc(100dvh - var(--chrome-height));
     max-block-size: calc(100dvh - var(--chrome-height));
     inline-size: 100%;
-    animation: channel-enter-down 1.15s cubic-bezier(0.16, 1, 0.3, 1);
+    animation: channel-enter-down 0.3s cubic-bezier(0.22, 1, 0.36, 1);
   }
 
   .spa-view[data-enter-dir="up"] {
-    animation: channel-enter-up 1.15s cubic-bezier(0.16, 1, 0.3, 1);
+    animation: channel-enter-up 0.3s cubic-bezier(0.22, 1, 0.36, 1);
   }
 
   @keyframes channel-enter-down {
     from {
       opacity: 0;
-      transform: translate3d(0, 26px, 0);
+      transform: translate3d(0, 12px, 0) scale(0.992);
     }
     to {
       opacity: 1;
-      transform: translate3d(0, 0, 0);
+      transform: translate3d(0, 0, 0) scale(1);
     }
   }
 
   @keyframes channel-enter-up {
     from {
       opacity: 0;
-      transform: translate3d(0, -26px, 0);
+      transform: translate3d(0, -12px, 0) scale(0.992);
     }
     to {
       opacity: 1;
-      transform: translate3d(0, 0, 0);
+      transform: translate3d(0, 0, 0) scale(1);
     }
   }
 

@@ -1,7 +1,7 @@
 @layer layout {
   html.portfolio-scroller {
-    scroll-snap-type: y proximity;
-    scroll-behavior: smooth;
+    scroll-snap-type: y mandatory;
+    scroll-behavior: auto;
     scrollbar-width: none;
     timeline-scope: --stage-sky, --stage-header, --stage-workspace;
   }
@@ -12,9 +12,11 @@
 
   .snap-stage {
     position: relative;
+    block-size: 100vh;
     block-size: 100dvh;
     inline-size: 100%;
     scroll-snap-align: start;
+    scroll-snap-stop: always;
   }
 
   #stage-1 { view-timeline: --stage-sky block; }
@@ -27,7 +29,7 @@
     inset: 0;
     z-index: 0;
     isolation: isolate;
-    transition: opacity 1.75s cubic-bezier(0.16, 1, 0.3, 1);
+    transition: opacity 0.42s cubic-bezier(0.22, 1, 0.36, 1);
   }
 
   body[data-stage="stage-2"] .sky-backdrop {
@@ -215,10 +217,10 @@
     align-items: center;
     padding-inline: clamp(1.25rem, 3vw, 2.25rem);
     opacity: 0;
-    transform: translate3d(0, -0.45rem, 0);
+    transform: translate3d(0, -0.35rem, 0);
     transition:
-      opacity 1.35s cubic-bezier(0.16, 1, 0.3, 1),
-      transform 1.35s cubic-bezier(0.16, 1, 0.3, 1);
+      opacity 0.34s cubic-bezier(0.22, 1, 0.36, 1),
+      transform 0.34s cubic-bezier(0.22, 1, 0.36, 1);
   }
 
   body[data-stage="stage-2"] .nav-strip-wrapper,
@@ -236,7 +238,7 @@
     margin: 0;
     padding: 0;
     transform: translate3d(var(--nav-scrub-offset, 0px), 0, 0);
-    transition: transform 1.15s cubic-bezier(0.16, 1, 0.3, 1);
+    transition: transform 0.36s cubic-bezier(0.22, 1, 0.36, 1);
   }
 
   @media (prefers-reduced-motion: reduce) {
