@@ -7,51 +7,20 @@ const { featuredConstellationId = null } = Astro.props;
 ---
 
 <div class="sky-backdrop">
-  <!-- Smaller Recessed 99th-Degree CRT Fisheye Observatory Tube -->
-  <div class="crt-fisheye-stage-center">
-    <div class="crt-tube-chassis">
-      <!-- Machined Corner Bolts on the CRT Housing -->
-      <span class="crt-bolt crt-bolt--tl" aria-hidden="true"></span>
-      <span class="crt-bolt crt-bolt--tr" aria-hidden="true"></span>
-      <span class="crt-bolt crt-bolt--bl" aria-hidden="true"></span>
-      <span class="crt-bolt crt-bolt--br" aria-hidden="true"></span>
-
-      <!-- Top CRT Bezel Engraving -->
-      <div class="crt-bezel-top" aria-hidden="true">
-        <span class="crt-bezel-tag tabular">CATHODE_OPTICS // 180° FISHEYE DOME · k₁ = +3.35</span>
-        <span class="crt-bezel-tag crt-bezel-tag--warn tabular" id="crt-anomaly-readout">
-          POSS-1954 // UNREDACTED PLATE
-        </span>
-      </div>
-
-      <!-- The Curved 99th-Degree CRT Tube Viewport -->
-      <div class="crt-tube-aperture">
-        <drc-constellation-canvas
-          data-featured-id={featuredConstellationId ?? ''}
-          style="display: block; inline-size: 100%; block-size: 100%; position: relative;"
-        >
-          <canvas
-            id="sky-nebula-layer"
-            style="position: absolute; inset: 0; inline-size: 100%; block-size: 100%; pointer-events: none;"
-          ></canvas>
-          <canvas
-            id="sky-artefact-layer"
-            class="sky-interactive-canvas"
-            style="position: absolute; inset: 0; inline-size: 100%; block-size: 100%; will-change: transform;"
-          ></canvas>
-        </drc-constellation-canvas>
-
-        <!-- Optical CRT Shadow-Mask & Curved Glass Dome Reflections -->
-        <div class="crt-glass-dome-overlay" aria-hidden="true"></div>
-      </div>
-
-      <!-- Bottom CRT Bezel Vernier Scale -->
-      <div class="crt-bezel-bottom" aria-hidden="true">
-        <span class="crt-bezel-sub tabular">PALOMAR SCHMIDT 48-IN · AGFA 103a-E EMULSION</span>
-        <span class="crt-bezel-sub tabular">ANODE 27.5 kV // SPHERICAL ABERRATION: 99TH DEG</span>
-      </div>
-    </div>
-  </div>
+  <drc-constellation-canvas
+    data-featured-id={featuredConstellationId ?? ''}
+    style="display: block; inline-size: 100%; block-size: 100%; position: relative;"
+  >
+    <canvas
+      id="sky-nebula-layer"
+      style="position: absolute; inset: 0; inline-size: 100%; block-size: 100%; pointer-events: none;"
+    ></canvas>
+    <canvas
+      id="sky-artefact-layer"
+      class="sky-interactive-canvas"
+      style="position: absolute; inset: 0; inline-size: 100%; block-size: 100%; will-change: transform;"
+    ></canvas>
+  </drc-constellation-canvas>
 </div>
 
 <!-- Stage 1 Foreground HUD: Vault Telemetry, Constellation Title, Inset Node Popup & Controls -->
@@ -142,7 +111,7 @@ const { featuredConstellationId = null } = Astro.props;
         <button type="button" id="btn-meteor-shower" class="vault-pill-btn" title="Trigger bolide meteor transit">
           [ ☄ METEOR TRANSIT ]
         </button>
-        <span class="vault-hint">Drag CRT dome to slew · Click α/β nodes · Scroll to enter archive</span>
+        <span class="vault-hint">Drag sky to rotate · Click any α/β star node to inspect · Scroll to enter archive</span>
       </div>
     </div>
 
@@ -180,147 +149,6 @@ const { featuredConstellationId = null } = Astro.props;
 </section>
 
 <style>
-  /* Centered Smaller Constellation CRT Zone inside .sky-backdrop */
-  .crt-fisheye-stage-center {
-    position: absolute;
-    inset-inline: 0;
-    inset-block-start: calc(var(--header-height) + 0.75rem);
-    inset-block-end: clamp(11.5rem, 25vh, 14.5rem);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding-inline: clamp(1rem, 3vw, 2.5rem);
-    pointer-events: none;
-  }
-
-  .crt-tube-chassis {
-    pointer-events: auto;
-    position: relative;
-    inline-size: min(74vw, 790px);
-    block-size: min(50vh, 435px);
-    min-block-size: 270px;
-    padding: 0.7rem 0.95rem;
-    border-radius: 38px / 32px;
-    background:
-      radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.05), transparent 60%),
-      linear-gradient(180deg, #10141d 0%, #06080d 55%, #090c12 100%);
-    border: 1px solid rgba(218, 195, 142, 0.22);
-    box-shadow:
-      0 28px 80px -12px rgba(0, 0, 0, 0.92),
-      0 0 45px rgba(127, 212, 255, 0.04),
-      inset 0 2px 3px rgba(255, 255, 255, 0.08),
-      inset 0 -6px 18px rgba(0, 0, 0, 0.95);
-    display: flex;
-    flex-direction: column;
-    gap: 0.38rem;
-  }
-
-  @media (max-width: 768px) {
-    .crt-fisheye-stage-center {
-      inset-block-start: calc(var(--header-height) + 0.4rem);
-      inset-block-end: 15.5rem;
-    }
-    .crt-tube-chassis {
-      inline-size: min(92vw, 680px);
-      block-size: min(42vh, 340px);
-      min-block-size: 220px;
-      padding: 0.55rem 0.7rem;
-      border-radius: 28px / 24px;
-    }
-  }
-
-  .crt-bolt {
-    position: absolute;
-    width: 7px;
-    height: 7px;
-    border-radius: 50%;
-    background: radial-gradient(circle at 35% 35%, #8493a8, #1d242e 75%, #05070b 100%);
-    box-shadow:
-      inset 0 1px 1px rgba(255, 255, 255, 0.35),
-      0 1px 2px rgba(0, 0, 0, 0.85);
-    pointer-events: none;
-  }
-  .crt-bolt--tl { top: 12px; left: 14px; }
-  .crt-bolt--tr { top: 12px; right: 14px; }
-  .crt-bolt--bl { bottom: 12px; left: 14px; }
-  .crt-bolt--br { bottom: 12px; right: 14px; }
-
-  .crt-bezel-top,
-  .crt-bezel-bottom {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 0.5rem;
-    padding-inline: 1.1rem;
-    font-family: var(--font-mono);
-    font-size: 0.54rem;
-    letter-spacing: 0.16em;
-    color: rgba(232, 222, 181, 0.52);
-    user-select: none;
-  }
-
-  .crt-bezel-tag--warn {
-    color: #7fd4ff;
-    text-shadow: 0 0 8px rgba(127, 212, 255, 0.35);
-  }
-
-  .crt-bezel-sub {
-    color: rgba(255, 255, 255, 0.28);
-  }
-
-  /* Barrel-Bowed Cathode-Ray Tube Aperture */
-  .crt-tube-aperture {
-    position: relative;
-    flex: 1 1 0%;
-    min-block-size: 0;
-    inline-size: 100%;
-    /* Bowed CRT television/oscilloscope tube silhouette */
-    border-radius: 44% / 14%;
-    overflow: hidden;
-    background: #020307;
-    border: 1.5px solid rgba(218, 195, 142, 0.28);
-    box-shadow:
-      inset 0 0 48px 16px rgba(0, 0, 0, 0.96),
-      inset 0 0 14px 2px rgba(127, 212, 255, 0.12),
-      0 0 1px 1px rgba(0, 0, 0, 0.95);
-    isolation: isolate;
-  }
-
-  /* Physical CRT Glass Bulge Specular Highlight & Shadow Mask */
-  .crt-glass-dome-overlay {
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-    z-index: 4;
-    border-radius: inherit;
-    background:
-      /* Upper-left convex glass dome specular reflection */
-      radial-gradient(
-        65% 42% at 32% 18%,
-        rgba(255, 255, 255, 0.065) 0%,
-        rgba(195, 228, 255, 0.02) 45%,
-        transparent 75%
-      ),
-      /* CRT RGB Phosphor Triad Aperture Grille */
-      repeating-linear-gradient(
-        90deg,
-        rgba(255, 40, 40, 0.018) 0px,
-        rgba(40, 255, 120, 0.018) 1px,
-        rgba(60, 140, 255, 0.018) 2px,
-        rgba(0, 0, 0, 0.08) 3px
-      ),
-      /* Deep CRT Rim Curvature Falloff */
-      radial-gradient(
-        56% 56% at 50% 50%,
-        transparent 58%,
-        rgba(2, 4, 9, 0.48) 82%,
-        rgba(1, 2, 5, 0.92) 100%
-      );
-    box-shadow:
-      inset 0 0 32px rgba(0, 0, 0, 0.92),
-      inset 0 1px 2px rgba(255, 255, 255, 0.14);
-  }
-
   .sky-interactive-canvas {
     cursor: crosshair;
   }
@@ -329,8 +157,8 @@ const { featuredConstellationId = null } = Astro.props;
     display: flex;
     flex-direction: column;
     justify-content: flex-end;
-    padding: clamp(1rem, 2.5vw, 2rem) clamp(1.25rem, 3.5vw, 2.75rem);
-    padding-block-end: calc(clamp(1rem, 2.5vh, 1.85rem) + env(safe-area-inset-bottom, 0px));
+    padding: clamp(1.25rem, 3.5vw, 2.75rem);
+    padding-block-end: calc(clamp(1.25rem, 3.5vh, 2.5rem) + env(safe-area-inset-bottom, 0px));
     z-index: 5;
     pointer-events: none;
   }
@@ -340,7 +168,7 @@ const { featuredConstellationId = null } = Astro.props;
     flex-wrap: wrap;
     align-items: flex-end;
     justify-content: space-between;
-    gap: 1.25rem;
+    gap: 1.5rem;
     width: 100%;
   }
 
@@ -348,24 +176,24 @@ const { featuredConstellationId = null } = Astro.props;
     pointer-events: auto;
     display: flex;
     flex-direction: column;
-    gap: 0.55rem;
+    gap: 0.85rem;
     max-inline-size: 36rem;
   }
 
   .vault-telemetry-box {
     font-family: var(--font-mono);
-    font-size: 0.64rem;
-    line-height: 1.48;
+    font-size: 0.68rem;
+    line-height: 1.55;
     letter-spacing: 0.14em;
     text-transform: uppercase;
     color: var(--text-secondary);
-    background: rgba(5, 7, 12, 0.72);
+    background: rgba(5, 7, 12, 0.68);
     backdrop-filter: blur(12px);
     border: 1px solid rgba(232, 222, 181, 0.16);
     box-shadow:
       0 0 20px rgba(232, 222, 181, 0.06),
       inset 0 1px 0 rgba(255, 255, 255, 0.06);
-    padding: 0.5rem 0.8rem;
+    padding: 0.65rem 0.9rem;
     border-radius: 0.35rem;
     width: fit-content;
   }
@@ -398,7 +226,7 @@ const { featuredConstellationId = null } = Astro.props;
   .sky-title-cluster {
     display: flex;
     flex-direction: column;
-    gap: 0.1rem;
+    gap: 0.15rem;
     opacity: 1;
     transform: translate3d(0, 0, 0);
     transition:
@@ -413,7 +241,7 @@ const { featuredConstellationId = null } = Astro.props;
 
   .sky-hud-name {
     font-family: var(--font-serif);
-    font-size: clamp(1.65rem, 3.4vw, 2.55rem);
+    font-size: clamp(2rem, 4.5vw, 3.35rem);
     font-weight: 400;
     letter-spacing: 0.02em;
     margin: 0;
@@ -424,32 +252,32 @@ const { featuredConstellationId = null } = Astro.props;
   .sky-hud-meaning {
     font-family: var(--font-serif);
     font-style: italic;
-    font-size: clamp(0.88rem, 1.3vw, 1.05rem);
+    font-size: clamp(0.95rem, 1.5vw, 1.15rem);
     color: var(--text-secondary);
     margin: 0;
   }
 
   .sky-hud-coords {
     font-family: var(--font-mono);
-    font-size: 0.68rem;
+    font-size: 0.72rem;
     letter-spacing: 0.14em;
     color: var(--text-muted);
-    margin: 0.1rem 0 0;
+    margin: 0.15rem 0 0;
   }
 
   .sky-micro-controls {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 0.55rem;
+    gap: 0.6rem;
   }
 
   .vault-pill-btn {
     font-family: var(--font-mono);
-    font-size: 0.62rem;
+    font-size: 0.65rem;
     letter-spacing: 0.18em;
     text-transform: uppercase;
-    padding: 0.34rem 0.65rem;
+    padding: 0.38rem 0.7rem;
     border-radius: 0.25rem;
     border: 1px solid rgba(255, 255, 255, 0.15);
     background: rgba(5, 7, 12, 0.55);
@@ -469,7 +297,7 @@ const { featuredConstellationId = null } = Astro.props;
 
   .vault-hint {
     font-family: var(--font-mono);
-    font-size: 0.6rem;
+    font-size: 0.62rem;
     letter-spacing: 0.12em;
     text-transform: uppercase;
     color: rgba(255, 255, 255, 0.32);
@@ -480,19 +308,19 @@ const { featuredConstellationId = null } = Astro.props;
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 0.55rem;
+    gap: 0.6rem;
   }
 
   .sky-hud-btn {
-    min-block-size: 2.35rem;
-    padding-inline: 0.8rem;
+    min-block-size: 2.5rem;
+    padding-inline: 0.85rem;
     border-radius: 0.35rem;
     border: 1px solid var(--border-subtle);
     background: color-mix(in oklab, var(--bg-surface) 75%, transparent);
     backdrop-filter: blur(10px);
     color: var(--text-primary);
     font-family: var(--font-mono);
-    font-size: 0.68rem;
+    font-size: 0.72rem;
     letter-spacing: 0.08em;
     text-transform: uppercase;
     cursor: pointer;
@@ -508,14 +336,14 @@ const { featuredConstellationId = null } = Astro.props;
   .sky-scroll-cue {
     display: inline-flex;
     align-items: center;
-    min-block-size: 2.35rem;
-    padding-inline: 0.9rem;
+    min-block-size: 2.5rem;
+    padding-inline: 0.95rem;
     border-radius: 0.35rem;
     border: 1px solid color-mix(in oklab, var(--accent) 50%, transparent);
     background: color-mix(in oklab, var(--accent) 14%, transparent);
     color: var(--accent);
     font-family: var(--font-mono);
-    font-size: 0.68rem;
+    font-size: 0.72rem;
     letter-spacing: 0.12em;
     text-decoration: none;
   }
@@ -761,60 +589,78 @@ const { featuredConstellationId = null } = Astro.props;
     return 'CLASS M2Iab · 3,450 K';
   }
 
-  // Quintic smoothstep for zero-jerk transitions
+  // Quintic smoothstep for zero-jerk transitions & seamless lens blending
   function quinticSmoothstep(t: number): number {
     const x = Math.max(0, Math.min(1, t));
     return x * x * x * (x * (x * 6 - 15) + 10);
   }
 
   /**
-   * 99th-Degree CRT Tube + 180° Hemispherical Fisheye Lens Projection.
-   * Bulges the central celestial field outward (~1.72x magnification) and bends
-   * peripheral coordinates around the curved cathode-ray glass walls.
+   * Seamless Full-Screen Center Fisheye Warp (CRT Tube 99th-Degree Bulge in the Center).
+   * Zero borders or boxes: warps space strongly around the central constellation zone
+   * (cx = w * 0.5, cy = h * 0.44) and blends C²-seamlessly into the full-screen starfield!
    */
-  function projectFisheyeCRT(
+  function projectSeamlessCenterFisheye(
     rawX: number,
     rawY: number,
     w: number,
     h: number
-  ): { x: number; y: number; scale: number; rNorm: number; ux: number; uy: number } {
+  ): { x: number; y: number; scale: number; shear: number; ux: number; uy: number } {
     const cx = w * 0.5;
-    const cy = h * 0.5;
-    const rx = Math.max(1, w * 0.5);
-    const ry = Math.max(1, h * 0.5);
+    const cy = h * 0.44;
+    const minEdge = Math.min(w, h);
+    // Radius of the central fisheye zone
+    const lensRadius = minEdge * 0.34;
 
-    const u = (rawX - cx) / rx;
-    const v = (rawY - cy) / ry;
-    const r = Math.hypot(u, v);
+    const dx = rawX - cx;
+    const dy = rawY - cy;
+    const dist = Math.hypot(dx, dy);
 
-    if (r < 0.0001) {
-      return { x: cx, y: cy, scale: 1.72, rNorm: 0, ux: 0, uy: 0 };
+    if (dist < 0.0001) {
+      return { x: cx, y: cy, scale: 1.95, shear: 0, ux: 0, uy: 0 };
     }
 
-    // Extreme 99th-degree fisheye + CRT spherical dome compression
-    const K_FISH = 3.45;
-    const maxAtan = Math.atan(K_FISH);
-    const rFish = Math.atan(K_FISH * r) / maxAtan;
+    const r = dist / Math.max(1, lensRadius);
+    const ux = dx / dist;
+    const uy = dy / dist;
 
-    // 2D CRT barrel cross-axis coupling (bows horizontal & vertical lines into a curved tube)
-    const crtBarrelX = 1 - 0.145 * Math.min(1.4, v * v);
-    const crtBarrelY = 1 - 0.145 * Math.min(1.4, u * u);
+    // Outside r = 1.35, 100% undisturbed full-screen sky (zero boundary seam!)
+    if (r >= 1.35) {
+      return { x: rawX, y: rawY, scale: 1, shear: 0, ux, uy };
+    }
 
-    const ratio = rFish / r;
-    const uOut = u * ratio * crtBarrelX * 0.96;
-    const vOut = v * ratio * crtBarrelY * 0.96;
+    // 99th-degree CRT dome / fisheye radial profile:
+    // Strong central convex bulge (~1.95x magnification at r=0) that compresses near r=0.82
+    // and smoothly rejoins r_out = r at r = 1.35
+    const falloff = 1 - quinticSmoothstep(r / 1.35);
+    const K = 3.6;
+    const fishR = (Math.atan(K * r) / Math.atan(K)) * 1.04;
 
-    // Local derivative / magnification factor (high in center, compressed at rim)
-    const deriv = (K_FISH / (1 + K_FISH * K_FISH * r * r)) / maxAtan;
-    const scale = Math.max(0.28, Math.min(1.85, (deriv * 0.65 + ratio * 0.35)));
+    // 2D CRT barrel cross-axis curvature inside the central lens
+    const nx = dx / Math.max(1, lensRadius);
+    const ny = dy / Math.max(1, lensRadius);
+    const barrelX = 1 - 0.13 * falloff * Math.min(1.2, ny * ny);
+    const barrelY = 1 - 0.13 * falloff * Math.min(1.2, nx * nx);
+
+    const warpedR = r * (1 - falloff) + fishR * falloff;
+    const ratio = warpedR / r;
+
+    const outX = cx + dx * ratio * barrelX;
+    const outY = cy + dy * ratio * barrelY;
+
+    // Local magnification scale (peaking in the center, compressed in the lens ring r ~ 0.7..1.05)
+    const derivFish = (K / (1 + K * K * r * r)) / Math.atan(K);
+    const localScale = 1 + falloff * (derivFish * 1.35 - 1 + 0.55 * Math.exp(-r * r * 3.2));
+    // Chromatic dispersion intensity peaks in the high-curvature fisheye ring (r ~ 0.45..1.05)
+    const ringShear = falloff * Math.pow(Math.min(1, r), 1.6) * Math.exp(-Math.pow(r - 0.72, 2) * 4.5);
 
     return {
-      x: cx + uOut * rx,
-      y: cy + vOut * ry,
-      scale,
-      rNorm: Math.min(1.25, r),
-      ux: u / r,
-      uy: v / r,
+      x: outX,
+      y: outY,
+      scale: Math.max(0.55, Math.min(2.05, localScale)),
+      shear: ringShear,
+      ux,
+      uy,
     };
   }
 
@@ -898,7 +744,7 @@ const { featuredConstellationId = null } = Astro.props;
     x: number;
     y: number;
     scale: number;
-    rNorm: number;
+    shear: number;
     ux: number;
     uy: number;
     mag: number;
@@ -912,8 +758,6 @@ const { featuredConstellationId = null } = Astro.props;
     private aCtx!: CanvasRenderingContext2D;
     private rafId = 0;
     private catalogIndex: any[] = [];
-    private canvasW = 760;
-    private canvasH = 420;
 
     // Active & Outgoing Constellation States for Seamless Redraw Cross-Dissolve
     private currentConstellation: any = null;
@@ -949,22 +793,13 @@ const { featuredConstellationId = null } = Astro.props;
     }> = [];
 
     // Silent Keyhole / NOSS Reconnaissance Satellite Triplet Anomaly
-    private satelliteTriad: {
-      active: boolean;
-      progress: number;
-      startX: number;
-      startY: number;
-      endX: number;
-      endY: number;
-      shadowCutoff: number;
-    } = {
-      active: true,
-      progress: 0.15,
-      startX: 0.12,
-      startY: 0.78,
-      endX: 0.86,
-      endY: 0.18,
-      shadowCutoff: 0.74,
+    private satelliteTriad = {
+      progress: 0.18,
+      startX: 0.18,
+      startY: 0.72,
+      endX: 0.82,
+      endY: 0.16,
+      shadowCutoff: 0.76,
     };
 
     private shootingStars: Array<{
@@ -1013,7 +848,6 @@ const { featuredConstellationId = null } = Astro.props;
      * with dense Open Star Clusters, Binary/Trinary companions, and Cosmic Voids.
      */
     private initClusteredDeepFieldSky() {
-      // 14 Open Cluster Centers along the galactic band
       const clusterCenters = Array.from({ length: 14 }, () => {
         const theta = Math.random() * Math.PI * 2;
         const phi = Math.acos((Math.random() - 0.5) * 1.25);
@@ -1024,14 +858,12 @@ const { featuredConstellationId = null } = Astro.props;
         };
       });
 
-      this.backgroundStars = Array.from({ length: 1750 }, (_, i) => {
+      this.backgroundStars = Array.from({ length: 1850 }, (_, i) => {
         let theta: number;
         let phi: number;
 
-        // 48% of stars belong to hierarchical open clusters (power-law two-point correlation)
-        if (i < 840) {
+        if (i < 860) {
           const cluster = clusterCenters[i % clusterCenters.length];
-          // Box-Muller Gaussian around cluster core
           const u1 = Math.max(0.0001, Math.random());
           const u2 = Math.random();
           const mag = cluster.spread * Math.sqrt(-2 * Math.log(u1));
@@ -1041,7 +873,7 @@ const { featuredConstellationId = null } = Astro.props;
           const u = Math.random();
           const v = Math.random();
           theta = 2 * Math.PI * u;
-          phi = i < 1300
+          phi = i < 1350
             ? Math.acos((Math.random() - 0.5) * 1.4)
             : Math.acos(2 * v - 1);
         }
@@ -1049,13 +881,12 @@ const { featuredConstellationId = null } = Astro.props;
         let x = Math.sin(phi) * Math.cos(theta);
         let y = Math.sin(phi) * Math.sin(theta);
         let z = Math.cos(phi);
-        if (i < 1200 && z < -0.15) z = -z;
+        if (i < 1250 && z < -0.15) z = -z;
 
-        const isSupernova = Math.random() > 0.952;
+        const isSupernova = Math.random() > 0.95;
         const isBinaryPrimary = !isSupernova && Math.random() > 0.91;
         const isTransientTwinkler = Math.random() < 0.78;
         const primarySpec = Math.floor(Math.random() * 6) + 1;
-        // Contrasting Planckian companion (e.g. blue B-star paired with amber K-giant)
         const companionSpec = primarySpec <= 2 ? 5 : 1;
         const compAngle = Math.random() * Math.PI * 2;
         const compDist = 2.1 + Math.random() * 1.9;
@@ -1069,9 +900,9 @@ const { featuredConstellationId = null } = Astro.props;
             : Math.pow(Math.random(), 2.3) * 1.32 + 0.3,
           rgb: specToPlanckianRgb(primarySpec),
           phase1: Math.random() * Math.PI * 2,
-          speed1: 0.014 + Math.random() * 0.032,
+          speed1: 0.014 + Math.random() * 0.03,
           phase2: Math.random() * Math.PI * 2,
-          speed2: 0.006 + Math.random() * 0.016,
+          speed2: 0.006 + Math.random() * 0.015,
           threshold: isTransientTwinkler ? 0.33 + Math.random() * 0.28 : 0.04,
           maxAlpha: isSupernova ? 0.96 : 0.45 + Math.random() * 0.5,
           isSupernova,
@@ -1085,11 +916,8 @@ const { featuredConstellationId = null } = Astro.props;
 
     private resizeCanvases() {
       const dpr = Math.min(window.devicePixelRatio || 1, 2);
-      const rect = this.getBoundingClientRect();
-      const w = Math.max(300, Math.floor(rect.width || window.innerWidth * 0.72));
-      const h = Math.max(220, Math.floor(rect.height || window.innerHeight * 0.48));
-      this.canvasW = w;
-      this.canvasH = h;
+      const w = window.innerWidth;
+      const h = window.innerHeight;
 
       this.artefactCanvas.width = Math.floor(w * dpr);
       this.artefactCanvas.height = Math.floor(h * dpr);
@@ -1104,12 +932,12 @@ const { featuredConstellationId = null } = Astro.props;
     }
 
     /**
-     * Synthesizes 3 volumetric parallax depth planes pre-warped through the
-     * 99th-degree CRT Fisheye lens + Silver-Halide Emulsion Grain.
+     * Synthesizes 3 volumetric parallax depth planes using a true per-pixel
+     * Domain-Warped fBm + Ridged Multifractal + Beer-Lambert Dark Dust Extinction shader.
      */
     private buildNebulaPlanes(c: any): HTMLCanvasElement[] {
-      const w = 280;
-      const h = 175;
+      const w = 300;
+      const h = 190;
 
       const planes = [0, 1, 2].map(() => {
         const cvs = document.createElement('canvas');
@@ -1163,17 +991,11 @@ const { featuredConstellationId = null } = Astro.props;
           const nx = px / w;
           const dxBary = nx - baryX;
 
-          // Fisheye dome radial falloff so nebula respects the curved CRT tube
-          const cxNorm = (nx - 0.5) * 2;
-          const cyNorm = (ny - 0.5) * 2;
-          const rDomeSq = cxNorm * cxNorm + cyNorm * cyNorm;
-          if (rDomeSq > 1.18) continue;
-
           const u = dxBary * cosA - dyBary * sinA;
           const v = dxBary * sinA + dyBary * cosA;
 
-          const radialDistSq = u * u * 2.1 + v * v * 5.4;
-          const envelope = Math.exp(-radialDistSq * 2.05) * Math.exp(-rDomeSq * 0.65);
+          const radialDistSq = u * u * 2.2 + v * v * 5.8;
+          const envelope = Math.exp(-radialDistSq * 2.1);
           if (envelope < 0.015) continue;
 
           const sx = (u + 0.5) * 3.4;
@@ -1203,17 +1025,15 @@ const { featuredConstellationId = null } = Astro.props;
 
           const idx = (py * w + px) * 4;
 
-          // Plane 0: Deep Cosmic Emission Envelope
           const density0 = Math.max(0, gas - 0.24) * 1.45 * envelope * extinction;
           if (density0 > 0.005) {
             const mix = Math.min(1, Math.max(0, (qx - 0.25) * 1.8));
             d0[idx] = Math.round(r0 * (1 - mix) + r1 * mix);
             d0[idx + 1] = Math.round(g0 * (1 - mix) + g1 * mix);
             d0[idx + 2] = Math.round(b0 * (1 - mix) + b1 * mix);
-            d0[idx + 3] = Math.min(255, Math.round(density0 * 66));
+            d0[idx + 3] = Math.min(255, Math.round(density0 * 68));
           }
 
-          // Plane 1: Mid-Field Gossamer Ionization Filaments
           const wisp = Math.pow(Math.max(0, filamentRidge - 0.22), 1.8) * envelope * (0.4 + 0.6 * extinction);
           const totalMid = Math.min(1, wisp * 1.15 + starGlow * (0.5 + 0.5 * filamentRidge));
           if (totalMid > 0.005) {
@@ -1221,22 +1041,21 @@ const { featuredConstellationId = null } = Astro.props;
             d1[idx] = Math.round(r1 * (1 - coreMix) + r2 * coreMix);
             d1[idx + 1] = Math.round(g1 * (1 - coreMix) + g2 * coreMix);
             d1[idx + 2] = Math.round(b1 * (1 - coreMix) + b2 * coreMix);
-            d1[idx + 3] = Math.min(255, Math.round(totalMid * 76));
+            d1[idx + 3] = Math.min(255, Math.round(totalMid * 78));
           }
 
-          // Plane 2: Foreground Fractal Dark Dust Rifts & Shock Threads
           const darkShadow = Math.min(1, Math.pow(Math.max(0, dustField - 0.48) * 2.2, 1.7) * envelope);
           const fineShock = Math.pow(Math.max(0, filamentRidge - 0.52) * 2.1, 2.6) * envelope;
           if (fineShock > 0.01) {
             d2[idx] = r2;
             d2[idx + 1] = g2;
             d2[idx + 2] = b2;
-            d2[idx + 3] = Math.min(255, Math.round(fineShock * 60));
+            d2[idx + 3] = Math.min(255, Math.round(fineShock * 62));
           } else if (darkShadow > 0.02) {
-            d2[idx] = 4;
-            d2[idx + 1] = 6;
-            d2[idx + 2] = 11;
-            d2[idx + 3] = Math.min(255, Math.round(darkShadow * 140));
+            d2[idx] = 5;
+            d2[idx + 1] = 7;
+            d2[idx + 2] = 12;
+            d2[idx + 3] = Math.min(255, Math.round(darkShadow * 135));
           }
         }
       }
@@ -1250,7 +1069,7 @@ const { featuredConstellationId = null } = Astro.props;
         blurred.width = w;
         blurred.height = h;
         const bCtx = blurred.getContext('2d')!;
-        const blurPx = layerIdx === 0 ? 9 : layerIdx === 1 ? 4 : 2.5;
+        const blurPx = layerIdx === 0 ? 10 : layerIdx === 1 ? 4 : 3;
         bCtx.filter = `blur(${blurPx}px)`;
         bCtx.drawImage(rawCanvas, 0, 0);
         bCtx.filter = 'none';
@@ -1331,7 +1150,7 @@ const { featuredConstellationId = null } = Astro.props;
     private crossDissolveHud() {
       const cluster = document.getElementById('sky-title-cluster');
       const statusEl = document.getElementById('hud-telemetry-status');
-      if (statusEl) statusEl.textContent = 'SLEWING // FISHEYE DOME';
+      if (statusEl) statusEl.textContent = 'SLEWING // EQUATORIAL';
       cluster?.classList.add('is-slew-fading');
 
       window.setTimeout(() => {
@@ -1346,8 +1165,8 @@ const { featuredConstellationId = null } = Astro.props;
 
     private spawnShootingStar() {
       this.shootingStars.push({
-        x: 0.48 + Math.random() * 0.38,
-        y: 0.08 + Math.random() * 0.25,
+        x: 0.48 + Math.random() * 0.42,
+        y: 0.05 + Math.random() * 0.25,
         born: this.frameCount,
       });
     }
@@ -1361,7 +1180,6 @@ const { featuredConstellationId = null } = Astro.props;
       const nameEl = document.getElementById('hud-constellation-name');
       const meaningEl = document.getElementById('hud-constellation-meaning');
       const coordsEl = document.getElementById('hud-constellation-coords');
-      const anomalyEl = document.getElementById('crt-anomaly-readout');
 
       if (idEl) idEl.textContent = c.id;
       if (nodeCountEl) nodeCountEl.textContent = `${c.stars?.length || 0} NODES`;
@@ -1371,9 +1189,6 @@ const { featuredConstellationId = null } = Astro.props;
       if (nameEl) nameEl.textContent = c.name;
       if (meaningEl) meaningEl.textContent = c.meaning || c.english || '';
       if (coordsEl) coordsEl.textContent = `RA ${c.ra} · DEC ${c.dec}`;
-      if (anomalyEl && c.redactedSector) {
-        anomalyEl.textContent = `${c.redactedSector.code} · Δm ${c.redactedSector.extinction}`;
-      }
     }
 
     private bindControls() {
@@ -1427,25 +1242,21 @@ const { featuredConstellationId = null } = Astro.props;
 
       canvas.addEventListener('pointerdown', (e) => {
         this.isDragging = true;
-        const rect = canvas.getBoundingClientRect();
-        this.dragStart = { x: e.clientX - rect.left, y: e.clientY - rect.top };
-        this.lastPointer = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+        this.dragStart = { x: e.clientX, y: e.clientY };
+        this.lastPointer = { x: e.clientX, y: e.clientY };
         if (modeEl) modeEl.textContent = 'MANUAL_OVERRIDE';
       });
 
       window.addEventListener('pointermove', (e) => {
-        const rect = canvas.getBoundingClientRect();
-        const localX = e.clientX - rect.left;
-        const localY = e.clientY - rect.top;
         if (this.isDragging) {
-          const dx = localX - this.lastPointer.x;
-          const dy = localY - this.lastPointer.y;
-          this.vX = dx * 0.0014;
-          this.vY = dy * 0.0014;
+          const dx = e.clientX - this.lastPointer.x;
+          const dy = e.clientY - this.lastPointer.y;
+          this.vX = dx * 0.0012;
+          this.vY = dy * 0.0012;
           this.rotX += this.vX;
-          this.rotY = Math.max(-0.48, Math.min(0.48, this.rotY + this.vY));
+          this.rotY = Math.max(-0.45, Math.min(0.45, this.rotY + this.vY));
         }
-        this.lastPointer = { x: localX, y: localY };
+        this.lastPointer = { x: e.clientX, y: e.clientY };
       }, { passive: true });
 
       window.addEventListener('pointerup', (e) => {
@@ -1454,10 +1265,7 @@ const { featuredConstellationId = null } = Astro.props;
         if (modeEl) {
           modeEl.textContent = this.autoRotate ? 'ORBITAL_AUTOPILOT' : 'STATIONARY_LOCK';
         }
-        const rect = canvas.getBoundingClientRect();
-        const localX = e.clientX - rect.left;
-        const localY = e.clientY - rect.top;
-        const dist = Math.hypot(localX - this.dragStart.x, localY - this.dragStart.y);
+        const dist = Math.hypot(e.clientX - this.dragStart.x, e.clientY - this.dragStart.y);
         if (dist < 6 && this.hoveredStarIdx !== -1) {
           this.openStarInsetPopup(this.hoveredStarIdx);
         }
@@ -1499,12 +1307,8 @@ const { featuredConstellationId = null } = Astro.props;
       if (fluxFill) fluxFill.style.width = `${lumPct}%`;
       if (fluxVal) fluxVal.textContent = `${lumPct}% FLUX`;
 
-      const rect = this.artefactCanvas.getBoundingClientRect();
-      const pageX = rect.left + star.x;
-      const pageY = rect.top + star.y;
-
-      const left = Math.min(Math.max(20, pageX + 24), window.innerWidth - 335);
-      const top = Math.min(Math.max(84, pageY - 52), window.innerHeight - 280);
+      const left = Math.min(Math.max(20, star.x + 24), window.innerWidth - 335);
+      const top = Math.min(Math.max(84, star.y - 52), window.innerHeight - 280);
       popup.style.left = `${left}px`;
       popup.style.top = `${top}px`;
       popup.removeAttribute('hidden');
@@ -1515,14 +1319,14 @@ const { featuredConstellationId = null } = Astro.props;
         this.frameCount++;
 
         if (this.transitionBlend < 1) {
-          this.transitionBlend = Math.min(1, this.transitionBlend + 0.0075);
+          this.transitionBlend = Math.min(1, this.transitionBlend + 0.0072);
           if (this.transitionBlend >= 1) {
             this.outgoingConstellation = null;
             this.outgoingNebulaPlanes = [];
           }
         }
 
-        this.drawProgress = Math.min(1, this.drawProgress + 0.0044);
+        this.drawProgress = Math.min(1, this.drawProgress + 0.0042);
 
         this.slewVX *= 0.955;
         this.slewVY *= 0.955;
@@ -1538,21 +1342,21 @@ const { featuredConstellationId = null } = Astro.props;
             this.vY *= 0.92;
           }
           this.rotX += this.vX + this.slewVX;
-          this.rotY = Math.max(-0.46, Math.min(0.46, this.rotY + this.vY + this.slewVY));
+          this.rotY = Math.max(-0.42, Math.min(0.42, this.rotY + this.vY + this.slewVY));
         }
 
-        // Advance NOSS Reconnaissance Satellite Triplet across orbital inclination chord
-        this.satelliteTriad.progress += 0.00075;
-        if (this.satelliteTriad.progress > 1.25) {
+        // Advance silent NOSS satellite triad
+        this.satelliteTriad.progress += 0.00065;
+        if (this.satelliteTriad.progress > 1.35) {
           this.satelliteTriad.progress = -0.15;
-          this.satelliteTriad.startX = 0.08 + Math.random() * 0.18;
-          this.satelliteTriad.startY = 0.65 + Math.random() * 0.25;
-          this.satelliteTriad.endX = 0.75 + Math.random() * 0.18;
-          this.satelliteTriad.endY = 0.12 + Math.random() * 0.25;
-          this.satelliteTriad.shadowCutoff = 0.62 + Math.random() * 0.22;
+          this.satelliteTriad.startX = 0.14 + Math.random() * 0.2;
+          this.satelliteTriad.startY = 0.65 + Math.random() * 0.22;
+          this.satelliteTriad.endX = 0.72 + Math.random() * 0.18;
+          this.satelliteTriad.endY = 0.12 + Math.random() * 0.22;
+          this.satelliteTriad.shadowCutoff = 0.65 + Math.random() * 0.2;
         }
 
-        if (this.frameCount % 620 === 0 && Math.random() > 0.35) {
+        if (this.frameCount % 680 === 0 && Math.random() > 0.4) {
           this.spawnShootingStar();
         }
 
@@ -1565,17 +1369,17 @@ const { featuredConstellationId = null } = Astro.props;
           }
         }
 
-        this.renderFrame(time, this.aCtx, this.canvasW, this.canvasH);
+        this.renderFrame(time, this.aCtx, window.innerWidth, window.innerHeight);
         this.rafId = requestAnimationFrame(step);
       };
       this.rafId = requestAnimationFrame(step);
     }
 
     /**
-     * Helper to trace a straight line in celestial space as a 26-segment curve
-     * warped through the 99th-degree CRT Fisheye lens.
+     * Traces a constellation line as a 28-segment curve warped through the
+     * seamless central 99th-degree fisheye distortion field.
      */
-    private traceFisheyeCurve(
+    private traceSeamlessFisheyeChord(
       ctx: CanvasRenderingContext2D,
       x0: number,
       y0: number,
@@ -1583,16 +1387,16 @@ const { featuredConstellationId = null } = Astro.props;
       y1: number,
       w: number,
       h: number,
-      radialOffsetPx = 0
+      radialDispersionPx = 0
     ) {
-      const SEGMENTS = 26;
+      const SEGMENTS = 28;
       ctx.beginPath();
       for (let s = 0; s <= SEGMENTS; s++) {
         const t = s / SEGMENTS;
         const lx = x0 + (x1 - x0) * t;
         const ly = y0 + (y1 - y0) * t;
-        const p = projectFisheyeCRT(lx, ly, w, h);
-        const disp = radialOffsetPx * Math.pow(p.rNorm, 2.4);
+        const p = projectSeamlessCenterFisheye(lx, ly, w, h);
+        const disp = radialDispersionPx * p.shear;
         const fx = p.x + p.ux * disp;
         const fy = p.y + p.uy * disp;
         if (s === 0) ctx.moveTo(fx, fy);
@@ -1601,8 +1405,7 @@ const { featuredConstellationId = null } = Astro.props;
     }
 
     /**
-     * Composites the 3 volumetric nebula depth planes with differential parallax
-     * inside the CRT fisheye dome.
+     * Composites the 3 volumetric nebula depth planes across the full-screen sky.
      */
     private drawVolumetricNebulaPlanes(
       ctx: CanvasRenderingContext2D,
@@ -1614,8 +1417,8 @@ const { featuredConstellationId = null } = Astro.props;
       masterAlpha: number
     ) {
       if (!planes || planes.length === 0 || masterAlpha <= 0.004) return;
-      const parallaxFactors = [0.25, 0.72, 1.25];
-      const pad = 36;
+      const parallaxFactors = [0.25, 0.68, 1.18];
+      const pad = 48;
 
       for (let i = 0; i < planes.length; i++) {
         const plane = planes[i];
@@ -1623,10 +1426,10 @@ const { featuredConstellationId = null } = Astro.props;
         const pFactor = parallaxFactors[i] ?? 0.65;
         const ox = rotOffsetX * pFactor;
         const oy = rotOffsetY * pFactor;
-        const breath = 1.08 + Math.sin(this.frameCount * 0.0055 + i * 1.7) * 0.016;
+        const breath = 1 + Math.sin(this.frameCount * 0.0055 + i * 1.7) * 0.014;
 
         ctx.save();
-        ctx.globalAlpha = masterAlpha * (i === 1 ? 0.98 : 0.88);
+        ctx.globalAlpha = masterAlpha * (i === 1 ? 0.96 : 0.88);
         if (i === 1) {
           ctx.globalCompositeOperation = 'screen';
         }
@@ -1640,46 +1443,8 @@ const { featuredConstellationId = null } = Astro.props;
     }
 
     /**
-     * Renders curved J2000.0 Right Ascension & Declination celestial graticule arcs
-     * warped through the 99th-degree CRT fisheye lens.
-     */
-    private renderCurvedEquatorialGraticule(
-      ctx: CanvasRenderingContext2D,
-      w: number,
-      h: number,
-      rotOffsetX: number,
-      rotOffsetY: number
-    ) {
-      ctx.save();
-      ctx.lineWidth = 0.65;
-      ctx.strokeStyle = 'rgba(127, 212, 255, 0.065)';
-
-      // 5 Declination parallels + 5 Right Ascension meridians warped through fisheye
-      for (let i = -2; i <= 2; i++) {
-        const yBase = h * 0.5 + i * (h * 0.21) + (rotOffsetY * 0.45) % (h * 0.21);
-        this.traceFisheyeCurve(ctx, -w * 0.1, yBase, w * 1.1, yBase, w, h);
-        ctx.stroke();
-
-        const xBase = w * 0.5 + i * (w * 0.21) + (rotOffsetX * 0.45) % (w * 0.21);
-        this.traceFisheyeCurve(ctx, xBase, -h * 0.1, xBase, h * 1.1, w, h);
-        ctx.stroke();
-      }
-
-      // Optical Axis Center Crosshair & Fisheye Field-of-View Calibration Ring
-      const cx = w * 0.5;
-      const cy = h * 0.5;
-      ctx.strokeStyle = 'rgba(218, 195, 142, 0.11)';
-      ctx.setLineDash([2, 6]);
-      ctx.beginPath();
-      ctx.ellipse(cx, cy, w * 0.39, h * 0.39, 0, 0, Math.PI * 2);
-      ctx.stroke();
-      ctx.setLineDash([]);
-      ctx.restore();
-    }
-
-    /**
-     * Renders Deep-Field Galaxies, Uncharted Sub-Asterisms, Redacted Bok Occlusion Sector,
-     * and the Principal Constellation Figure through the 99th-degree CRT Fisheye lens.
+     * Renders the smaller central constellation figure warped seamlessly through
+     * the 99th-degree central fisheye bulge in the middle of the full-screen sky.
      */
     private renderConstellationFigure(
       ctx: CanvasRenderingContext2D,
@@ -1695,31 +1460,33 @@ const { featuredConstellationId = null } = Astro.props;
     ) {
       if (!c || opacityScale <= 0.005) return;
 
-      const padX = w * 0.16;
-      const padY = h * 0.15;
-      const drawW = w - padX * 2;
-      const drawH = h - padY * 2;
+      // Smaller central constellation zone (compact & centered in the full-screen sky)
+      const centerX = w * 0.5;
+      const centerY = h * 0.44;
+      const zoneRadius = Math.min(w, h) * 0.19 * this.zoom;
+      const drawW = zoneRadius * 2.1;
+      const drawH = zoneRadius * 1.85;
+      const padX = centerX - drawW * 0.5;
+      const padY = centerY - drawH * 0.5;
 
       const driftScale = isInteractivePrimary ? 1 : 1 - (1 - opacityScale) * 0.04;
-      const centerX = w * 0.5;
-      const centerY = h * 0.5;
 
       // 1. Deep-Field Elliptical Galaxies & Globular Clusters (PGC / Palomar smudges)
       if (Array.isArray(c.deepFieldObjects)) {
         for (const dso of c.deepFieldObjects) {
-          const [gx, gy, grx, gry, gAngle, gType, gDesig] = dso;
+          const [gx, gy, grx, gry, gAngle, _gType, gDesig] = dso;
           const rawX = padX + (gx / 10000) * drawW + rotOffsetX * 0.35;
           const rawY = padY + (gy / 10000) * drawH + rotOffsetY * 0.35;
-          const fp = projectFisheyeCRT(rawX, rawY, w, h);
-          const rxPx = (grx / 10000) * w * fp.scale * 1.15;
-          const ryPx = (gry / 10000) * w * fp.scale * 1.15;
+          const fp = projectSeamlessCenterFisheye(rawX, rawY, w, h);
+          const rxPx = (grx / 10000) * drawW * fp.scale * 1.4;
+          const ryPx = (gry / 10000) * drawH * fp.scale * 1.4;
 
           ctx.save();
           ctx.translate(fp.x, fp.y);
           ctx.rotate(gAngle);
           const gGrad = ctx.createRadialGradient(0, 0, 0, 0, 0, rxPx);
-          gGrad.addColorStop(0, `rgba(255, 232, 188, ${(0.34 * opacityScale).toFixed(3)})`);
-          gGrad.addColorStop(0.45, `rgba(214, 184, 138, ${(0.14 * opacityScale).toFixed(3)})`);
+          gGrad.addColorStop(0, `rgba(255, 232, 188, ${(0.32 * opacityScale).toFixed(3)})`);
+          gGrad.addColorStop(0.45, `rgba(214, 184, 138, ${(0.12 * opacityScale).toFixed(3)})`);
           gGrad.addColorStop(1, 'rgba(214, 184, 138, 0)');
           ctx.fillStyle = gGrad;
           ctx.scale(1, Math.max(0.32, ryPx / Math.max(1, rxPx)));
@@ -1728,8 +1495,8 @@ const { featuredConstellationId = null } = Astro.props;
           ctx.fill();
           ctx.restore();
 
-          if (progress > 0.55) {
-            ctx.fillStyle = `rgba(127, 212, 255, ${(0.28 * opacityScale).toFixed(3)})`;
+          if (progress > 0.65) {
+            ctx.fillStyle = `rgba(127, 212, 255, ${(0.22 * opacityScale).toFixed(3)})`;
             ctx.font = '8.5px monospace';
             ctx.fillText(gDesig, fp.x + rxPx * 0.65, fp.y - 4);
           }
@@ -1737,87 +1504,54 @@ const { featuredConstellationId = null } = Astro.props;
       }
 
       // 2. Uncharted Background Sub-Asterisms (faint 3-star micro-triangles)
-      if (Array.isArray(c.unchartedAsterisms) && progress > 0.35) {
-        const subAlpha = Math.min(1, (progress - 0.35) / 0.45) * opacityScale;
+      if (Array.isArray(c.unchartedAsterisms) && progress > 0.4) {
+        const subAlpha = Math.min(1, (progress - 0.4) / 0.45) * opacityScale;
         for (const ast of c.unchartedAsterisms) {
           const pts = (ast.stars || []).map((s: number[]) => {
             const rx = padX + (s[0] / 10000) * drawW + rotOffsetX * 0.45;
             const ry = padY + (s[1] / 10000) * drawH + rotOffsetY * 0.45;
-            return { rawX: rx, rawY: ry, proj: projectFisheyeCRT(rx, ry, w, h) };
+            return { rawX: rx, rawY: ry, proj: projectSeamlessCenterFisheye(rx, ry, w, h) };
           });
           ctx.save();
-          ctx.setLineDash([2, 4]);
-          ctx.strokeStyle = `rgba(127, 212, 255, ${(0.16 * subAlpha).toFixed(3)})`;
+          ctx.setLineDash([2, 5]);
+          ctx.strokeStyle = `rgba(127, 212, 255, ${(0.14 * subAlpha).toFixed(3)})`;
           ctx.lineWidth = 0.65;
           for (const [u, v] of ast.edges || []) {
             if (pts[u] && pts[v]) {
-              this.traceFisheyeCurve(ctx, pts[u].rawX, pts[u].rawY, pts[v].rawX, pts[v].rawY, w, h);
+              this.traceSeamlessFisheyeChord(ctx, pts[u].rawX, pts[u].rawY, pts[v].rawX, pts[v].rawY, w, h);
               ctx.stroke();
             }
           }
           ctx.setLineDash([]);
           for (const pt of pts) {
-            ctx.fillStyle = `rgba(205, 228, 255, ${(0.45 * subAlpha).toFixed(3)})`;
+            ctx.fillStyle = `rgba(205, 228, 255, ${(0.42 * subAlpha).toFixed(3)})`;
             ctx.beginPath();
-            ctx.arc(pt.proj.x, pt.proj.y, 1.3 * pt.proj.scale, 0, Math.PI * 2);
+            ctx.arc(pt.proj.x, pt.proj.y, 1.2 * pt.proj.scale, 0, Math.PI * 2);
             ctx.fill();
           }
           ctx.restore();
         }
       }
 
-      // 3. Redacted Bok Globule Occlusion Anomaly Callout Box
-      if (c.redactedSector && progress > 0.5) {
-        const rs = c.redactedSector;
-        const rxRaw = padX + (rs.x / 10000) * drawW + rotOffsetX * 0.52;
-        const ryRaw = padY + (rs.y / 10000) * drawH + rotOffsetY * 0.52;
-        const rp = projectFisheyeCRT(rxRaw, ryRaw, w, h);
-        const boxR = Math.max(14, (rs.r / 10000) * Math.min(w, h) * rp.scale * 0.85);
-        const rAlpha = Math.min(1, (progress - 0.5) / 0.4) * opacityScale;
-
-        ctx.save();
-        // Dark Bok Globule core occluding background light
-        const bokGrad = ctx.createRadialGradient(rp.x, rp.y, 0, rp.x, rp.y, boxR * 1.35);
-        bokGrad.addColorStop(0, `rgba(2, 3, 7, ${(0.88 * rAlpha).toFixed(3)})`);
-        bokGrad.addColorStop(0.7, `rgba(2, 3, 7, ${(0.45 * rAlpha).toFixed(3)})`);
-        bokGrad.addColorStop(1, 'rgba(2, 3, 7, 0)');
-        ctx.fillStyle = bokGrad;
-        ctx.beginPath();
-        ctx.arc(rp.x, rp.y, boxR * 1.35, 0, Math.PI * 2);
-        ctx.fill();
-
-        // Dashed Redacted Telemetry Reticle
-        ctx.strokeStyle = `rgba(255, 110, 95, ${(0.34 * rAlpha).toFixed(3)})`;
-        ctx.lineWidth = 0.75;
-        ctx.setLineDash([3, 3]);
-        ctx.strokeRect(rp.x - boxR, rp.y - boxR * 0.72, boxR * 2, boxR * 1.44);
-        ctx.setLineDash([]);
-
-        ctx.fillStyle = `rgba(255, 135, 120, ${(0.52 * rAlpha).toFixed(3)})`;
-        ctx.font = '8px monospace';
-        ctx.fillText(`[REDACTED // ${rs.code}]`, rp.x - boxR, rp.y - boxR * 0.72 - 4);
-        ctx.restore();
-      }
-
-      // 4. Project Principal Constellation Stars through the 99th-degree Fisheye CRT Dome
+      // 3. Project Principal Constellation Stars through the Seamless Central Fisheye Lens
       let nextHovered = -1;
       const projected: ProjectedStar[] = c.stars.map(
         (s: [number, number, number, number], idx: number) => {
           const normX = s[0] > 1.5 ? s[0] / 10000 : s[0];
           const normY = s[1] > 1.5 ? s[1] / 10000 : s[1];
 
-          const parallaxFactor = 0.72 + (idx % 3) * 0.14;
+          const parallaxFactor = 0.7 + (idx % 3) * 0.15;
           const rawX0 = padX + normX * drawW + rotOffsetX * parallaxFactor;
           const rawY0 = padY + normY * drawH + rotOffsetY * parallaxFactor;
 
-          // Kolmogorov atmospheric seeing micro-jitter (±0.22px)
-          const seeX = Math.sin(this.frameCount * 0.09 + idx * 3.1) * 0.22;
-          const seeY = Math.cos(this.frameCount * 0.08 + idx * 2.7) * 0.22;
+          // Kolmogorov atmospheric seeing micro-jitter (±0.2px)
+          const seeX = Math.sin(this.frameCount * 0.09 + idx * 3.1) * 0.2;
+          const seeY = Math.cos(this.frameCount * 0.08 + idx * 2.7) * 0.2;
 
           const undistX = centerX + (rawX0 - centerX) * driftScale + seeX;
           const undistY = centerY + (rawY0 - centerY) * driftScale + seeY;
 
-          const fp = projectFisheyeCRT(undistX, undistY, w, h);
+          const fp = projectSeamlessCenterFisheye(undistX, undistY, w, h);
           const rgb = specToPlanckianRgb(s[3]);
 
           if (
@@ -1835,7 +1569,7 @@ const { featuredConstellationId = null } = Astro.props;
             x: fp.x,
             y: fp.y,
             scale: fp.scale,
-            rNorm: fp.rNorm,
+            shear: fp.shear,
             ux: fp.ux,
             uy: fp.uy,
             mag: s[2],
@@ -1850,24 +1584,24 @@ const { featuredConstellationId = null } = Astro.props;
         this.hoveredStarIdx = nextHovered;
       }
 
-      // 4A. Secondary Ghost Construction Chords (warped through Fisheye lens)
+      // 4A. Secondary Ghost Construction Chords (warped through seamless center fisheye)
       if (Array.isArray(c.ghostChords) && progress > 0.65) {
-        const chordAlpha = Math.min(1, (progress - 0.65) / 0.35) * 0.24 * opacityScale;
+        const chordAlpha = Math.min(1, (progress - 0.65) / 0.35) * 0.22 * opacityScale;
         ctx.save();
         ctx.setLineDash([3, 7]);
         ctx.strokeStyle = `rgba(218, 195, 142, ${chordAlpha.toFixed(3)})`;
-        ctx.lineWidth = 0.8;
+        ctx.lineWidth = 0.75;
         for (const [u, v] of c.ghostChords) {
           const p1 = projected[u];
           const p2 = projected[v];
           if (!p1 || !p2) continue;
-          this.traceFisheyeCurve(ctx, p1.rawX, p1.rawY, p2.rawX, p2.rawY, w, h);
+          this.traceSeamlessFisheyeChord(ctx, p1.rawX, p1.rawY, p2.rawX, p2.rawY, w, h);
           ctx.stroke();
         }
         ctx.restore();
       }
 
-      // 4B. Primary Intaglio Silverpoint Constellation Edges (Bowed Fisheye Chords + CRT Chromatic Dispersion)
+      // 4B. Primary Intaglio Silverpoint Constellation Edges (Bowed Fisheye Chords + Subtle Chromatic Fringe)
       const totalEdges = c.edges.length;
       const easedProgress = 1 - Math.pow(1 - progress, 2.4);
       const activeEdges = easedProgress * totalEdges;
@@ -1882,7 +1616,7 @@ const { featuredConstellationId = null } = Astro.props;
         const dx = p2.rawX - p1.rawX;
         const dy = p2.rawY - p1.rawY;
         const dist = Math.hypot(dx, dy);
-        const gap = 8;
+        const gap = 6.5;
         if (dist <= gap * 2.2) return;
 
         const ux = dx / dist;
@@ -1898,93 +1632,92 @@ const { featuredConstellationId = null } = Astro.props;
         const ey = sy0 + (fullEy - sy0) * segProgress;
 
         const linePhase = (edge[0] * 2.4 + edge[1] * 1.7) % (Math.PI * 2);
-        const glimmer = Math.pow((Math.sin(this.frameCount * 0.014 + linePhase) + 1) * 0.5, 2);
+        const glimmer = Math.pow((Math.sin(this.frameCount * 0.012 + linePhase) + 1) * 0.5, 2);
 
         ctx.save();
 
-        // 99th-Degree CRT Electron-Gun Lateral Chromatic Dispersion on Chords (Red & Cyan split near rim)
-        ctx.strokeStyle = `rgba(255, 70, 90, ${(0.22 * opacityScale).toFixed(3)})`;
-        ctx.lineWidth = 1.05;
-        this.traceFisheyeCurve(ctx, sx0, sy0, ex, ey, w, h, +4.2);
+        // Subtle CRT-lens RGB lateral dispersion along curved fisheye chords
+        ctx.strokeStyle = `rgba(255, 75, 95, ${(0.18 * opacityScale).toFixed(3)})`;
+        ctx.lineWidth = 0.95;
+        this.traceSeamlessFisheyeChord(ctx, sx0, sy0, ex, ey, w, h, +3.6);
         ctx.stroke();
 
-        ctx.strokeStyle = `rgba(80, 220, 255, ${(0.22 * opacityScale).toFixed(3)})`;
-        ctx.lineWidth = 1.05;
-        this.traceFisheyeCurve(ctx, sx0, sy0, ex, ey, w, h, -4.2);
+        ctx.strokeStyle = `rgba(80, 220, 255, ${(0.18 * opacityScale).toFixed(3)})`;
+        ctx.lineWidth = 0.95;
+        this.traceSeamlessFisheyeChord(ctx, sx0, sy0, ex, ey, w, h, -3.6);
         ctx.stroke();
 
-        // Outer phosphor bloom along the curved chord
-        ctx.strokeStyle = `rgba(218, 195, 142, ${(0.16 * opacityScale).toFixed(3)})`;
-        ctx.lineWidth = 3.4;
-        this.traceFisheyeCurve(ctx, sx0, sy0, ex, ey, w, h, 0);
+        // Soft gold halation
+        ctx.strokeStyle = `rgba(218, 195, 142, ${(0.15 * opacityScale).toFixed(3)})`;
+        ctx.lineWidth = 3.2;
+        this.traceSeamlessFisheyeChord(ctx, sx0, sy0, ex, ey, w, h, 0);
         ctx.stroke();
 
-        // Core silverpoint engraved line
-        const baseA = ((0.52 + glimmer * 0.18) * opacityScale).toFixed(3);
-        ctx.strokeStyle = `rgba(255, 242, 205, ${baseA})`;
-        ctx.lineWidth = 1.25 + glimmer * 0.35;
-        this.traceFisheyeCurve(ctx, sx0, sy0, ex, ey, w, h, 0);
+        // Crisp silverpoint core chord
+        const midA = ((0.68 + glimmer * 0.22) * opacityScale).toFixed(3);
+        ctx.strokeStyle = `rgba(255, 242, 205, ${midA})`;
+        ctx.lineWidth = 1.15 + glimmer * 0.35;
+        this.traceSeamlessFisheyeChord(ctx, sx0, sy0, ex, ey, w, h, 0);
         ctx.stroke();
-
         ctx.restore();
       });
 
-      // 5. Render Principal Constellation Stars with Newton's Interference Rings, Spider-Vane Spikes & CRT RGB Split
+      // 5. Render Principal Constellation Stars with Newton's Rings & Spider-Vane Diffraction Spikes
       projected.forEach((p, idx) => {
         const [r, g, b] = p.rgb;
-        const baseRadius = Math.max(2.0, (4.5 - p.mag * 0.68) * Math.pow(p.scale, 0.55));
+        const baseRadius = Math.max(2.0, (4.3 - p.mag * 0.68) * Math.pow(p.scale, 0.45));
         const isHov = isInteractivePrimary && idx === this.hoveredStarIdx;
         const isSel = isInteractivePrimary && idx === this.selectedStarIdx;
-        const radius = baseRadius * (isSel ? 1.48 : isHov ? 1.26 : 1);
+        const radius = baseRadius * (isSel ? 1.5 : isHov ? 1.28 : 1);
 
-        // 99th-Degree CRT Lateral Chromatic Aberration ghosts on peripheral stars
-        const caOffset = Math.pow(p.rNorm, 2.3) * 5.2;
-        if (caOffset > 0.45) {
-          ctx.fillStyle = `rgba(255, 65, 85, ${(0.42 * opacityScale).toFixed(3)})`;
+        // Subtle CRT radial RGB chromatic split in the high-curvature fisheye ring
+        const caOffset = p.shear * 4.2;
+        if (caOffset > 0.35) {
+          ctx.fillStyle = `rgba(255, 70, 90, ${(0.38 * opacityScale).toFixed(3)})`;
           ctx.beginPath();
-          ctx.arc(p.x + p.ux * caOffset, p.y + p.uy * caOffset, radius * 0.72, 0, Math.PI * 2);
+          ctx.arc(p.x + p.ux * caOffset, p.y + p.uy * caOffset, radius * 0.7, 0, Math.PI * 2);
           ctx.fill();
 
-          ctx.fillStyle = `rgba(75, 225, 255, ${(0.42 * opacityScale).toFixed(3)})`;
+          ctx.fillStyle = `rgba(75, 225, 255, ${(0.38 * opacityScale).toFixed(3)})`;
           ctx.beginPath();
-          ctx.arc(p.x - p.ux * caOffset, p.y - p.uy * caOffset, radius * 0.72, 0, Math.PI * 2);
+          ctx.arc(p.x - p.ux * caOffset, p.y - p.uy * caOffset, radius * 0.7, 0, Math.PI * 2);
           ctx.fill();
         }
 
         // Zone C: Wide atmospheric halation
-        const haloRadius = radius * 8.2;
+        const haloRadius = radius * 8.5;
         const halo = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, haloRadius);
-        const coreHaloA = (isSel || isHov ? 0.64 : 0.44) * opacityScale;
+        const coreHaloA = (isSel || isHov ? 0.62 : 0.42) * opacityScale;
         halo.addColorStop(0, `rgba(${r}, ${g}, ${b}, ${coreHaloA.toFixed(3)})`);
-        halo.addColorStop(0.38, `rgba(${r}, ${g}, ${b}, ${(0.15 * opacityScale).toFixed(3)})`);
+        halo.addColorStop(0.38, `rgba(${r}, ${g}, ${b}, ${(0.14 * opacityScale).toFixed(3)})`);
         halo.addColorStop(1, `rgba(${r}, ${g}, ${b}, 0)`);
         ctx.fillStyle = halo;
         ctx.beginPath();
         ctx.arc(p.x, p.y, haloRadius, 0, Math.PI * 2);
         ctx.fill();
 
-        // Palomar Glass-Plate Concentric Dichroic Newton's Interference Ring on Alpha/Beta nodes
+        // Palomar Plate Concentric Dichroic Newton's Interference Rings on Alpha/Beta stars
         if (idx <= 1 || isHov || isSel) {
           ctx.save();
-          ctx.strokeStyle = `rgba(127, 212, 255, ${(0.18 * opacityScale).toFixed(3)})`;
-          ctx.lineWidth = 0.7;
+          ctx.strokeStyle = `rgba(127, 212, 255, ${(0.16 * opacityScale).toFixed(3)})`;
+          ctx.lineWidth = 0.65;
           ctx.beginPath();
-          ctx.arc(p.x, p.y, radius * 3.8, 0, Math.PI * 2);
+          ctx.arc(p.x, p.y, radius * 3.7, 0, Math.PI * 2);
           ctx.stroke();
 
-          ctx.strokeStyle = `rgba(232, 202, 145, ${(0.14 * opacityScale).toFixed(3)})`;
+          ctx.strokeStyle = `rgba(232, 202, 145, ${(0.12 * opacityScale).toFixed(3)})`;
           ctx.beginPath();
-          ctx.arc(p.x, p.y, radius * 5.1, 0, Math.PI * 2);
+          ctx.arc(p.x, p.y, radius * 5.0, 0, Math.PI * 2);
           ctx.stroke();
           ctx.restore();
         }
 
-        // Zone B: 4-Point Secondary-Mirror Spider-Vane Diffraction Spikes
+        // Zone B: Fraunhofer spider-vane diffraction spikes for bright alpha/beta/gamma stars
         if (p.mag < 2.2 || isHov || isSel) {
-          const spikeLen = radius * (isSel ? 9.8 : 7.4);
-          const spikeA = (isSel || isHov ? 0.75 : 0.52) * opacityScale;
+          const spikeLen = radius * (isSel ? 9.5 : 7.2);
+          const spikeA = (isSel || isHov ? 0.72 : 0.48) * opacityScale;
           ctx.strokeStyle = `rgba(${r}, ${g}, ${b}, ${spikeA.toFixed(3)})`;
-          ctx.lineWidth = 0.75;
+          ctx.lineWidth = 0.7;
           ctx.beginPath();
           ctx.moveTo(p.x - spikeLen, p.y);
           ctx.lineTo(p.x + spikeLen, p.y);
@@ -2027,33 +1760,12 @@ const { featuredConstellationId = null } = Astro.props;
 
         // Bayer Greek letter designation
         if (idx < BAYER_GREEK.length && progress > 0.25) {
-          const labelA = (isHov || isSel ? 1 : 0.84) * opacityScale;
+          const labelA = (isHov || isSel ? 1 : 0.82) * opacityScale;
           ctx.fillStyle = `rgba(218, 195, 142, ${labelA.toFixed(3)})`;
-          ctx.font = '11.5px Georgia, serif';
-          ctx.fillText(BAYER_GREEK[idx], p.x + 10, p.y - 7);
+          ctx.font = '12px Georgia, serif';
+          ctx.fillText(BAYER_GREEK[idx], p.x + 11, p.y - 8);
         }
       });
-    }
-
-    /**
-     * Renders bowed horizontal CRT phosphor scanlines & peripheral CRT glass curvature shadow
-     */
-    private renderCRTScanlinesAndCurvature(ctx: CanvasRenderingContext2D, w: number, h: number) {
-      ctx.save();
-      ctx.strokeStyle = 'rgba(0, 0, 0, 0.26)';
-      ctx.lineWidth = 1;
-
-      // Bowed CRT scanlines that curve with the vertical barrel distortion of the tube
-      const stepY = 4;
-      for (let y = 0; y < h; y += stepY) {
-        const ny = (y / h - 0.5) * 2;
-        const bow = ny * 18;
-        ctx.beginPath();
-        ctx.moveTo(0, y);
-        ctx.quadraticCurveTo(w * 0.5, y + bow, w, y);
-        ctx.stroke();
-      }
-      ctx.restore();
     }
 
     private renderFrame(
@@ -2071,14 +1783,14 @@ const { featuredConstellationId = null } = Astro.props;
 
       const maxEdge = Math.max(w, h);
       const minEdge = Math.min(w, h);
-      const uniRad = maxEdge * 0.76;
-      const uniFov = maxEdge * 1.25;
-      const vaultRad = minEdge * 0.4 * this.zoom;
+      const uniRad = maxEdge * 0.72;
+      const uniFov = maxEdge * 1.35;
+      const vaultRad = minEdge * 0.24 * this.zoom;
 
-      const rotOffsetX = Math.sin(this.rotX * 1.35) * (vaultRad * 0.28);
-      const rotOffsetY = Math.sin(this.rotY * 1.35) * (vaultRad * 0.28);
+      const rotOffsetX = Math.sin(this.rotX * 1.2) * (vaultRad * 0.28);
+      const rotOffsetY = Math.sin(this.rotY * 1.2) * (vaultRad * 0.28);
 
-      // 0. Draw 3-Layer Volumetric Parallax Nebulae
+      // 0. Draw 3-Layer Volumetric Parallax Nebulae across the full-screen sky
       const smoothBlend = quinticSmoothstep(this.transitionBlend);
       if (this.outgoingNebulaPlanes.length > 0 && smoothBlend < 1) {
         this.drawVolumetricNebulaPlanes(
@@ -2101,25 +1813,21 @@ const { featuredConstellationId = null } = Astro.props;
         smoothBlend
       );
 
-      // 0B. Curved J2000.0 Equatorial RA/DEC Graticule Sphere
-      this.renderCurvedEquatorialGraticule(ctx, w, h, rotOffsetX, rotOffsetY);
-
-      // 1. Hierarchical Clustered Starfield + Binary Systems + Kolmogorov Chromatic Scintillation
+      // 1. Full-Screen Clustered 3D Starfield (seamlessly warped by the central fisheye lens!)
       for (const s of this.backgroundStars) {
         const x1 = s.x * cx - s.z * sx;
         const z1 = s.z * cx + s.x * sx;
         const y2 = s.y * cy - z1 * sy;
         const z2 = z1 * cy + s.y * sy;
-        if (z2 < -0.55) continue;
+        if (z2 < -0.65) continue;
 
-        const scale3D = uniFov / (uniFov + z2 * uniRad);
-        const rawX = w * 0.5 + x1 * uniRad * scale3D;
-        const rawY = h * 0.5 + y2 * uniRad * scale3D;
-        if (rawX < -30 || rawX > w + 30 || rawY < -30 || rawY > h + 30) continue;
+        const scale = uniFov / (uniFov + z2 * uniRad);
+        const rawX = w * 0.5 + x1 * uniRad * scale;
+        const rawY = h * 0.5 + y2 * uniRad * scale;
+        if (rawX < -15 || rawX > w + 15 || rawY < -15 || rawY > h + 15) continue;
 
-        // Project every background star through the 99th-degree CRT Fisheye lens!
-        const fp = projectFisheyeCRT(rawX, rawY, w, h);
-        if (fp.rNorm > 1.16) continue;
+        // Pass star through the seamless central fisheye lens
+        const fp = projectSeamlessCenterFisheye(rawX, rawY, w, h);
 
         const w1 = Math.sin(this.frameCount * s.speed1 + s.phase1);
         const w2 = Math.cos(this.frameCount * s.speed2 + s.phase2);
@@ -2128,12 +1836,11 @@ const { featuredConstellationId = null } = Astro.props;
 
         const normWave = (wave - s.threshold) / (1 - s.threshold);
         const twinkle = normWave * normWave * (3 - 2 * normWave);
-        const depthFade = Math.max(0.18, Math.min(1, (1 - z2 * 0.5) * 0.92));
-        const rimFade = Math.max(0.1, 1 - Math.pow(fp.rNorm, 3.6) * 0.78);
-        const alpha = twinkle * s.maxAlpha * depthFade * rimFade;
+        const depthFade = Math.max(0.18, Math.min(1, (1 - z2 * 0.52) * 0.9));
+        const alpha = twinkle * s.maxAlpha * depthFade;
         if (alpha < 0.02) continue;
 
-        // Kolmogorov chromatic scintillation: momentary cyan or crimson shift during high wavefront turbulence
+        // Kolmogorov chromatic scintillation
         let [r, g, b] = s.rgb;
         if (s.isSupernova && w1 > 0.78) {
           r = Math.min(255, r + 35);
@@ -2142,14 +1849,14 @@ const { featuredConstellationId = null } = Astro.props;
           b = Math.min(255, b + 40);
         }
 
-        const starRad = s.r * Math.pow(fp.scale, 0.65);
+        const starRad = s.r * Math.pow(fp.scale, 0.52);
 
-        // Peripheral CRT RGB Chromatic Dispersion on bright background stars
-        if (s.isSupernova && fp.rNorm > 0.38) {
-          const ca = Math.pow(fp.rNorm, 2.2) * 3.4;
-          ctx.fillStyle = `rgba(255, 65, 85, ${(alpha * 0.45).toFixed(3)})`;
+        // Subtle CRT RGB chromatic split on bright stars passing through the fisheye curvature ring
+        if (s.isSupernova && fp.shear > 0.12) {
+          const ca = fp.shear * 3.2;
+          ctx.fillStyle = `rgba(255, 65, 85, ${(alpha * 0.42).toFixed(3)})`;
           ctx.fillRect(fp.x + fp.ux * ca - 0.8, fp.y + fp.uy * ca - 0.8, 1.6, 1.6);
-          ctx.fillStyle = `rgba(75, 225, 255, ${(alpha * 0.45).toFixed(3)})`;
+          ctx.fillStyle = `rgba(75, 225, 255, ${(alpha * 0.42).toFixed(3)})`;
           ctx.fillRect(fp.x - fp.ux * ca - 0.8, fp.y - fp.uy * ca - 0.8, 1.6, 1.6);
         }
 
@@ -2158,10 +1865,10 @@ const { featuredConstellationId = null } = Astro.props;
         ctx.arc(fp.x, fp.y, starRad, 0, Math.PI * 2);
         ctx.fill();
 
-        // Render close binary companion star (1.5-4px separation with contrasting Planckian color)
-        if (s.isBinaryPrimary && alpha > 0.22) {
+        // Close binary companion star
+        if (s.isBinaryPrimary && alpha > 0.24) {
           const [cr, cg, cb] = s.companionRgb;
-          ctx.fillStyle = `rgba(${cr}, ${cg}, ${cb}, ${(alpha * 0.78).toFixed(3)})`;
+          ctx.fillStyle = `rgba(${cr}, ${cg}, ${cb}, ${(alpha * 0.76).toFixed(3)})`;
           ctx.beginPath();
           ctx.arc(
             fp.x + s.companionDx * fp.scale,
@@ -2174,21 +1881,20 @@ const { featuredConstellationId = null } = Astro.props;
         }
 
         if (s.isSupernova && normWave > 0.55) {
-          const flareAlpha = (normWave - 0.55) * 1.4 * depthFade * rimFade;
+          const flareAlpha = (normWave - 0.55) * 1.45 * depthFade;
           const haloR = starRad * 3.8;
-          ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${(flareAlpha * 0.26).toFixed(3)})`;
+          ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${(flareAlpha * 0.28).toFixed(3)})`;
           ctx.beginPath();
           ctx.arc(fp.x, fp.y, haloR, 0, Math.PI * 2);
           ctx.fill();
         }
       }
 
-      // 2. Silent Keyhole / NOSS Reconnaissance Satellite Triplet Anomaly
+      // 2. Silent Keyhole / NOSS Reconnaissance Satellite Triplet
       const sat = this.satelliteTriad;
       if (sat.progress >= 0 && sat.progress <= sat.shadowCutoff) {
         const sxRaw = (sat.startX + (sat.endX - sat.startX) * sat.progress) * w;
         const syRaw = (sat.startY + (sat.endY - sat.startY) * sat.progress) * h;
-        // Fade smoothly as the triplet enters Earth's umbral shadow cone
         const shadowFade =
           sat.progress > sat.shadowCutoff - 0.12
             ? Math.max(0, (sat.shadowCutoff - sat.progress) / 0.12)
@@ -2200,30 +1906,26 @@ const { featuredConstellationId = null } = Astro.props;
         ];
         ctx.save();
         for (const [ox, oy] of offsets) {
-          const sp = projectFisheyeCRT(sxRaw + ox, syRaw + oy, w, h);
-          ctx.fillStyle = `rgba(218, 235, 255, ${(0.52 * shadowFade).toFixed(3)})`;
+          const sp = projectSeamlessCenterFisheye(sxRaw + ox, syRaw + oy, w, h);
+          ctx.fillStyle = `rgba(218, 235, 255, ${(0.46 * shadowFade).toFixed(3)})`;
           ctx.beginPath();
-          ctx.arc(sp.x, sp.y, 1.15 * sp.scale, 0, Math.PI * 2);
+          ctx.arc(sp.x, sp.y, 1.1 * sp.scale, 0, Math.PI * 2);
           ctx.fill();
         }
-        const leadP = projectFisheyeCRT(sxRaw, syRaw, w, h);
-        ctx.fillStyle = `rgba(127, 212, 255, ${(0.32 * shadowFade).toFixed(3)})`;
-        ctx.font = '7.5px monospace';
-        ctx.fillText('NOSS-3 // UNCATALOGUED TRIAD', leadP.x + 8, leadP.y - 6);
         ctx.restore();
       }
 
-      // 3. Shooting Stars / Bolides warped through Fisheye Dome
+      // 3. Shooting Stars / Bolides
       this.shootingStars = this.shootingStars.filter((m) => {
         const age = this.frameCount - m.born;
         if (age > 48) return false;
         const p = age / 48;
-        const mxRaw = (m.x - p * 0.24) * w;
-        const myRaw = (m.y + p * 0.24) * h;
-        const txRaw = mxRaw + 58 * (1 - p);
-        const tyRaw = myRaw - 58 * (1 - p);
-        const head = projectFisheyeCRT(mxRaw, myRaw, w, h);
-        const tail = projectFisheyeCRT(txRaw, tyRaw, w, h);
+        const mxRaw = (m.x - p * 0.25) * w;
+        const myRaw = (m.y + p * 0.25) * h;
+        const txRaw = mxRaw + 65 * (1 - p);
+        const tyRaw = myRaw - 65 * (1 - p);
+        const head = projectSeamlessCenterFisheye(mxRaw, myRaw, w, h);
+        const tail = projectSeamlessCenterFisheye(txRaw, tyRaw, w, h);
 
         const grad = ctx.createLinearGradient(head.x, head.y, tail.x, tail.y);
         grad.addColorStop(0, `rgba(255, 248, 225, ${(1 - p).toFixed(3)})`);
@@ -2237,7 +1939,7 @@ const { featuredConstellationId = null } = Astro.props;
         return true;
       });
 
-      // 4. Outgoing & Current Constellation Figures (Warped through 99th-degree Fisheye Lens)
+      // 4. Outgoing & Current Constellation Figures (Smaller Central Zone + Seamless Fisheye Warp)
       if (this.outgoingConstellation && smoothBlend < 1) {
         this.renderConstellationFigure(
           ctx,
@@ -2267,9 +1969,6 @@ const { featuredConstellationId = null } = Astro.props;
           true
         );
       }
-
-      // 5. Bowed CRT Scanlines & Tube Curvature Pass
-      this.renderCRTScanlinesAndCurvature(ctx, w, h);
     }
 
     private exportHighResChart() {
@@ -2279,7 +1978,7 @@ const { featuredConstellationId = null } = Astro.props;
       exportCanvas.height = 1500;
       const eCtx = exportCanvas.getContext('2d')!;
 
-      eCtx.fillStyle = '#04060b';
+      eCtx.fillStyle = '#07080f';
       eCtx.fillRect(0, 0, 2400, 1500);
 
       const prevProgress = this.drawProgress;
@@ -2300,7 +1999,7 @@ const { featuredConstellationId = null } = Astro.props;
       eCtx.fillStyle = '#8e96aa';
       eCtx.font = '20px monospace';
       eCtx.fillText(
-        `${this.currentConstellation.id} · RA ${this.currentConstellation.ra} · DEC ${this.currentConstellation.dec} · 99TH DEG CRT FISHEYE PLATE`,
+        `${this.currentConstellation.id} · RA ${this.currentConstellation.ra} · DEC ${this.currentConstellation.dec} · J2000.0`,
         90,
         1425
       );
