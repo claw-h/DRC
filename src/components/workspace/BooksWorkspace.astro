@@ -10,16 +10,29 @@ const sortedBooks = [...books].sort((a, b) => b.data.year - a.data.year);
 <section
   id="view-books"
   class="spa-view workspace-split inactive"
+  data-view-idx="1"
   tabindex="-1"
   aria-label="Books and Monographs"
 >
-  <!-- LEFT PANE: Subgrid Cover Catalog -->
+  <!-- LEFT PANE: Subgrid Cover Catalog (with Close Index button inside the index pane) -->
   <aside class="workspace-pane-left">
-    <div class="pane-inner-scroll">
+    <div class="pane-inner-scroll" data-scrollable-pane>
       <header class="pane-toolbar">
-        <h2 class="pane-heading">
-          Monographs <span class="count-badge tabular">[{String(sortedBooks.length).padStart(2, '0')}]</span>
-        </h2>
+        <div class="pane-toolbar-title">
+          <span class="led-socket is-on" aria-hidden="true"></span>
+          <h2 class="pane-heading">
+            Monographs <span class="count-badge tabular">[{String(sortedBooks.length).padStart(2, '0')}]</span>
+          </h2>
+        </div>
+        <button
+          type="button"
+          class="pane-close-index-btn tabular"
+          data-collapse-index
+          aria-label="Close Index Pane"
+          title="Close left index pane"
+        >
+          ◁ Close Index
+        </button>
       </header>
 
       <ul class="book-catalog-grid" role="list">
@@ -31,15 +44,18 @@ const sortedBooks = [...books].sort((a, b) => b.data.year - a.data.year);
               aria-current={idx === 0 ? 'true' : 'false'}
               data-book-select={book.data.id}
             >
-              <img
-                src={book.data.coverImage}
-                alt={`Cover of ${book.data.title}`}
-                width="200"
-                height="300"
-                loading="lazy"
-                class="book-cover-thumb"
-              />
-              <span style="font-size: 0.85rem; font-weight: 500; line-height: 1.3; color: var(--text-primary);">
+              <div class="book-cover-frame">
+                <img
+                  src={book.data.coverImage}
+                  alt={`Cover of ${book.data.title}`}
+                  width="200"
+                  height="300"
+                  loading="lazy"
+                  class="book-cover-thumb"
+                />
+                <span class="book-slot-tag tabular">VOL.{String(idx + 1).padStart(2, '0')}</span>
+              </div>
+              <span style="font-size: 0.85rem; font-weight: 500; line-height: 1.3; color: var(--text-primary); font-family: var(--font-serif);">
                 {book.data.title}
               </span>
               <span class="tabular" style="font-size: 0.7rem; color: var(--text-muted);">
@@ -54,12 +70,27 @@ const sortedBooks = [...books].sort((a, b) => b.data.year - a.data.year);
 
   <!-- RIGHT PANE: Size-Aware Monograph Dossier -->
   <div class="workspace-pane-right">
-    <div class="pane-inner-scroll book-dossier-container">
+    <button
+      type="button"
+      class="pane-reopen-index-btn tabular"
+      data-expand-index
+      aria-label="Open Index Pane"
+      title="Re-open left index pane"
+    >
+      ▷ Open Index
+    </button>
+
+    <div class="pane-inner-scroll book-dossier-container" data-scrollable-pane data-primary-reader>
       <div class="mobile-back-bar">
         <button type="button" class="btn-mobile-back tabular" data-stack-back>
           ◄ Back to Monographs
         </button>
         <span class="tabular" style="font-size: 0.7rem; color: var(--text-muted);">MONOGRAPH DOSSIER</span>
+      </div>
+
+      <!-- Top Return Horizon Cue: Books -> Publications -->
+      <div class="scroll-horizon-top-cue" data-jump-view="view-publications">
+        <span class="tabular">↑ Scroll up at top boundary to return to 01 // PUBLICATIONS</span>
       </div>
 
       {sortedBooks.map((book, idx) => {
@@ -71,19 +102,23 @@ const sortedBooks = [...books].sort((a, b) => b.data.year - a.data.year);
             style="padding: clamp(1.25rem, 3vw, 2.75rem); max-inline-size: 86ch;"
           >
             <header class="dossier-hero">
-              <img
-                src={b.coverImage}
-                alt={`Cover of ${b.title}`}
-                width="240"
-                height="360"
-                style="border-radius: 6px; border: 1px solid var(--border-subtle); box-shadow: 0 18px 36px -12px oklch(0% 0 0 / 0.45); aspect-ratio: 2 / 3; object-fit: cover;"
-              />
+              <div class="dossier-cover-showcase">
+                <img
+                  src={b.coverImage}
+                  alt={`Cover of ${b.title}`}
+                  width="240"
+                  height="360"
+                  style="border-radius: 6px; border: 1px solid var(--border-subtle); box-shadow: 0 22px 44px -12px oklch(0% 0 0 / 0.65); aspect-ratio: 2 / 3; object-fit: cover;"
+                />
+              </div>
 
               <div class="dossier-meta-lockup">
-                <p class="tabular" style="font-size: 0.72rem; letter-spacing: 0.15em; color: var(--accent); margin-block-end: 0.35rem;">
-                  MONOGRAPH // {b.year}
-                </p>
-                <h3 style="font-size: clamp(1.4rem, 2.5vw, 2.1rem); margin-block-end: 0.3rem;">
+                <div class="reader-eyebrow-row">
+                  <span class="cathode-tag tabular" data-scramble-eyebrow>
+                    MONOGRAPH // {b.year} · {b.id.toUpperCase()}
+                  </span>
+                </div>
+                <h3 class="reader-main-title" data-scramble-title>
                   {b.title}
                 </h3>
                 {b.subtitle && (
@@ -92,17 +127,17 @@ const sortedBooks = [...books].sort((a, b) => b.data.year - a.data.year);
                   </p>
                 )}
 
-                <dl class="tabular" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 0.75rem; padding: 0.85rem; border-radius: 6px; background: var(--bg-elevated); border: 1px solid var(--border-subtle); font-size: 0.78rem; margin-block-end: 1.1rem;">
+                <dl class="tabular telemetry-specs-grid">
                   <div>
-                    <dt style="font-size: 0.65rem; color: var(--text-muted);">PUBLISHER</dt>
-                    <dd style="font-weight: 500;">{b.publisher}</dd>
+                    <dt>PUBLISHER</dt>
+                    <dd>{b.publisher}</dd>
                   </div>
                   <div>
-                    <dt style="font-size: 0.65rem; color: var(--text-muted);">ISBN-13</dt>
+                    <dt>ISBN-13</dt>
                     <dd><code>{b.isbn}</code></dd>
                   </div>
                   <div>
-                    <dt style="font-size: 0.65rem; color: var(--text-muted);">EXTENT</dt>
+                    <dt>EXTENT</dt>
                     <dd>{b.pages} Pages</dd>
                   </div>
                 </dl>
@@ -123,11 +158,15 @@ const sortedBooks = [...books].sort((a, b) => b.data.year - a.data.year);
               </div>
             </header>
 
-            <section style="margin-block-end: 2rem;">
+            <section class="recessed-abstract-box" style="margin-block-end: 2rem;">
+              <div class="chassis-bolt chassis-bolt--tl"></div>
+              <div class="chassis-bolt chassis-bolt--tr"></div>
+              <div class="chassis-bolt chassis-bolt--bl"></div>
+              <div class="chassis-bolt chassis-bolt--br"></div>
               <h4 class="tabular" style="font-size: 0.74rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--accent); margin-block-end: 0.5rem;">
-                Synopsis
+                Synopsis // Editorial Dossier
               </h4>
-              <p style="font-size: 0.96rem; color: var(--text-secondary); line-height: 1.65;">
+              <p style="font-size: 0.98rem; color: var(--text-primary); line-height: 1.68; font-family: var(--font-serif);">
                 {b.synopsis}
               </p>
             </section>
@@ -177,6 +216,18 @@ const sortedBooks = [...books].sort((a, b) => b.data.year - a.data.year);
           </article>
         );
       })}
+
+      <!-- Seamless Scroll Horizon Cue: Books -> Classes -->
+      <div class="scroll-horizon-bridge" data-jump-view="view-classes">
+        <div class="horizon-bridge-meta">
+          <span class="horizon-kicker tabular">CONTINUOUS SCROLL HORIZON // NEXT CHANNEL</span>
+          <strong class="horizon-title">03 · UNIVERSITY SEMINARS &amp; SYLLABI →</strong>
+        </div>
+        <div class="horizon-charge-track">
+          <div class="horizon-charge-fill" data-scroll-charge-fill></div>
+        </div>
+        <span class="horizon-hint tabular">Keep scrolling down to transition seamlessly into Classes</span>
+      </div>
     </div>
   </div>
 </section>

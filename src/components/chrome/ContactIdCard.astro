@@ -10,21 +10,36 @@ const { profile } = Astro.props;
 
 <dialog id="contact-id-card" class="id-card-dialog" closedby="any" aria-labelledby="id-card-name">
   <div class="id-card-surface">
+    <div class="chassis-bolt chassis-bolt--tl"></div>
+    <div class="chassis-bolt chassis-bolt--tr"></div>
+    <div class="chassis-bolt chassis-bolt--bl"></div>
+    <div class="chassis-bolt chassis-bolt--br"></div>
+
     <header class="id-card-strip">
-      <span>{profile.institution.toUpperCase()}</span>
+      <span style="display: inline-flex; align-items: center; gap: 0.45rem;">
+        <span class="led-socket is-on" aria-hidden="true"></span>
+        <span>{profile.institution.toUpperCase()}</span>
+      </span>
       <span>ID // {profile.credentialId}</span>
     </header>
 
     <div class="id-card-body">
-      <img
-        src={profile.portraitUrl}
-        alt={`Portrait of ${profile.name}`}
-        width="96"
-        height="120"
-        class="id-card-photo"
-      />
+      <div class="id-card-photo-frame">
+        <img
+          src={profile.portraitUrl}
+          alt={`Portrait of ${profile.name}`}
+          width="96"
+          height="120"
+          class="id-card-photo"
+        />
+        <span class="photo-reticle photo-reticle--tl" aria-hidden="true"></span>
+        <span class="photo-reticle photo-reticle--tr" aria-hidden="true"></span>
+        <span class="photo-reticle photo-reticle--bl" aria-hidden="true"></span>
+        <span class="photo-reticle photo-reticle--br" aria-hidden="true"></span>
+      </div>
       <div class="id-card-identity">
-        <h2 id="id-card-name" class="id-card-name">{profile.name}</h2>
+        <span class="id-card-clearance tabular">CLEARANCE // SOVEREIGN FACULTY</span>
+        <h2 id="id-card-name" class="id-card-name" style="font-family: var(--font-serif);">{profile.name}</h2>
         <p class="id-card-title">{profile.title}</p>
         <p class="id-card-dept">{profile.department} · {profile.office}</p>
       </div>
@@ -59,6 +74,36 @@ const { profile } = Astro.props;
     </footer>
   </div>
 </dialog>
+
+<style>
+  .id-card-photo-frame {
+    position: relative;
+    display: inline-block;
+    border-radius: 6px;
+    overflow: hidden;
+  }
+
+  .photo-reticle {
+    position: absolute;
+    width: 8px;
+    height: 8px;
+    border-color: rgba(232, 222, 181, 0.65);
+    pointer-events: none;
+  }
+  .photo-reticle--tl { top: 4px; left: 4px; border-top: 1px solid; border-left: 1px solid; }
+  .photo-reticle--tr { top: 4px; right: 4px; border-top: 1px solid; border-right: 1px solid; }
+  .photo-reticle--bl { bottom: 4px; left: 4px; border-bottom: 1px solid; border-left: 1px solid; }
+  .photo-reticle--br { bottom: 4px; right: 4px; border-bottom: 1px solid; border-right: 1px solid; }
+
+  .id-card-clearance {
+    font-family: var(--font-mono);
+    font-size: 0.58rem;
+    letter-spacing: 0.16em;
+    color: #5effa4;
+    margin-block-end: 0.15rem;
+    display: block;
+  }
+</style>
 
 <script>
   const triggerBtn = document.getElementById('contact-trigger-btn');
@@ -102,7 +147,6 @@ const { profile } = Astro.props;
     dialog.close();
   }
 
-  // Fallback for browsers without Invoker Commands API (commandfor / command)
   if (!('commandForElement' in HTMLButtonElement.prototype)) {
     triggerBtn?.addEventListener('click', () => {
       if (dialog && !dialog.open) dialog.showModal();
@@ -114,7 +158,6 @@ const { profile } = Astro.props;
     closeIdCard();
   });
 
-  // Fallback light-dismiss for browsers without <dialog closedby="any">
   dialog?.addEventListener('click', (event) => {
     if (event.target !== dialog) return;
     const rect = dialog.getBoundingClientRect();

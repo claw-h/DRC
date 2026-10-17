@@ -9,16 +9,29 @@ const { classes } = Astro.props;
 <section
   id="view-classes"
   class="spa-view workspace-split inactive"
+  data-view-idx="2"
   tabindex="-1"
   aria-label="Classes and Syllabi"
 >
-  <!-- LEFT PANE: Semester Ledger & Level Filter -->
+  <!-- LEFT PANE: Semester Ledger & Level Filter (with Close Index button inside the index pane) -->
   <aside class="workspace-pane-left">
-    <div class="pane-inner-scroll">
+    <div class="pane-inner-scroll" data-scrollable-pane>
       <header class="pane-toolbar">
-        <h2 class="pane-heading">
-          Course Archive <span class="count-badge tabular">[{String(classes.length).padStart(2, '0')}]</span>
-        </h2>
+        <div class="pane-toolbar-title">
+          <span class="led-socket is-on" aria-hidden="true"></span>
+          <h2 class="pane-heading">
+            Course Archive <span class="count-badge tabular">[{String(classes.length).padStart(2, '0')}]</span>
+          </h2>
+        </div>
+        <button
+          type="button"
+          class="pane-close-index-btn tabular"
+          data-collapse-index
+          aria-label="Close Index Pane"
+          title="Close left index pane"
+        >
+          ◁ Close Index
+        </button>
       </header>
 
       <search class="course-filter-bar" aria-label="Filter courses" style="padding: 0.85rem 1.25rem; border-block-end: 1px solid var(--border-subtle);">
@@ -29,7 +42,7 @@ const { classes } = Astro.props;
           placeholder="Filter by course code or topic..."
           spellcheck="false"
           autocomplete="off"
-          style="inline-size: 100%; padding: 0.45rem 0.7rem; font-size: 0.82rem; border-radius: 4px; border: 1px solid var(--border-subtle); background: var(--bg-canvas);"
+          class="telemetry-input"
         />
         <div class="level-pill-group" role="group" aria-label="Filter by course level">
           <button type="button" class="pill" data-level-filter="all" aria-pressed="true">All</button>
@@ -51,9 +64,12 @@ const { classes } = Astro.props;
               aria-current={idx === 0 ? 'true' : 'false'}
               data-class-select={cls.data.id}
             >
-              <span class="pub-item-meta tabular">
-                {cls.data.courseCode} · {cls.data.term.toUpperCase()}
-              </span>
+              <div class="pub-item-top-row">
+                <span class="index-slot-num tabular">{String(idx + 1).padStart(2, '0')}</span>
+                <span class="pub-item-meta tabular">
+                  {cls.data.courseCode} · {cls.data.term.toUpperCase()}
+                </span>
+              </div>
               <span class="pub-item-title">{cls.data.title}</span>
               <span class="pub-item-venue tabular">{cls.data.level} · {cls.data.academicYear}</span>
             </button>
@@ -65,12 +81,27 @@ const { classes } = Astro.props;
 
   <!-- RIGHT PANE: Syllabus & Weekly Schedule Briefing -->
   <div class="workspace-pane-right">
-    <div class="pane-inner-scroll">
+    <button
+      type="button"
+      class="pane-reopen-index-btn tabular"
+      data-expand-index
+      aria-label="Open Index Pane"
+      title="Re-open left index pane"
+    >
+      ▷ Open Index
+    </button>
+
+    <div class="pane-inner-scroll" data-scrollable-pane data-primary-reader>
       <div class="mobile-back-bar">
         <button type="button" class="btn-mobile-back tabular" data-stack-back>
           ◄ Back to Course Ledger
         </button>
         <span class="tabular" style="font-size: 0.7rem; color: var(--text-muted);">SYLLABUS BRIEFING</span>
+      </div>
+
+      <!-- Top Return Horizon Cue: Classes -> Books -->
+      <div class="scroll-horizon-top-cue" data-jump-view="view-books">
+        <span class="tabular">↑ Scroll up at top boundary to return to 02 // BOOKS &amp; MONOGRAPHS</span>
       </div>
 
       {classes.map((cls, idx) => {
@@ -82,38 +113,45 @@ const { classes } = Astro.props;
             style="padding: clamp(1.25rem, 3vw, 2.75rem); max-inline-size: 82ch;"
           >
             <header style="border-block-end: 1px solid var(--border-subtle); padding-block-end: 1.5rem; margin-block-end: 1.75rem;">
-              <p class="tabular" style="font-size: 0.74rem; letter-spacing: 0.15em; color: var(--accent); margin-block-end: 0.35rem;">
-                COURSE BRIEFING // {c.courseCode}
-              </p>
-              <h3 style="font-size: clamp(1.35rem, 2.4vw, 1.95rem); margin-block-end: 1rem;">
+              <div class="reader-eyebrow-row">
+                <span class="cathode-tag tabular" data-scramble-eyebrow>
+                  COURSE BRIEFING // {c.courseCode}
+                </span>
+                <span class="telemetry-stamp tabular">{c.level.toUpperCase()} SEMINAR</span>
+              </div>
+              <h3 class="reader-main-title" data-scramble-title>
                 {c.title}
               </h3>
 
-              <dl class="tabular" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 0.75rem; padding: 0.85rem; border-radius: 6px; background: var(--bg-elevated); border: 1px solid var(--border-subtle); font-size: 0.78rem;">
+              <dl class="tabular telemetry-specs-grid">
                 <div>
-                  <dt style="font-size: 0.65rem; color: var(--text-muted);">TERM</dt>
-                  <dd style="font-weight: 500;">{c.term} ({c.academicYear})</dd>
+                  <dt>TERM</dt>
+                  <dd>{c.term} ({c.academicYear})</dd>
                 </div>
                 <div>
-                  <dt style="font-size: 0.65rem; color: var(--text-muted);">LEVEL</dt>
+                  <dt>LEVEL</dt>
                   <dd>{c.level}</dd>
                 </div>
                 <div>
-                  <dt style="font-size: 0.65rem; color: var(--text-muted);">MEETING &amp; LOCATION</dt>
+                  <dt>MEETING &amp; LOCATION</dt>
                   <dd>{c.schedule}</dd>
                 </div>
                 <div>
-                  <dt style="font-size: 0.65rem; color: var(--text-muted);">PRINTABLE SYLLABUS</dt>
+                  <dt>PRINTABLE SYLLABUS</dt>
                   <dd><a href={c.syllabusPdf || '/cv'} style="color: var(--accent);">Open Syllabus / CV ↗</a></dd>
                 </div>
               </dl>
             </header>
 
-            <section style="margin-block-end: 2rem;">
+            <section class="recessed-abstract-box" style="margin-block-end: 2rem;">
+              <div class="chassis-bolt chassis-bolt--tl"></div>
+              <div class="chassis-bolt chassis-bolt--tr"></div>
+              <div class="chassis-bolt chassis-bolt--bl"></div>
+              <div class="chassis-bolt chassis-bolt--br"></div>
               <h4 class="tabular" style="font-size: 0.74rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--accent); margin-block-end: 0.5rem;">
-                Course Description
+                Course Description // Seminar Prospectus
               </h4>
-              <p style="font-size: 0.96rem; color: var(--text-secondary); line-height: 1.65;">
+              <p style="font-size: 0.98rem; color: var(--text-primary); line-height: 1.68; font-family: var(--font-serif);">
                 {c.summary}
               </p>
             </section>
@@ -145,6 +183,15 @@ const { classes } = Astro.props;
           </article>
         );
       })}
+
+      <!-- Bottom Return-to-Sky / CV Cue -->
+      <div class="scroll-horizon-bridge" data-jump-view="view-publications">
+        <div class="horizon-bridge-meta">
+          <span class="horizon-kicker tabular">END OF ARCHIVE // FULL CYCLE</span>
+          <strong class="horizon-title">↺ RETURN TO 01 · PUBLICATIONS OR /CV</strong>
+        </div>
+        <span class="horizon-hint tabular">Click to cycle back to Publications or scroll up to Books</span>
+      </div>
     </div>
   </div>
 </section>

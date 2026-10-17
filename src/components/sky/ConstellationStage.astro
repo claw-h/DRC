@@ -6,86 +6,292 @@ interface Props {
 const { featuredConstellationId = null } = Astro.props;
 ---
 
-<div class="sky-backdrop" aria-hidden="true">
+<div class="sky-backdrop">
   <drc-constellation-canvas
     data-featured-id={featuredConstellationId ?? ''}
     style="display: block; inline-size: 100%; block-size: 100%; position: relative;"
   >
-    <canvas id="sky-nebula-layer" style="position: absolute; inset: 0; inline-size: 100%; block-size: 100%;"></canvas>
-    <canvas id="sky-artefact-layer" style="position: absolute; inset: 0; inline-size: 100%; block-size: 100%; will-change: transform;"></canvas>
+    <canvas
+      id="sky-nebula-layer"
+      style="position: absolute; inset: 0; inline-size: 100%; block-size: 100%; pointer-events: none;"
+    ></canvas>
+    <canvas
+      id="sky-artefact-layer"
+      class="sky-interactive-canvas"
+      style="position: absolute; inset: 0; inline-size: 100%; block-size: 100%; will-change: transform;"
+    ></canvas>
   </drc-constellation-canvas>
 </div>
 
-<!-- Stage 1 Foreground HUD: Constellation Name, Coordinates & 4K Export -->
+<!-- Stage 1 Foreground HUD: Vault Telemetry, Constellation Title, Inset Node Popup & Controls -->
 <section id="stage-1" class="snap-stage stage-sky-hud" aria-label="Celestial Cartography">
-  <div class="sky-hud-bottom-left">
-    <p class="sky-hud-epoch tabular" id="hud-constellation-id">EPOCH J2000.0 // DRC-0001</p>
-    <h1 class="sky-hud-name" id="hud-constellation-name">Vela Minor</h1>
-    <p class="sky-hud-meaning" id="hud-constellation-meaning">The Celestial Sail of the Lesser Arc</p>
-    <p class="sky-hud-coords tabular" id="hud-constellation-coords">
-      RA 09h 34m 12.4s · DEC -42° 18' 05"
-    </p>
+  <!-- Interactive Inset-Map Star Node Popup (inspired by Lovesite vault/page.tsx) -->
+  <div id="star-inset-popup" class="star-inset-popup" hidden>
+    <svg class="inset-connector" viewBox="0 0 28 12" aria-hidden="true">
+      <line x1="0" y1="6" x2="24" y2="6" stroke="rgba(232,222,181,0.45)" stroke-width="1" stroke-dasharray="3 3" />
+      <circle cx="0" cy="6" r="2.2" fill="rgba(232,222,181,0.75)" />
+    </svg>
+    <div class="inset-card">
+      <div class="inset-card-header">
+        <div class="inset-header-left">
+          <span class="inset-pulse-dot"></span>
+          <span class="inset-kicker" id="inset-star-designation">ASTROMETRIC_LOG // α</span>
+        </div>
+        <div class="inset-header-right">
+          <span class="inset-mag" id="inset-star-mag">MAG 1.85</span>
+          <button type="button" id="inset-close-btn" class="inset-close-btn" aria-label="Close star telemetry">✕</button>
+        </div>
+      </div>
+
+      <div class="inset-visual-box">
+        <div class="inset-scanlines"></div>
+        <div class="inset-reticle inset-reticle--tl"></div>
+        <div class="inset-reticle inset-reticle--tr"></div>
+        <div class="inset-reticle inset-reticle--bl"></div>
+        <div class="inset-reticle inset-reticle--br"></div>
+        <div class="inset-star-preview" id="inset-star-preview"></div>
+        <div class="inset-visual-caption">
+          <span class="inset-caption-sub" id="inset-star-spectral">SPECTRAL CLASS B8V · 11,400 K</span>
+          <h3 class="inset-caption-title" id="inset-star-title">Alpha Velorum Minoris</h3>
+        </div>
+      </div>
+
+      <div class="inset-card-footer">
+        <span class="inset-coords" id="inset-star-coords">RA 09h 34m · DEC -42° 18'</span>
+        <div class="inset-flux-meter">
+          <div class="inset-flux-bar">
+            <div class="inset-flux-fill" id="inset-flux-fill" style="width: 88%;"></div>
+          </div>
+          <span class="inset-flux-val" id="inset-flux-val">88% LUM</span>
+        </div>
+      </div>
+    </div>
   </div>
 
-  <div class="sky-hud-bottom-right">
-    <button type="button" class="sky-hud-btn tabular" id="btn-new-constellation" title="Draw another constellation from the 1,000-entry catalog">
-      ↻ Redraw Sky
-    </button>
-    <button type="button" class="sky-hud-btn tabular" id="btn-copy-sky-link" title="Copy permalink to this exact constellation">
-      ⌖ Permalink
-    </button>
-    <button type="button" class="sky-hud-btn tabular" id="btn-export-chart" title="Export high-resolution PNG Star Chart">
-      ↓ Export Star Chart
-    </button>
-    <a href="#stage-2" class="sky-scroll-cue tabular" aria-label="Scroll down to Duncan R. Cordry archive">
-      SCROLL TO ENTER ARCHIVE ↓
-    </a>
+  <div class="sky-hud-bottom-row">
+    <!-- Left: Lovesite Vault-style Telemetry Block + Mythological Designation -->
+    <div class="sky-hud-bottom-left">
+      <div class="vault-telemetry-box">
+        <div class="telemetry-line">
+          <span class="telemetry-key">TELEMETRY_STATUS:</span>
+          <span class="telemetry-val telemetry-val--ok" id="hud-telemetry-status">ACTIVE // J2000.0</span>
+        </div>
+        <div class="telemetry-line">
+          <span class="telemetry-key">CATALOG_ARTIFACT:</span>
+          <span class="telemetry-val" id="hud-constellation-id">DRC-0001</span>
+          <span class="telemetry-sep">|</span>
+          <span class="telemetry-key">STARS:</span>
+          <span class="telemetry-val" id="hud-node-count">7 NODES</span>
+        </div>
+        <div class="telemetry-line">
+          <span class="telemetry-key">MODE:</span>
+          <span class="telemetry-val" id="hud-orbital-mode">ORBITAL_AUTOPILOT</span>
+        </div>
+        <div class="telemetry-line">
+          <span class="telemetry-key">SPIN:</span>
+          <span class="telemetry-val" id="hud-spin-speed">0.042°/f</span>
+          <span class="telemetry-sep">|</span>
+          <span class="telemetry-key">FOV_SCALE:</span>
+          <span class="telemetry-val" id="hud-zoom-val">100%</span>
+        </div>
+      </div>
+
+      <div class="sky-title-cluster">
+        <h1 class="sky-hud-name" id="hud-constellation-name">Vela Minor</h1>
+        <p class="sky-hud-meaning" id="hud-constellation-meaning">The Celestial Sail of the Lesser Arc</p>
+        <p class="sky-hud-coords tabular" id="hud-constellation-coords">
+          RA 09h 34m 12.4s · DEC -42° 18' 05"
+        </p>
+      </div>
+
+      <div class="sky-micro-controls">
+        <button type="button" id="btn-auto-rotate" class="vault-pill-btn is-active">
+          [ AUTO: ON ]
+        </button>
+        <button type="button" id="btn-meteor-shower" class="vault-pill-btn" title="Trigger bolide meteor transit">
+          [ ☄ METEOR TRANSIT ]
+        </button>
+        <span class="vault-hint">Drag sky to rotate · Click any α/β star node to inspect · Scroll to enter archive</span>
+      </div>
+    </div>
+
+    <!-- Right: Action Controls -->
+    <div class="sky-hud-bottom-right">
+      <button
+        type="button"
+        class="sky-hud-btn tabular"
+        id="btn-new-constellation"
+        title="Draw another constellation from the 1,000-entry catalog"
+      >
+        ↻ Redraw Sky
+      </button>
+      <button
+        type="button"
+        class="sky-hud-btn tabular"
+        id="btn-copy-sky-link"
+        title="Copy permalink to this exact constellation"
+      >
+        ⌖ Permalink
+      </button>
+      <button
+        type="button"
+        class="sky-hud-btn tabular"
+        id="btn-export-chart"
+        title="Export high-resolution PNG Star Chart"
+      >
+        ↓ Export Star Chart
+      </button>
+      <a href="#stage-2" class="sky-scroll-cue tabular" aria-label="Scroll down to Duncan R. Cordry archive">
+        SCROLL TO ENTER ARCHIVE ↓
+      </a>
+    </div>
   </div>
 </section>
 
 <style>
+  .sky-interactive-canvas {
+    cursor: crosshair;
+  }
+
   .stage-sky-hud {
     display: flex;
     flex-direction: column;
     justify-content: flex-end;
-    padding: clamp(1.25rem, 4vw, 3rem);
-    padding-block-end: calc(clamp(1.5rem, 4vh, 3rem) + env(safe-area-inset-bottom, 0px));
+    padding: clamp(1.25rem, 3.5vw, 2.75rem);
+    padding-block-end: calc(clamp(1.25rem, 3.5vh, 2.5rem) + env(safe-area-inset-bottom, 0px));
     z-index: 5;
     pointer-events: none;
   }
 
-  .sky-hud-bottom-left {
-    pointer-events: auto;
-    max-inline-size: 34rem;
+  .sky-hud-bottom-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 1.5rem;
+    width: 100%;
   }
 
-  .sky-hud-epoch {
-    font-size: 0.72rem;
-    letter-spacing: 0.2em;
-    color: var(--accent);
-    margin-block-end: 0.35rem;
+  .sky-hud-bottom-left {
+    pointer-events: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+    max-inline-size: 36rem;
+  }
+
+  /* Lovesite Vault-style Telemetry Box */
+  .vault-telemetry-box {
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    line-height: 1.55;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+    background: rgba(5, 7, 12, 0.68);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(232, 222, 181, 0.16);
+    box-shadow:
+      0 0 20px rgba(232, 222, 181, 0.06),
+      inset 0 1px 0 rgba(255, 255, 255, 0.06);
+    padding: 0.65rem 0.9rem;
+    border-radius: 0.35rem;
+    width: fit-content;
+  }
+
+  .telemetry-line {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    flex-wrap: wrap;
+  }
+
+  .telemetry-key {
+    color: var(--text-muted);
+  }
+
+  .telemetry-val {
+    color: #e8deb5;
+    font-weight: 600;
+  }
+
+  .telemetry-val--ok {
+    color: #5effa4;
+    text-shadow: 0 0 6px rgba(94, 255, 164, 0.45);
+  }
+
+  .telemetry-sep {
+    color: rgba(255, 255, 255, 0.18);
+  }
+
+  .sky-title-cluster {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
   }
 
   .sky-hud-name {
-    font-size: clamp(1.85rem, 4vw, 3.1rem);
+    font-family: var(--font-serif);
+    font-size: clamp(2rem, 4.5vw, 3.35rem);
     font-weight: 400;
-    letter-spacing: 0.04em;
+    letter-spacing: 0.02em;
+    margin: 0;
     color: var(--text-primary);
-    margin-block-end: 0.2rem;
+    text-shadow: 0 2px 24px rgba(0, 0, 0, 0.85);
   }
 
   .sky-hud-meaning {
     font-family: var(--font-serif);
     font-style: italic;
-    font-size: clamp(1rem, 1.6vw, 1.25rem);
+    font-size: clamp(0.95rem, 1.5vw, 1.15rem);
     color: var(--text-secondary);
-    margin-block-end: 0.55rem;
+    margin: 0;
   }
 
   .sky-hud-coords {
-    font-size: 0.78rem;
-    letter-spacing: 0.12em;
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.14em;
     color: var(--text-muted);
+    margin: 0.15rem 0 0;
+  }
+
+  .sky-micro-controls {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.6rem;
+  }
+
+  .vault-pill-btn {
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    padding: 0.38rem 0.7rem;
+    border-radius: 0.25rem;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    background: rgba(5, 7, 12, 0.55);
+    color: var(--text-muted);
+    backdrop-filter: blur(8px);
+    cursor: pointer;
+    transition: all 0.25s ease;
+  }
+
+  .vault-pill-btn.is-active,
+  .vault-pill-btn:hover {
+    border-color: rgba(232, 222, 181, 0.45);
+    color: #e8deb5;
+    background: rgba(232, 222, 181, 0.08);
+    box-shadow: 0 0 12px rgba(232, 222, 181, 0.12);
+  }
+
+  .vault-hint {
+    font-family: var(--font-mono);
+    font-size: 0.62rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.32);
   }
 
   .sky-hud-bottom-right {
@@ -94,635 +300,1055 @@ const { featuredConstellationId = null } = Astro.props;
     flex-wrap: wrap;
     align-items: center;
     gap: 0.6rem;
-    margin-block-start: 1.25rem;
   }
 
-  @media (min-width: 768px) {
-    .stage-sky-hud {
-      flex-direction: row;
-      align-items: flex-end;
-      justify-content: space-between;
-    }
-    .sky-hud-bottom-right {
-      margin-block-start: 0;
-    }
-  }
-
-  .sky-hud-btn,
-  .sky-scroll-cue {
-    font-size: 0.72rem;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    padding: 0.5rem 0.85rem;
-    border-radius: 999px;
+  .sky-hud-btn {
+    min-block-size: 2.5rem;
+    padding-inline: 0.85rem;
+    border-radius: 0.35rem;
     border: 1px solid var(--border-subtle);
-    background: color-mix(in oklab, var(--bg-surface) 78%, transparent);
-    backdrop-filter: blur(8px);
+    background: color-mix(in oklab, var(--bg-surface) 75%, transparent);
+    backdrop-filter: blur(10px);
     color: var(--text-primary);
-    text-decoration: none;
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
     cursor: pointer;
-    transition: border-color 0.2s ease, color 0.2s ease;
+    transition: border-color 0.2s ease, color 0.2s ease, transform 0.15s ease;
   }
 
-  .sky-hud-btn:hover,
-  .sky-scroll-cue:hover {
+  .sky-hud-btn:hover {
     border-color: var(--accent);
     color: var(--accent);
+    transform: translateY(-1px);
+  }
+
+  .sky-scroll-cue {
+    display: inline-flex;
+    align-items: center;
+    min-block-size: 2.5rem;
+    padding-inline: 0.95rem;
+    border-radius: 0.35rem;
+    border: 1px solid color-mix(in oklab, var(--accent) 50%, transparent);
+    background: color-mix(in oklab, var(--accent) 14%, transparent);
+    color: var(--accent);
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.12em;
+    text-decoration: none;
+  }
+
+  /* Inset-Map Star Node Popup Card (Lovesite vault/page.tsx aesthetic) */
+  .star-inset-popup {
+    position: fixed;
+    z-index: 45;
+    width: 310px;
+    pointer-events: auto;
+    animation: inset-map-open 0.35s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    transform-origin: top left;
+  }
+
+  @keyframes inset-map-open {
+    0% {
+      opacity: 0;
+      transform: scale(0.84) translateY(6px);
+      clip-path: inset(0% 0% 100% 0% round 10px);
+    }
+    60% {
+      clip-path: inset(0% 0% 0% 0% round 10px);
+    }
+    100% {
+      opacity: 1;
+      transform: scale(1) translateY(0);
+      clip-path: inset(0% 0% 0% 0% round 10px);
+    }
+  }
+
+  .inset-connector {
+    position: absolute;
+    top: 42px;
+    left: -24px;
+    width: 28px;
+    height: 12px;
+    overflow: visible;
+    pointer-events: none;
+  }
+
+  .inset-card {
+    border-radius: 0.65rem;
+    overflow: hidden;
+    border: 1px solid rgba(232, 222, 181, 0.28);
+    background: rgba(7, 8, 15, 0.94);
+    backdrop-filter: blur(20px);
+    box-shadow:
+      0 0 0 1px rgba(232, 222, 181, 0.06),
+      0 20px 55px rgba(0, 0, 0, 0.88);
+  }
+
+  .inset-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.55rem 0.85rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+    background: rgba(255, 255, 255, 0.025);
+  }
+
+  .inset-header-left {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+  }
+
+  .inset-pulse-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #e8deb5;
+    box-shadow: 0 0 8px #e8deb5;
+  }
+
+  .inset-kicker {
+    font-family: var(--font-mono);
+    font-size: 0.62rem;
+    letter-spacing: 0.28em;
+    color: #e8deb5;
+    text-transform: uppercase;
+  }
+
+  .inset-header-right {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .inset-mag {
+    font-family: var(--font-mono);
+    font-size: 0.62rem;
+    color: rgba(255, 255, 255, 0.4);
+    letter-spacing: 0.12em;
+  }
+
+  .inset-close-btn {
+    width: 20px;
+    height: 20px;
+    border-radius: 4px;
+    border: none;
+    background: transparent;
+    color: rgba(255, 255, 255, 0.4);
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    cursor: pointer;
+  }
+
+  .inset-close-btn:hover {
+    color: #e8deb5;
+    background: rgba(255, 255, 255, 0.08);
+  }
+
+  .inset-visual-box {
+    position: relative;
+    height: 128px;
+    background: radial-gradient(circle at 50% 42%, #151b2c 0%, #05070c 100%);
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .inset-scanlines {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.22;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 1px,
+      #000 1px,
+      #000 2px
+    );
+  }
+
+  .inset-reticle {
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    border-color: rgba(232, 222, 181, 0.55);
+    pointer-events: none;
+  }
+  .inset-reticle--tl { top: 6px; left: 6px; border-top: 1px solid; border-left: 1px solid; }
+  .inset-reticle--tr { top: 6px; right: 6px; border-top: 1px solid; border-right: 1px solid; }
+  .inset-reticle--bl { bottom: 6px; left: 6px; border-bottom: 1px solid; border-left: 1px solid; }
+  .inset-reticle--br { bottom: 6px; right: 6px; border-bottom: 1px solid; border-right: 1px solid; }
+
+  .inset-star-preview {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow:
+      0 0 12px 4px #fff,
+      0 0 32px 12px rgba(232, 222, 181, 0.75);
+    transform: translateY(-10px);
+  }
+
+  .inset-visual-caption {
+    position: absolute;
+    inset-inline: 0;
+    bottom: 0;
+    padding: 0.5rem 0.85rem;
+    background: linear-gradient(to top, rgba(7, 8, 15, 0.96), transparent);
+  }
+
+  .inset-caption-sub {
+    display: block;
+    font-family: var(--font-mono);
+    font-size: 0.58rem;
+    letter-spacing: 0.16em;
+    color: #7fd4ff;
+    margin-bottom: 0.15rem;
+  }
+
+  .inset-caption-title {
+    margin: 0;
+    font-family: var(--font-serif);
+    font-size: 0.98rem;
+    font-weight: 500;
+    color: #f5f5f0;
+  }
+
+  .inset-card-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.6rem 0.85rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+    font-family: var(--font-mono);
+    font-size: 0.62rem;
+    color: rgba(255, 255, 255, 0.5);
+  }
+
+  .inset-flux-meter {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+  }
+
+  .inset-flux-bar {
+    width: 54px;
+    height: 3px;
+    border-radius: 99px;
+    background: rgba(255, 255, 255, 0.08);
+    overflow: hidden;
+  }
+
+  .inset-flux-fill {
+    height: 100%;
+    background: #e8deb5;
+    box-shadow: 0 0 6px #e8deb5;
+  }
+
+  .inset-flux-val {
+    color: #e8deb5;
   }
 </style>
 
 <script>
-  const GREEK_BAYER = ['α', 'β', 'γ', 'δ', 'ε', 'ζ', 'η', 'θ', 'ι', 'κ'];
-
-  // Harvard spectral classes: O, B, A, F, G, K, M
-  const SPECTRAL_DARK = [
-    [165, 195, 255], // O: Blue-White
-    [185, 210, 255], // B: Rigel Blue
-    [228, 238, 255], // A: Sirius Frost White
-    [248, 246, 238], // F: Procyon Cream
-    [255, 243, 218], // G: Solar Ivory
-    [255, 214, 165], // K: Arcturus Gold
-    [255, 178, 132], // M: Betelgeuse Amber
+  const BAYER_GREEK = ['α', 'β', 'γ', 'δ', 'ε', 'ζ', 'η', 'θ', 'ι', 'κ', 'λ', 'μ', 'ν', 'ξ', 'ο', 'π'];
+  const BAYER_NAMES = [
+    'Alpha', 'Beta', 'Gamma', 'Delta', 'Epsilon', 'Zeta', 'Eta', 'Theta',
+    'Iota', 'Kappa', 'Lambda', 'Mu', 'Nu', 'Xi', 'Omicron', 'Pi'
   ];
 
-  const SPECTRAL_LIGHT = [
-    [35, 58, 98],
-    [42, 62, 92],
-    [45, 42, 38],
-    [58, 48, 36],
-    [72, 54, 34],
-    [112, 58, 28],
-    [138, 46, 24],
-  ];
-
-  // Fast 2D value noise + fBm for Domain-Warped Milky Way & Interstellar Dust Rifts
-  function hash2D(ix: number, iy: number, seed: number): number {
-    let n = (ix * 374761393 + iy * 668265263 + seed * 1442695041) | 0;
-    n = (n ^ (n >> 13)) * 1274126177;
-    return ((n ^ (n >> 16)) >>> 0) / 4294967296;
+  function bvToPlanckianRgb(bv: number): [number, number, number] {
+    if (bv < 0.0) return [175, 205, 255]; // O/B Blue-White
+    if (bv < 0.35) return [238, 244, 255]; // A White-Blue
+    if (bv < 0.65) return [255, 249, 235]; // F Creamy White
+    if (bv < 1.0) return [255, 232, 185]; // G Solar Gold
+    if (bv < 1.4) return [255, 198, 135]; // K Amber
+    return [255, 160, 110]; // M Ember Red
   }
 
-  function valueNoise(x: number, y: number, seed: number): number {
-    const ix = Math.floor(x);
-    const iy = Math.floor(y);
-    const fx = x - ix;
-    const fy = y - iy;
-    const ux = fx * fx * (3 - 2 * fx);
-    const uy = fy * fy * (3 - 2 * fy);
-    const a = hash2D(ix, iy, seed);
-    const b = hash2D(ix + 1, iy, seed);
-    const c = hash2D(ix, iy + 1, seed);
-    const d = hash2D(ix + 1, iy + 1, seed);
-    return a + (b - a) * ux + (c - a) * uy + (a - b - c + d) * ux * uy;
-  }
-
-  function fbm(x: number, y: number, seed: number): number {
-    let v = 0;
-    let amp = 0.5;
-    let freq = 1;
-    for (let i = 0; i < 3; i++) {
-      v += amp * valueNoise(x * freq, y * freq, seed + i * 31);
-      freq *= 2.03;
-      amp *= 0.5;
-    }
-    return v;
+  function bvToSpectralInfo(bv: number): string {
+    if (bv < 0.0) return 'CLASS B2V · 18,500 K';
+    if (bv < 0.35) return 'CLASS A1V · 9,400 K';
+    if (bv < 0.65) return 'CLASS F5V · 6,500 K';
+    if (bv < 1.0) return 'CLASS G2V · 5,780 K';
+    if (bv < 1.4) return 'CLASS K3III · 4,300 K';
+    return 'CLASS M2Iab · 3,450 K';
   }
 
   class DrcConstellationCanvas extends HTMLElement {
     private nebulaCanvas!: HTMLCanvasElement;
     private artefactCanvas!: HTMLCanvasElement;
+    private nCtx!: CanvasRenderingContext2D;
+    private aCtx!: CanvasRenderingContext2D;
+    private rafId = 0;
+    private catalogIndex: any[] = [];
     private currentConstellation: any = null;
-    private animFrameId: number | null = null;
-    private startTime = 0;
-    private isLightMode = false;
+    private backgroundStars: Array<{
+      x: number;
+      y: number;
+      z: number;
+      r: number;
+      rgb: [number, number, number];
+      phase: number;
+      speed: number;
+      isSupernova: boolean;
+    }> = [];
+    private dustMotes: Array<{
+      x: number;
+      y: number;
+      vx: number;
+      vy: number;
+      size: number;
+      op: number;
+      opDir: number;
+    }> = [];
+    private shootingStars: Array<{
+      x: number;
+      y: number;
+      born: number;
+    }> = [];
 
-    connectedCallback() {
+    private drawProgress = 0;
+    private frameCount = 0;
+
+    // Interactive spherical rotation & inertia (from vault/page.tsx)
+    private rotX = 0;
+    private rotY = 0;
+    private vX = 0.00045;
+    private vY = 0.00025;
+    private autoRotate = true;
+    private isDragging = false;
+    private dragStart = { x: 0, y: 0 };
+    private lastPointer = { x: -1000, y: -1000 };
+    private zoom = 1;
+
+    private hoveredStarIdx: number = -1;
+    private selectedStarIdx: number = -1;
+    private projectedPrincipalStars: Array<{
+      idx: number;
+      x: number;
+      y: number;
+      mag: number;
+      bv: number;
+      rgb: [number, number, number];
+    }> = [];
+
+    async connectedCallback() {
       this.nebulaCanvas = this.querySelector('#sky-nebula-layer') as HTMLCanvasElement;
       this.artefactCanvas = this.querySelector('#sky-artefact-layer') as HTMLCanvasElement;
-      if (!this.nebulaCanvas || !this.artefactCanvas) return;
+      this.nCtx = this.nebulaCanvas.getContext('2d')!;
+      this.aCtx = this.artefactCanvas.getContext('2d')!;
 
-      this.detectTheme();
-      this.loadAndRenderSky();
+      this.initBackgroundField();
+      this.resizeCanvases();
+      window.addEventListener('resize', () => this.resizeCanvases(), { passive: true });
 
-      window.addEventListener('resize', () => this.onResize(), { passive: true });
-      window.addEventListener('drc-theme-changed', () => {
-        this.detectTheme();
-        this.renderStaticNebulaAndStars();
-        this.drawArtefactFrame(1);
-      });
-
-      // Subtle 2-layer stereographic parallax on mouse move
-      window.addEventListener(
-        'pointermove',
-        (e) => {
-          if (document.body.dataset.stage === 'stage-3') return;
-          const nx = (e.clientX / window.innerWidth - 0.5) * 2;
-          const ny = (e.clientY / window.innerHeight - 0.5) * 2;
-          this.artefactCanvas.style.transform = `translate3d(${(nx * -5.5).toFixed(2)}px, ${(ny * -5.5).toFixed(2)}px, 0)`;
-        },
-        { passive: true }
-      );
-
-      document.getElementById('btn-new-constellation')?.addEventListener('click', () => {
-        this.loadAndRenderSky(true);
-      });
-
-      document.getElementById('btn-copy-sky-link')?.addEventListener('click', (e) => {
-        if (!this.currentConstellation) return;
-        const url = new URL(window.location.href);
-        url.searchParams.set('sky', this.currentConstellation.id);
-        navigator.clipboard?.writeText(url.toString());
-        const btn = e.currentTarget as HTMLButtonElement;
-        const orig = btn.textContent;
-        btn.textContent = `✓ Copied ${this.currentConstellation.id}`;
-        setTimeout(() => (btn.textContent = orig), 1800);
-      });
-
-      document.getElementById('btn-export-chart')?.addEventListener('click', () => {
-        this.exportStarChartPng();
-      });
+      await this.loadCatalogAndSelect();
+      this.bindControls();
+      this.bindInteractivePointer();
+      this.startLoop();
     }
 
-    private detectTheme() {
-      const meta = document.querySelector('meta[name="color-scheme"]')?.getAttribute('content') || 'light dark';
-      if (meta === 'light') {
-        this.isLightMode = true;
-      } else if (meta === 'dark') {
-        this.isLightMode = false;
-      } else {
-        this.isLightMode = window.matchMedia('(prefers-color-scheme: light)').matches;
-      }
+    disconnectedCallback() {
+      cancelAnimationFrame(this.rafId);
     }
 
-    private async loadAndRenderSky(forceRandom = false) {
-      try {
-        const params = new URLSearchParams(window.location.search);
-        const requestedId = !forceRandom ? (params.get('sky') || this.dataset.featuredId) : '';
+    private initBackgroundField() {
+      // 380 spherical background stars with Supernova cross-flares
+      this.backgroundStars = Array.from({ length: 380 }, () => {
+        const u = Math.random();
+        const v = Math.random();
+        const theta = 2 * Math.PI * u;
+        const phi = Math.acos(2 * v - 1);
+        const isSupernova = Math.random() > 0.965;
+        return {
+          x: Math.sin(phi) * Math.cos(theta),
+          y: Math.sin(phi) * Math.sin(theta),
+          z: Math.cos(phi),
+          r: isSupernova ? 1.7 : Math.pow(Math.random(), 2.2) * 1.45 + 0.35,
+          rgb: bvToPlanckianRgb(-0.15 + Math.random() * 1.65),
+          phase: Math.random() * Math.PI * 2,
+          speed: (0.008 + Math.random() * 0.018) * (isSupernova ? 1.8 : 1),
+          isSupernova,
+        };
+      });
 
-        let shardNum = Math.floor(Math.random() * 10);
-        let itemIdx = Math.floor(Math.random() * 100);
-
-        if (requestedId && /^DRC-\d{4}$/.test(requestedId)) {
-          const num = parseInt(requestedId.slice(4), 10) - 1;
-          if (num >= 0 && num < 1000) {
-            shardNum = Math.floor(num / 100);
-            itemIdx = num % 100;
-          }
-        }
-
-        const shardFile = `/data/sky/shards/shard-${String(shardNum).padStart(2, '0')}.json`;
-        const res = await fetch(shardFile);
-        const list = await res.json();
-        this.currentConstellation = list[itemIdx] || list[0];
-
-        this.updateHudText();
-        this.onResize(true);
-      } catch (err) {
-        console.error('Failed to load constellation shard:', err);
-      }
+      // 34 ambient golden dust motes (from Lovesite vault/page.tsx)
+      this.dustMotes = Array.from({ length: 34 }, () => ({
+        x: Math.random(),
+        y: Math.random(),
+        vx: (Math.random() - 0.5) * 0.00012,
+        vy: (Math.random() - 0.5) * 0.00012,
+        size: Math.random() * 1.15 + 0.35,
+        op: Math.random() * 0.25 + 0.08,
+        opDir: Math.random() > 0.5 ? 1 : -1,
+      }));
     }
 
-    private updateHudText() {
-      const c = this.currentConstellation;
-      if (!c) return;
-      const idEl = document.getElementById('hud-constellation-id');
-      const nameEl = document.getElementById('hud-constellation-name');
-      const meaningEl = document.getElementById('hud-constellation-meaning');
-      const coordsEl = document.getElementById('hud-constellation-coords');
-
-      if (idEl) idEl.textContent = `EPOCH ${c.epoch} // ${c.id}`;
-      if (nameEl) nameEl.textContent = c.name;
-      if (meaningEl) meaningEl.textContent = c.meaning || 'Archival Celestial Figure';
-      if (coordsEl) coordsEl.textContent = `RA ${c.ra} · DEC ${c.dec}`;
-    }
-
-    private onResize(restartAnim = false) {
+    private resizeCanvases() {
       const dpr = Math.min(window.devicePixelRatio || 1, 2);
       const w = window.innerWidth;
       const h = window.innerHeight;
 
-      this.nebulaCanvas.width = Math.round(w * dpr);
-      this.nebulaCanvas.height = Math.round(h * dpr);
-      this.artefactCanvas.width = Math.round(w * dpr);
-      this.artefactCanvas.height = Math.round(h * dpr);
+      this.nebulaCanvas.width = Math.max(1, Math.floor(w * 0.25));
+      this.nebulaCanvas.height = Math.max(1, Math.floor(h * 0.25));
 
-      this.renderStaticNebulaAndStars();
+      this.artefactCanvas.width = Math.floor(w * dpr);
+      this.artefactCanvas.height = Math.floor(h * dpr);
+      this.aCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-      if (restartAnim) {
-        this.startAstrolabeAwakening();
-      } else {
-        this.drawArtefactFrame(1);
+      this.renderNebulaBuffer();
+    }
+
+    private renderNebulaBuffer() {
+      const w = this.nebulaCanvas.width;
+      const h = this.nebulaCanvas.height;
+      const ctx = this.nCtx;
+      ctx.clearRect(0, 0, w, h);
+
+      ctx.save();
+      ctx.translate(w * 0.5, h * 0.5);
+      ctx.rotate(-0.56);
+
+      const bandGrad = ctx.createLinearGradient(0, -h * 0.45, 0, h * 0.45);
+      bandGrad.addColorStop(0, 'rgba(14, 20, 38, 0)');
+      bandGrad.addColorStop(0.3, 'rgba(52, 68, 112, 0.22)');
+      bandGrad.addColorStop(0.5, 'rgba(214, 185, 132, 0.26)');
+      bandGrad.addColorStop(0.7, 'rgba(65, 52, 108, 0.22)');
+      bandGrad.addColorStop(1, 'rgba(14, 20, 38, 0)');
+
+      ctx.fillStyle = bandGrad;
+      ctx.fillRect(-w, -h * 0.45, w * 2, h * 0.9);
+
+      for (let i = 0; i < 18; i++) {
+        const cx = (Math.sin(i * 17.3) * 0.5) * w * 1.2;
+        const cy = (Math.cos(i * 9.7) * 0.5) * h * 0.36;
+        const radius = (0.12 + (i % 5) * 0.05) * Math.max(w, h);
+        const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, radius);
+        if (i % 3 === 0) {
+          g.addColorStop(0, 'rgba(6, 8, 13, 0.52)');
+          g.addColorStop(1, 'rgba(6, 8, 13, 0)');
+        } else {
+          g.addColorStop(0, 'rgba(205, 178, 128, 0.13)');
+          g.addColorStop(1, 'rgba(205, 178, 128, 0)');
+        }
+        ctx.fillStyle = g;
+        ctx.beginPath();
+        ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+    }
+
+    private async loadCatalogAndSelect(forceRandom = false) {
+      try {
+        if (this.catalogIndex.length === 0) {
+          const res = await fetch('/data/sky/index.json');
+          const data = await res.json();
+          this.catalogIndex = data.catalog || [];
+        }
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const queryId = urlParams.get('sky');
+        const featuredId = this.dataset.featuredId;
+
+        let chosenMeta = null;
+        if (!forceRandom && queryId) {
+          chosenMeta = this.catalogIndex.find((c) => c.id === queryId);
+        }
+        if (!forceRandom && !chosenMeta && featuredId) {
+          chosenMeta = this.catalogIndex.find((c) => c.id === featuredId);
+        }
+        if (!chosenMeta) {
+          const idx = Math.floor(Math.random() * this.catalogIndex.length);
+          chosenMeta = this.catalogIndex[idx];
+        }
+
+        const shardName = `shard-${String(chosenMeta.shard).padStart(2, '0')}.json`;
+        const shardRes = await fetch(`/data/sky/shards/${shardName}`);
+        const shardList = await shardRes.json();
+        this.currentConstellation =
+          shardList.find((c: any) => c.id === chosenMeta.id) || shardList[0];
+
+        this.drawProgress = 0;
+        this.selectedStarIdx = -1;
+        document.getElementById('star-inset-popup')?.setAttribute('hidden', '');
+        this.updateHud();
+        // Spawn a celebratory shooting star on constellation load
+        this.spawnShootingStar();
+      } catch (err) {
+        console.error('[DRC Sky Engine] Failed to load constellation shard:', err);
       }
     }
 
-    // Layer 1 & 2: 1/4-Res Domain-Warped Nebula + High-DPR Planckian Starfield
-    private renderStaticNebulaAndStars() {
-      const ctx = this.nebulaCanvas.getContext('2d');
-      if (!ctx) return;
-      const W = this.nebulaCanvas.width;
-      const H = this.nebulaCanvas.height;
+    private spawnShootingStar() {
+      this.shootingStars.push({
+        x: 0.45 + Math.random() * 0.45,
+        y: 0.04 + Math.random() * 0.28,
+        born: this.frameCount,
+      });
+    }
 
-      // 1. Low-Res Offscreen Domain-Warped Milky Way Buffer (<= 320px wide for instant execution)
-      const bufW = 240;
-      const bufH = Math.max(135, Math.round((H / W) * bufW));
-      const off = document.createElement('canvas');
-      off.width = bufW;
-      off.height = bufH;
-      const octx = off.getContext('2d')!;
-      const img = octx.createImageData(bufW, bufH);
-      const data = img.data;
-
-      const light = this.isLightMode;
-      const angle = 0.56; // ~32 deg Milky Way galactic plane tilt
-      const cosA = Math.cos(angle);
-      const sinA = Math.sin(angle);
-
-      for (let py = 0; py < bufH; py++) {
-        const ny = py / bufH - 0.5;
-        for (let px = 0; px < bufW; px++) {
-          const nx = px / bufW - 0.5;
-          // Rotate into galactic coordinates (gx along band, gy perpendicular to band)
-          const gx = nx * cosA + ny * sinA;
-          const gy = -nx * sinA + ny * cosA;
-
-          // Galactic spine profile
-          const bandMask = Math.exp(-(gy * gy) / 0.048);
-
-          // Domain warping q = (fbm(p), fbm(p + offset))
-          const sx = gx * 3.4 + 2.1;
-          const sy = gy * 5.2 + 1.7;
-          const qx = fbm(sx, sy, 11);
-          const qy = fbm(sx + 5.2, sy + 1.3, 29);
-          const warped = fbm(sx + 2.4 * qx, sy + 2.4 * qy, 47);
-
-          // Dark interstellar dust rift cutting down the spine
-          const riftNoise = fbm(gx * 6.5 + 1.8 * qy, gy * 9.0 - 1.8 * qx, 83);
-          const dustRift = Math.max(0, 1 - Math.abs(gy) * 8.5) * Math.pow(riftNoise, 1.6) * 0.78;
-
-          const nebulaIntensity = Math.max(0, bandMask * (0.35 + 0.85 * warped) - dustRift);
-          const idx = (py * bufW + px) * 4;
-
-          if (!light) {
-            // Night Observatory Mode: Obsidian sky + warm core + cobalt wings + H-alpha knots
-            const baseR = 11 + nebulaIntensity * 46 + Math.pow(warped, 3) * bandMask * 22;
-            const baseG = 14 + nebulaIntensity * 44 + bandMask * 10;
-            const baseB = 22 + nebulaIntensity * 68 + (1 - Math.abs(gx)) * bandMask * 18;
-            data[idx] = Math.min(255, baseR);
-            data[idx + 1] = Math.min(255, baseG);
-            data[idx + 2] = Math.min(255, baseB);
-            data[idx + 3] = 255;
-          } else {
-            // 17th-Century Vellum Atlas Mode: Warm parchment + sepia ink wash along galactic band
-            const vellumR = 244 - nebulaIntensity * 28;
-            const vellumG = 238 - nebulaIntensity * 32;
-            const vellumB = 224 - nebulaIntensity * 36;
-            data[idx] = Math.max(0, vellumR);
-            data[idx + 1] = Math.max(0, vellumG);
-            data[idx + 2] = Math.max(0, vellumB);
-            data[idx + 3] = 255;
-          }
+    private scrambleText(el: HTMLElement | null, finalStr: string) {
+      if (!el) return;
+      const glyphs = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789αβγδεζηθ';
+      let iter = 0;
+      const timer = window.setInterval(() => {
+        el.textContent = finalStr
+          .split('')
+          .map((ch, idx) => {
+            if (ch === ' ' || ch === '·' || ch === '/') return ch;
+            if (idx < iter) return finalStr[idx];
+            return glyphs[Math.floor(Math.random() * glyphs.length)];
+          })
+          .join('');
+        if (iter >= finalStr.length) {
+          clearInterval(timer);
+          el.textContent = finalStr;
         }
+        iter += 0.65;
+      }, 24);
+    }
+
+    private updateHud() {
+      if (!this.currentConstellation) return;
+      const c = this.currentConstellation;
+      const idEl = document.getElementById('hud-constellation-id');
+      const nodeCountEl = document.getElementById('hud-node-count');
+      const nameEl = document.getElementById('hud-constellation-name');
+      const meaningEl = document.getElementById('hud-constellation-meaning');
+      const coordsEl = document.getElementById('hud-constellation-coords');
+
+      if (idEl) idEl.textContent = c.id;
+      if (nodeCountEl) nodeCountEl.textContent = `${c.stars?.length || 0} NODES`;
+      this.scrambleText(nameEl, c.name);
+      if (meaningEl) meaningEl.textContent = c.english;
+      if (coordsEl) coordsEl.textContent = `RA ${c.ra} · DEC ${c.dec}`;
+    }
+
+    private bindControls() {
+      document.getElementById('btn-new-constellation')?.addEventListener('click', () => {
+        this.loadCatalogAndSelect(true);
+      });
+
+      document.getElementById('btn-copy-sky-link')?.addEventListener('click', (e) => {
+        if (!this.currentConstellation) return;
+        const btn = e.currentTarget as HTMLButtonElement;
+        const url = new URL(window.location.href);
+        url.searchParams.set('sky', this.currentConstellation.id);
+        navigator.clipboard?.writeText(url.toString());
+        const orig = btn.textContent;
+        btn.textContent = '✓ Copied Link';
+        setTimeout(() => (btn.textContent = orig), 1800);
+      });
+
+      document.getElementById('btn-export-chart')?.addEventListener('click', () => {
+        this.exportHighResChart();
+      });
+
+      const autoBtn = document.getElementById('btn-auto-rotate');
+      const modeEl = document.getElementById('hud-orbital-mode');
+      autoBtn?.addEventListener('click', () => {
+        this.autoRotate = !this.autoRotate;
+        autoBtn.textContent = `[ AUTO: ${this.autoRotate ? 'ON' : 'OFF'} ]`;
+        autoBtn.classList.toggle('is-active', this.autoRotate);
+        if (modeEl) {
+          modeEl.textContent = this.autoRotate ? 'ORBITAL_AUTOPILOT' : 'STATIONARY_LOCK';
+        }
+        if (this.autoRotate) {
+          this.vX = 0.00045;
+          this.vY = 0.00025;
+        }
+      });
+
+      document.getElementById('btn-meteor-shower')?.addEventListener('click', () => {
+        this.spawnShootingStar();
+      });
+
+      document.getElementById('inset-close-btn')?.addEventListener('click', () => {
+        this.selectedStarIdx = -1;
+        document.getElementById('star-inset-popup')?.setAttribute('hidden', '');
+      });
+    }
+
+    private bindInteractivePointer() {
+      const canvas = this.artefactCanvas;
+      const modeEl = document.getElementById('hud-orbital-mode');
+
+      canvas.addEventListener('pointerdown', (e) => {
+        this.isDragging = true;
+        this.dragStart = { x: e.clientX, y: e.clientY };
+        this.lastPointer = { x: e.clientX, y: e.clientY };
+        if (modeEl) modeEl.textContent = 'MANUAL_OVERRIDE';
+      });
+
+      window.addEventListener('pointermove', (e) => {
+        if (this.isDragging) {
+          const dx = e.clientX - this.lastPointer.x;
+          const dy = e.clientY - this.lastPointer.y;
+          this.vX = dx * 0.0022;
+          this.vY = dy * 0.0022;
+          this.rotX += this.vX;
+          this.rotY = Math.max(-0.65, Math.min(0.65, this.rotY + this.vY));
+        }
+        this.lastPointer = { x: e.clientX, y: e.clientY };
+      }, { passive: true });
+
+      window.addEventListener('pointerup', (e) => {
+        if (!this.isDragging) return;
+        this.isDragging = false;
+        if (modeEl) {
+          modeEl.textContent = this.autoRotate ? 'ORBITAL_AUTOPILOT' : 'STATIONARY_LOCK';
+        }
+        const dist = Math.hypot(e.clientX - this.dragStart.x, e.clientY - this.dragStart.y);
+        if (dist < 6 && this.hoveredStarIdx !== -1) {
+          this.openStarInsetPopup(this.hoveredStarIdx);
+        }
+      });
+    }
+
+    private openStarInsetPopup(idx: number) {
+      this.selectedStarIdx = idx;
+      const star = this.projectedPrincipalStars.find((s) => s.idx === idx);
+      const popup = document.getElementById('star-inset-popup');
+      if (!star || !popup || !this.currentConstellation) return;
+
+      const greek = BAYER_GREEK[idx] || '★';
+      const bayerName = BAYER_NAMES[idx] || `Node ${idx + 1}`;
+      const c = this.currentConstellation;
+
+      const desigEl = document.getElementById('inset-star-designation');
+      const magEl = document.getElementById('inset-star-mag');
+      const specEl = document.getElementById('inset-star-spectral');
+      const titleEl = document.getElementById('inset-star-title');
+      const coordsEl = document.getElementById('inset-star-coords');
+      const previewEl = document.getElementById('inset-star-preview');
+      const fluxFill = document.getElementById('inset-flux-fill');
+      const fluxVal = document.getElementById('inset-flux-val');
+
+      if (desigEl) desigEl.textContent = `ASTROMETRIC_LOG // ${greek} NODE`;
+      if (magEl) magEl.textContent = `MAG ${star.mag.toFixed(2)}`;
+      if (specEl) specEl.textContent = bvToSpectralInfo(star.bv);
+      if (titleEl) titleEl.textContent = `${bayerName} ${c.name}`;
+      if (coordsEl) coordsEl.textContent = `RA ${c.ra} · DEC ${c.dec}`;
+
+      const [r, g, b] = star.rgb;
+      if (previewEl) {
+        previewEl.style.background = `rgb(${r}, ${g}, ${b})`;
+        previewEl.style.boxShadow = `0 0 14px 4px rgb(${r}, ${g}, ${b}), 0 0 34px 12px rgba(${r}, ${g}, ${b}, 0.65)`;
       }
 
-      octx.putImageData(img, 0, 0);
+      const lumPct = Math.round(Math.max(18, Math.min(99, (4.2 - star.mag) * 28)));
+      if (fluxFill) fluxFill.style.width = `${lumPct}%`;
+      if (fluxVal) fluxVal.textContent = `${lumPct}% FLUX`;
 
-      // Upscale low-res buffer onto full canvas with hardware bilinear/bicubic smoothing
+      const left = Math.min(Math.max(20, star.x + 24), window.innerWidth - 335);
+      const top = Math.min(Math.max(84, star.y - 52), window.innerHeight - 280);
+      popup.style.left = `${left}px`;
+      popup.style.top = `${top}px`;
+      popup.removeAttribute('hidden');
+    }
+
+    private startLoop() {
+      const step = (time: number) => {
+        this.frameCount++;
+        this.drawProgress = Math.min(1, this.drawProgress + 0.016);
+
+        if (!this.isDragging) {
+          if (this.autoRotate) {
+            this.vX *= 0.96;
+            this.vY *= 0.96;
+            if (Math.abs(this.vX) < 0.00038) this.vX = (this.vX >= 0 ? 1 : -1) * 0.00038;
+            if (Math.abs(this.vY) < 0.00018) this.vY = (this.vY >= 0 ? 1 : -1) * 0.00018;
+          } else {
+            this.vX *= 0.88;
+            this.vY *= 0.88;
+          }
+          this.rotX += this.vX;
+          this.rotY = Math.max(-0.55, Math.min(0.55, this.rotY + this.vY));
+        }
+
+        // Occasionally spawn an ambient shooting star
+        if (this.frameCount % 420 === 0 && Math.random() > 0.35) {
+          this.spawnShootingStar();
+        }
+
+        // Update HUD spin readout every 24 frames
+        if (this.frameCount % 24 === 0) {
+          const spinEl = document.getElementById('hud-spin-speed');
+          if (spinEl) {
+            const degPerFrame = (Math.hypot(this.vX, this.vY) * (180 / Math.PI)).toFixed(3);
+            spinEl.textContent = `${degPerFrame}°/f`;
+          }
+        }
+
+        this.renderFrame(time, this.aCtx, window.innerWidth, window.innerHeight);
+        this.rafId = requestAnimationFrame(step);
+      };
+      this.rafId = requestAnimationFrame(step);
+    }
+
+    private renderFrame(
+      time: number,
+      ctx: CanvasRenderingContext2D,
+      w: number,
+      h: number
+    ) {
+      ctx.clearRect(0, 0, w, h);
+
+      // 0. Draw blurred low-res nebula layer
       ctx.save();
-      ctx.imageSmoothingEnabled = true;
-      ctx.imageSmoothingQuality = 'high';
-      ctx.drawImage(off, 0, 0, W, H);
+      ctx.globalAlpha = 0.88;
+      ctx.drawImage(this.nebulaCanvas, 0, 0, w, h);
       ctx.restore();
 
-      // 2. Render 650 Background Field Stars with Planckian Blackbody Color & Galactic Concentration
-      let seed = 928371;
-      const rand = () => {
-        seed = (seed * 1664525 + 1013904223) >>> 0;
-        return seed / 4294967296;
-      };
+      const cx = Math.cos(this.rotX);
+      const sx = Math.sin(this.rotX);
+      const cy = Math.cos(this.rotY);
+      const sy = Math.sin(this.rotY);
 
-      const palette = light ? SPECTRAL_LIGHT : SPECTRAL_DARK;
-      const starTotal = 650;
+      const maxEdge = Math.max(w, h);
+      const minEdge = Math.min(w, h);
+      const uniRad = maxEdge * 0.72;
+      const uniFov = maxEdge * 1.35;
+      const vaultRad = minEdge * 0.36 * this.zoom;
 
-      for (let i = 0; i < starTotal; i++) {
-        // Concentrate 55% of stars toward the Milky Way galactic band
-        let sx = rand() * W;
-        let sy = rand() * H;
-        if (i < starTotal * 0.55) {
-          const u = (rand() - 0.5) * 1.35;
-          const v = (rand() + rand() + rand() - 1.5) * 0.16;
-          const nx = u * cosA - v * sinA + 0.5;
-          const ny = u * sinA + v * cosA + 0.5;
-          sx = nx * W;
-          sy = ny * H;
-        }
-        if (sx < 0 || sx > W || sy < 0 || sy > H) continue;
+      // 1. Background 3D spherical starfield + Supernova cross-flares
+      for (const s of this.backgroundStars) {
+        const x1 = s.x * cx - s.z * sx;
+        const z1 = s.z * cx + s.x * sx;
+        const y2 = s.y * cy - z1 * sy;
+        const z2 = z1 * cy + s.y * sy;
+        if (z2 < -0.65) continue;
 
-        const spec = palette[Math.floor(rand() * palette.length)];
-        const p = Math.pow(rand(), 3.2); // Power-law luminosity distribution
-        const radius = (0.45 + p * 1.9) * (W > 1200 ? 1.15 : 0.95);
-        const alpha = light ? 0.25 + p * 0.55 : 0.22 + p * 0.72;
+        const scale = uniFov / (uniFov + z2 * uniRad);
+        const sx2D = w * 0.5 + x1 * uniRad * scale;
+        const sy2D = h * 0.5 + y2 * uniRad * scale;
 
+        const phase = s.phase + this.frameCount * s.speed;
+        const tw = Math.pow((Math.sin(phase) + 1) * 0.5, 5);
+        const alpha = (0.14 + tw * 0.68) * Math.min(1, scale);
+        const [r, g, b] = s.rgb;
+
+        ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${alpha.toFixed(3)})`;
         ctx.beginPath();
-        ctx.fillStyle = `rgba(${spec[0]}, ${spec[1]}, ${spec[2]}, ${alpha.toFixed(3)})`;
-        ctx.arc(sx, sy, radius, 0, Math.PI * 2);
+        ctx.arc(sx2D, sy2D, s.r * scale, 0, Math.PI * 2);
         ctx.fill();
 
-        // Add subtle atmospheric halation to top 6% brightest field stars
-        if (p > 0.72) {
-          const halo = ctx.createRadialGradient(sx, sy, 0, sx, sy, radius * 5.5);
-          halo.addColorStop(0, `rgba(${spec[0]}, ${spec[1]}, ${spec[2]}, ${(alpha * 0.35).toFixed(3)})`);
-          halo.addColorStop(1, `rgba(${spec[0]}, ${spec[1]}, ${spec[2]}, 0)`);
-          ctx.fillStyle = halo;
+        if (s.isSupernova && tw > 0.76) {
+          const flareAlpha = (tw - 0.76) * 3.8;
+          const flareSize = s.r * scale * 7.5;
+          ctx.strokeStyle = `rgba(${r}, ${g}, ${b}, ${(flareAlpha * 0.75).toFixed(3)})`;
+          ctx.lineWidth = 0.6;
           ctx.beginPath();
-          ctx.arc(sx, sy, radius * 5.5, 0, Math.PI * 2);
-          ctx.fill();
+          ctx.moveTo(sx2D, sy2D - flareSize);
+          ctx.lineTo(sx2D, sy2D + flareSize);
+          ctx.moveTo(sx2D - flareSize, sy2D);
+          ctx.lineTo(sx2D + flareSize, sy2D);
+          ctx.stroke();
         }
       }
-    }
 
-    private startAstrolabeAwakening() {
-      if (this.animFrameId) cancelAnimationFrame(this.animFrameId);
-      const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-      if (prefersReduced) {
-        this.drawArtefactFrame(1);
-        return;
+      // 2. Ambient floating golden dust motes (from Lovesite vault/page.tsx)
+      for (const d of this.dustMotes) {
+        d.x += d.vx;
+        d.y += d.vy;
+        if (d.x < 0) d.x = 1;
+        if (d.x > 1) d.x = 0;
+        if (d.y < 0) d.y = 1;
+        if (d.y > 1) d.y = 0;
+        d.op += 0.0007 * d.opDir;
+        if (d.op > 0.34 || d.op < 0.05) d.opDir *= -1;
+        ctx.fillStyle = `rgba(232, 222, 181, ${d.op.toFixed(3)})`;
+        ctx.beginPath();
+        ctx.arc(d.x * w, d.y * h, d.size, 0, Math.PI * 2);
+        ctx.fill();
       }
 
-      this.startTime = performance.now();
-      const duration = 3100; // 3.1-second 4-movement Astrolabe Awakening
+      // 3. Dual-chromatic Astrolabe Sphere Rings & Off-Center Glare (vault/page.tsx signature)
+      ctx.save();
+      ctx.lineWidth = 1.1;
+      ctx.strokeStyle = 'rgba(255, 60, 60, 0.24)';
+      ctx.beginPath();
+      ctx.arc(w * 0.5 + 1.2, h * 0.5, vaultRad + 0.6, 0, Math.PI * 2);
+      ctx.stroke();
 
-      const tick = (now: number) => {
-        const progress = Math.min(1, (now - this.startTime) / duration);
-        this.drawArtefactFrame(progress);
-        if (progress < 1) {
-          this.animFrameId = requestAnimationFrame(tick);
-        } else {
-          this.animFrameId = null; // 0% GPU idle once complete
-        }
-      };
+      ctx.strokeStyle = 'rgba(65, 160, 255, 0.24)';
+      ctx.beginPath();
+      ctx.arc(w * 0.5 - 1.2, h * 0.5, vaultRad - 0.6, 0, Math.PI * 2);
+      ctx.stroke();
 
-      this.animFrameId = requestAnimationFrame(tick);
-    }
+      ctx.strokeStyle = 'rgba(232, 222, 181, 0.24)';
+      ctx.beginPath();
+      ctx.arc(w * 0.5, h * 0.5, vaultRad, 0, Math.PI * 2);
+      ctx.stroke();
 
-    // Layer 3 & 4: Mythological Artefact Cartography & 4-Movement Choreography
-    private drawArtefactFrame(progress: number) {
-      const ctx = this.artefactCanvas.getContext('2d');
-      if (!ctx || !this.currentConstellation) return;
+      // Inner dashed ecliptic meridian circle
+      ctx.setLineDash([3, 7]);
+      ctx.strokeStyle = 'rgba(232, 222, 181, 0.14)';
+      ctx.beginPath();
+      ctx.arc(w * 0.5, h * 0.5, vaultRad * 0.72, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.setLineDash([]);
 
-      const W = this.artefactCanvas.width;
-      const H = this.artefactCanvas.height;
-      const dpr = Math.min(window.devicePixelRatio || 1, 2);
-      ctx.clearRect(0, 0, W, H);
+      const glare = ctx.createRadialGradient(
+        w * 0.5 - vaultRad * 0.3,
+        h * 0.5 - vaultRad * 0.3,
+        0,
+        w * 0.5 - vaultRad * 0.3,
+        h * 0.5 - vaultRad * 0.3,
+        vaultRad * 0.85
+      );
+      glare.addColorStop(0, 'rgba(255, 255, 255, 0.035)');
+      glare.addColorStop(1, 'transparent');
+      ctx.fillStyle = glare;
+      ctx.beginPath();
+      ctx.arc(w * 0.5, h * 0.5, vaultRad, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
 
+      if (!this.currentConstellation) return;
       const c = this.currentConstellation;
-      const light = this.isLightMode;
-      const palette = light ? SPECTRAL_LIGHT : SPECTRAL_DARK;
 
-      // Movement timings (0..1)
-      const easeOutQuart = (t: number) => 1 - Math.pow(1 - Math.max(0, Math.min(1, t)), 4);
-      const m1Stars = easeOutQuart(progress / 0.35);
-      const m2Survey = easeOutQuart((progress - 0.14) / 0.45);
-      const m3Edges = easeOutQuart((progress - 0.32) / 0.52);
-      const m4Labels = easeOutQuart((progress - 0.58) / 0.42);
+      // Project constellation stars with subtle 3D spherical parallax offset
+      const padX = w * 0.22;
+      const padY = h * 0.2;
+      const drawW = w - padX * 2;
+      const drawH = h - padY * 2;
 
-      // Project constellation [0..10000] into viewport safe zone (auto-rotate 90deg on portrait mobile)
-      const isPortrait = H > W * 1.1;
-      const padX = W * (isPortrait ? 0.12 : 0.2);
-      const padY = H * (isPortrait ? 0.18 : 0.16);
-      const availW = W - padX * 2;
-      const availH = H - padY * 2;
+      const rotOffsetX = Math.sin(this.rotX * 1.4) * (vaultRad * 0.28);
+      const rotOffsetY = Math.sin(this.rotY * 1.4) * (vaultRad * 0.28);
 
-      const pts = c.stars.map((s: number[]) => {
-        const nx = s[0] / 10000;
-        const ny = s[1] / 10000;
-        const px = isPortrait ? padX + ny * availW : padX + nx * availW;
-        const py = isPortrait ? padY + (1 - nx) * availH : padY + ny * availH;
-        return { x: px, y: py, mag: s[2], specIdx: s[3] ?? 2 };
+      let nextHovered = -1;
+      this.projectedPrincipalStars = c.stars.map((s: [number, number, number, number], idx: number) => {
+        const depthZ = Math.cos(idx * 1.3 + this.rotX);
+        const px = padX + s[0] * drawW + rotOffsetX * (0.65 + (idx % 3) * 0.18);
+        const py = padY + s[1] * drawH + rotOffsetY * (0.65 + (idx % 3) * 0.18);
+        const rgb = bvToPlanckianRgb(s[3]);
+
+        if (!this.isDragging && Math.hypot(px - this.lastPointer.x, py - this.lastPointer.y) < 22) {
+          nextHovered = idx;
+        }
+
+        return {
+          idx,
+          x: px,
+          y: py,
+          z: depthZ,
+          mag: s[2],
+          bv: s[3],
+          rgb,
+        };
+      });
+      this.hoveredStarIdx = nextHovered;
+
+      // 4. Intaglio Silverpoint Constellation Edges with Independent Midpoint Glimmer & 9px Halo Gap
+      const totalEdges = c.edges.length;
+      const activeEdges = this.drawProgress * totalEdges;
+
+      c.edges.forEach((edge: [number, number], idx: number) => {
+        if (idx > activeEdges) return;
+        const p1 = this.projectedPrincipalStars[edge[0]];
+        const p2 = this.projectedPrincipalStars[edge[1]];
+        if (!p1 || !p2) return;
+
+        const segProgress = Math.min(1, activeEdges - idx);
+        const dx = p2.x - p1.x;
+        const dy = p2.y - p1.y;
+        const dist = Math.hypot(dx, dy);
+        const gap = 9;
+        if (dist <= gap * 2.2) return;
+
+        const ux = dx / dist;
+        const uy = dy / dist;
+        const sx0 = p1.x + ux * gap;
+        const sy0 = p1.y + uy * gap;
+        const fullEx = p2.x - ux * gap;
+        const fullEy = p2.y - uy * gap;
+
+        const ex = sx0 + (fullEx - sx0) * segProgress;
+        const ey = sy0 + (fullEy - sy0) * segProgress;
+
+        // Independent per-line glimmer (vault/page.tsx aesthetic)
+        const linePhase = (edge[0] * 2.4 + edge[1] * 1.7) % (Math.PI * 2);
+        const glimmer = Math.pow((Math.sin(this.frameCount * 0.024 + linePhase) + 1) * 0.5, 2);
+
+        const grad = ctx.createLinearGradient(sx0, sy0, ex, ey);
+        const baseA = (0.28 + glimmer * 0.12).toFixed(3);
+        const midA = (0.52 + glimmer * 0.34).toFixed(3);
+        grad.addColorStop(0, `rgba(218, 195, 142, ${baseA})`);
+        grad.addColorStop(0.5, `rgba(255, 238, 195, ${midA})`);
+        grad.addColorStop(1, `rgba(218, 195, 142, ${baseA})`);
+
+        ctx.save();
+        ctx.strokeStyle = grad;
+        ctx.lineWidth = 0.85 + glimmer * 0.55;
+        ctx.beginPath();
+        ctx.moveTo(sx0, sy0);
+        ctx.lineTo(ex, ey);
+        ctx.stroke();
+        ctx.restore();
       });
 
-      if (pts.length === 0) return;
+      // 5. Render Principal Stars with 3-Zone Airy Disk + Rotating 4-Corner Target Reticle on Hover/Select
+      this.projectedPrincipalStars.forEach((p, idx) => {
+        const [r, g, b] = p.rgb;
+        const baseRadius = Math.max(1.8, 4.3 - p.mag * 0.72);
+        const isHov = idx === this.hoveredStarIdx;
+        const isSel = idx === this.selectedStarIdx;
+        const radius = baseRadius * (isSel ? 1.55 : isHov ? 1.3 : 1);
 
-      // Geometric barycenter
-      const cx = pts.reduce((acc: number, p: any) => acc + p.x, 0) / pts.length;
-      const cy = pts.reduce((acc: number, p: any) => acc + p.y, 0) / pts.length;
-
-      // Ink colors: Champagne Silverpoint (Dark) vs Oxidized Copperplate & Vermilion (Light)
-      const inkRgb = light ? '72, 52, 34' : '226, 214, 188';
-      const accentRgb = light ? '168, 52, 32' : '212, 188, 136';
-
-      // 1. Movement II: Sweeping Great-Circle Declination Arc & Vernier Ticks
-      if (m2Survey > 0.01) {
-        ctx.save();
-        const arcRadius = Math.max(W, H) * 1.15;
-        const arcCenterX = cx - arcRadius * 0.28;
-        const arcCenterY = cy + arcRadius * 0.94;
-        const baseAngle = -Math.PI * 0.41;
-        const sweep = 0.34 * m2Survey;
-
-        ctx.strokeStyle = `rgba(${inkRgb}, ${(0.18 * m2Survey).toFixed(3)})`;
-        ctx.lineWidth = 0.85 * dpr;
-        ctx.beginPath();
-        ctx.arc(arcCenterX, arcCenterY, arcRadius, baseAngle - sweep, baseAngle + sweep);
-        ctx.stroke();
-
-        // Graduated 1° vernier ticks along the Great Circle
-        const tickCount = 24;
-        for (let t = -tickCount; t <= tickCount; t++) {
-          const a = baseAngle + (t / tickCount) * sweep;
-          const isMajor = t % 5 === 0;
-          const len = (isMajor ? 7 : 3.5) * dpr;
-          const x1 = arcCenterX + Math.cos(a) * (arcRadius - len);
-          const y1 = arcCenterY + Math.sin(a) * (arcRadius - len);
-          const x2 = arcCenterX + Math.cos(a) * (arcRadius + len);
-          const y2 = arcCenterY + Math.sin(a) * (arcRadius + len);
-
-          ctx.strokeStyle = `rgba(${accentRgb}, ${((isMajor ? 0.32 : 0.16) * m2Survey).toFixed(3)})`;
-          ctx.beginPath();
-          ctx.moveTo(x1, y1);
-          ctx.lineTo(x2, y2);
-          ctx.stroke();
-        }
-        ctx.restore();
-      }
-
-      // 2. Ghost Mythos Construction Chords (Dotted geometric proof lines)
-      if (m3Edges > 0.1 && Array.isArray(c.ghostChords)) {
-        ctx.save();
-        ctx.setLineDash([1.5 * dpr, 5.5 * dpr]);
-        ctx.lineWidth = 0.8 * dpr;
-        ctx.strokeStyle = `rgba(${accentRgb}, ${(0.2 * m3Edges).toFixed(3)})`;
-        for (const [u, v] of c.ghostChords) {
-          if (!pts[u] || !pts[v]) continue;
-          ctx.beginPath();
-          ctx.moveTo(pts[u].x, pts[u].y);
-          ctx.lineTo(pts[v].x, pts[v].y);
-          ctx.stroke();
-        }
-        ctx.restore();
-      }
-
-      // 3. Movement III: Primary Intaglio Silverpoint Edges with 9px "Breathing Halo" Gap
-      if (m3Edges > 0.01) {
-        const gap = 10 * dpr;
-        ctx.save();
-        for (let eIdx = 0; eIdx < c.edges.length; eIdx++) {
-          const [u, v] = c.edges[eIdx];
-          const pA = pts[u];
-          const pB = pts[v];
-          if (!pA || !pB) continue;
-
-          const stagger = Math.max(0, Math.min(1, (m3Edges * c.edges.length - eIdx * 0.55)));
-          if (stagger <= 0) continue;
-
-          const dx = pB.x - pA.x;
-          const dy = pB.y - pA.y;
-          const dist = Math.hypot(dx, dy);
-          if (dist <= gap * 2.2) continue;
-
-          const ux = dx / dist;
-          const uy = dy / dist;
-          const startX = pA.x + ux * gap;
-          const startY = pA.y + uy * gap;
-          const drawLen = (dist - gap * 2) * stagger;
-          const endX = startX + ux * drawLen;
-          const endY = startY + uy * drawLen;
-
-          // Primary silverpoint stroke
-          ctx.strokeStyle = `rgba(${inkRgb}, ${(0.62 * stagger).toFixed(3)})`;
-          ctx.lineWidth = 1.15 * dpr;
-          ctx.beginPath();
-          ctx.moveTo(startX, startY);
-          ctx.lineTo(endX, endY);
-          ctx.stroke();
-
-          // Parallel intaglio copperplate shadow hairline offset by 1.8px
-          const nx = -uy * 1.8 * dpr;
-          const ny = ux * 1.8 * dpr;
-          ctx.strokeStyle = `rgba(${accentRgb}, ${(0.18 * stagger).toFixed(3)})`;
-          ctx.lineWidth = 0.65 * dpr;
-          ctx.beginPath();
-          ctx.moveTo(startX + nx, startY + ny);
-          ctx.lineTo(endX + nx, endY + ny);
-          ctx.stroke();
-        }
-        ctx.restore();
-      }
-
-      // 4. Movement I & II & IV: Constellation Stars (3-Zone Airy Disk + Astrolabe Reticles + Bayer Symbols)
-      pts.forEach((pt: any, idx: number) => {
-        const spec = palette[pt.specIdx % palette.length];
-        const lum = Math.max(0.35, 1.55 - pt.mag * 0.35) * m1Stars;
-        const coreR = (1.6 + lum * 1.5) * dpr;
-        const haloR = (12 + lum * 15) * dpr;
-
-        // Zone 3: Exponential Atmospheric Halation
-        const halo = ctx.createRadialGradient(pt.x, pt.y, 0, pt.x, pt.y, haloR);
-        halo.addColorStop(0, `rgba(${spec[0]}, ${spec[1]}, ${spec[2]}, ${(0.48 * m1Stars).toFixed(3)})`);
-        halo.addColorStop(0.3, `rgba(${spec[0]}, ${spec[1]}, ${spec[2]}, ${(0.16 * m1Stars).toFixed(3)})`);
-        halo.addColorStop(1, `rgba(${spec[0]}, ${spec[1]}, ${spec[2]}, 0)`);
+        // Zone C: Wide atmospheric halation
+        const haloRadius = radius * 7.5;
+        const halo = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, haloRadius);
+        halo.addColorStop(0, `rgba(${r}, ${g}, ${b}, ${isSel || isHov ? 0.52 : 0.34})`);
+        halo.addColorStop(0.4, `rgba(${r}, ${g}, ${b}, 0.09)`);
+        halo.addColorStop(1, `rgba(${r}, ${g}, ${b}, 0)`);
         ctx.fillStyle = halo;
         ctx.beginPath();
-        ctx.arc(pt.x, pt.y, haloR, 0, Math.PI * 2);
+        ctx.arc(p.x, p.y, haloRadius, 0, Math.PI * 2);
         ctx.fill();
 
-        // Zone 1: Saturated Airy Core
-        ctx.fillStyle = light
-          ? `rgba(${spec[0]}, ${spec[1]}, ${spec[2]}, ${m1Stars.toFixed(3)})`
-          : `rgba(255, 252, 245, ${m1Stars.toFixed(3)})`;
-        ctx.beginPath();
-        ctx.arc(pt.x, pt.y, coreR, 0, Math.PI * 2);
-        ctx.fill();
-
-        // Fraunhofer Diffraction Spikes on Alpha (0) and Beta (1) stars
-        if (idx <= 1 && m1Stars > 0.2) {
-          const spikeLen = (idx === 0 ? 22 : 14) * dpr * m1Stars;
-          const spikeAngle = 0.26; // 15 deg spider-vane angle
-          ctx.save();
-          ctx.translate(pt.x, pt.y);
-          ctx.rotate(spikeAngle);
-          ctx.strokeStyle = `rgba(${inkRgb}, ${(0.45 * m1Stars).toFixed(3)})`;
-          ctx.lineWidth = 0.65 * dpr;
+        // Zone B: Fraunhofer diffraction spikes for bright alpha/beta stars (mag < 2.2)
+        if (p.mag < 2.2 || isHov || isSel) {
+          const spikeLen = radius * (isSel ? 9.5 : 6.8);
+          ctx.strokeStyle = `rgba(${r}, ${g}, ${b}, ${isSel || isHov ? 0.65 : 0.42})`;
+          ctx.lineWidth = 0.65;
           ctx.beginPath();
-          ctx.moveTo(-spikeLen, 0);
-          ctx.lineTo(spikeLen, 0);
-          ctx.moveTo(0, -spikeLen);
-          ctx.lineTo(0, spikeLen);
+          ctx.moveTo(p.x - spikeLen, p.y);
+          ctx.lineTo(p.x + spikeLen, p.y);
+          ctx.moveTo(p.x, p.y - spikeLen);
+          ctx.lineTo(p.x, p.y + spikeLen);
           ctx.stroke();
-          ctx.restore();
         }
 
-        // Concentric Astrolabe Reticles around Alpha and Beta stars
-        if (idx <= 1 && m2Survey > 0.05) {
-          ctx.save();
-          ctx.translate(pt.x, pt.y);
-          ctx.rotate((1 - m2Survey) * 0.78);
-          ctx.strokeStyle = `rgba(${accentRgb}, ${(0.45 * m2Survey).toFixed(3)})`;
-          ctx.lineWidth = 0.8 * dpr;
-          ctx.beginPath();
-          ctx.arc(0, 0, 7.5 * dpr, 0, Math.PI * 2);
-          ctx.stroke();
+        // Zone A: Pinpoint incandescent core
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, radius * 0.72, 0, Math.PI * 2);
+        ctx.fill();
 
-          if (idx === 0) {
-            ctx.setLineDash([2 * dpr, 3.5 * dpr]);
+        // Rotating 4-Corner Target Reticle on Hovered or Selected Star (from vault/page.tsx lines 685-693)
+        if (isHov || isSel) {
+          const tSize = 13;
+          const rot = this.frameCount * 0.035;
+          ctx.save();
+          ctx.translate(p.x, p.y);
+          ctx.rotate(rot);
+          ctx.strokeStyle = 'rgba(232, 222, 181, 0.92)';
+          ctx.lineWidth = 1.1;
+          for (let corner = 0; corner < 4; corner++) {
             ctx.beginPath();
-            ctx.arc(0, 0, 15.5 * dpr, 0, Math.PI * 2);
+            ctx.moveTo(-tSize, -tSize + tSize * 0.48);
+            ctx.lineTo(-tSize, -tSize);
+            ctx.lineTo(-tSize + tSize * 0.48, -tSize);
             ctx.stroke();
+            ctx.rotate(Math.PI * 0.5);
           }
           ctx.restore();
+        } else if (idx === 0 || idx === 1) {
+          // Subtle astrolabe ring around Alpha & Beta stars
+          ctx.strokeStyle = 'rgba(218, 195, 142, 0.34)';
+          ctx.lineWidth = 0.6;
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, 6.5, 0, Math.PI * 2);
+          ctx.stroke();
         }
 
-        // Bayer Greek Letter Designation (α, β, γ, δ...)
-        if (m4Labels > 0.05 && idx < GREEK_BAYER.length) {
-          ctx.save();
-          ctx.font = `italic ${Math.round(12 * dpr)}px Georgia, "Instrument Serif", serif`;
-          ctx.fillStyle = `rgba(${inkRgb}, ${(0.78 * m4Labels).toFixed(3)})`;
-          ctx.fillText(GREEK_BAYER[idx], pt.x + 10 * dpr, pt.y - 8 * dpr);
-          ctx.restore();
+        // Bayer Greek letter designation
+        if (idx < BAYER_GREEK.length && this.drawProgress > 0.35) {
+          ctx.fillStyle = isHov || isSel ? 'rgba(232, 222, 181, 1)' : 'rgba(218, 195, 142, 0.72)';
+          ctx.font = '11px ui-monospace, SFMono-Regular, Menlo, monospace';
+          ctx.fillText(BAYER_GREEK[idx], p.x + 10, p.y - 8);
         }
+      });
+
+      // 6. Shooting Stars / Bolide Transits (from Lovesite vault/page.tsx lines 721-749)
+      this.shootingStars = this.shootingStars.filter((star) => {
+        const age = this.frameCount - star.born;
+        const dur = 56;
+        if (age > dur) return false;
+        const prog = age / dur;
+        const sx0 = star.x * w;
+        const sy0 = star.y * h;
+        const travel = prog * w * 0.52;
+        const ex = sx0 - travel * 0.76;
+        const ey = sy0 + travel * 0.64;
+        const op = prog < 0.2 ? prog / 0.2 : prog > 0.75 ? 1 - (prog - 0.75) / 0.25 : 1;
+        const tailLen = 175 * Math.min(1, prog * 4);
+        const tx = ex + tailLen * 0.76;
+        const ty = ey - tailLen * 0.64;
+
+        const grad = ctx.createLinearGradient(tx, ty, ex, ey);
+        grad.addColorStop(0, 'transparent');
+        grad.addColorStop(0.4, `rgba(232, 222, 181, ${(op * 0.42).toFixed(3)})`);
+        grad.addColorStop(1, `rgba(255, 255, 255, ${op.toFixed(3)})`);
+        ctx.beginPath();
+        ctx.moveTo(tx, ty);
+        ctx.lineTo(ex, ey);
+        ctx.strokeStyle = grad;
+        ctx.lineWidth = 1.75;
+        ctx.lineCap = 'round';
+        ctx.stroke();
+
+        const hg = ctx.createRadialGradient(ex, ey, 0, ex, ey, 8);
+        hg.addColorStop(0, `rgba(255, 255, 255, ${op.toFixed(3)})`);
+        hg.addColorStop(0.4, `rgba(232, 222, 181, ${(op * 0.6).toFixed(3)})`);
+        hg.addColorStop(1, 'transparent');
+        ctx.fillStyle = hg;
+        ctx.beginPath();
+        ctx.arc(ex, ey, 8, 0, Math.PI * 2);
+        ctx.fill();
+        return true;
       });
     }
 
-    // Export high-resolution souvenir Star Chart PNG with title & coordinates stamp
-    private exportStarChartPng() {
+    private exportHighResChart() {
       if (!this.currentConstellation) return;
-      const W = this.nebulaCanvas.width;
-      const H = this.nebulaCanvas.height;
-      const dpr = Math.min(window.devicePixelRatio || 1, 2);
-
-      const out = document.createElement('canvas');
-      out.width = W;
-      out.height = H;
-      const ctx = out.getContext('2d')!;
-
-      ctx.drawImage(this.nebulaCanvas, 0, 0);
-      ctx.drawImage(this.artefactCanvas, 0, 0);
-
-      // Stamp archival border and typography
       const c = this.currentConstellation;
-      const ink = this.isLightMode ? '#241c14' : '#efe6d5';
-      ctx.strokeStyle = ink;
-      ctx.globalAlpha = 0.35;
-      ctx.lineWidth = 1 * dpr;
-      ctx.strokeRect(20 * dpr, 20 * dpr, W - 40 * dpr, H - 40 * dpr);
+      const off = document.createElement('canvas');
+      off.width = 2400;
+      off.height = 1500;
+      const ctx = off.getContext('2d')!;
 
-      ctx.globalAlpha = 0.9;
-      ctx.fillStyle = ink;
-      ctx.font = `500 ${Math.round(22 * dpr)}px sans-serif`;
-      ctx.fillText(c.name.toUpperCase(), 42 * dpr, H - 64 * dpr);
+      ctx.fillStyle = '#07090e';
+      ctx.fillRect(0, 0, off.width, off.height);
 
-      ctx.font = `${Math.round(11 * dpr)}px monospace`;
-      ctx.globalAlpha = 0.7;
+      const savedProgress = this.drawProgress;
+      this.drawProgress = 1;
+      this.renderFrame(performance.now(), ctx, off.width, off.height);
+      this.drawProgress = savedProgress;
+
+      ctx.strokeStyle = 'rgba(218, 195, 142, 0.4)';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(48, 48, off.width - 96, off.height - 96);
+
+      ctx.fillStyle = '#f2efe9';
+      ctx.font = '38px Georgia, serif';
+      ctx.fillText(`${c.name} — ${c.english}`, 96, off.height - 130);
+
+      ctx.fillStyle = '#d4af37';
+      ctx.font = '22px ui-monospace, monospace';
       ctx.fillText(
-        `${c.id} · RA ${c.ra} · DEC ${c.dec} · DUNCAN R. CORDRY OBSERVATORY ARCHIVE`,
-        42 * dpr,
-        H - 42 * dpr
+        `DUNCAN R. CORDRY OBSERVATORY ARCHIVE · ${c.id} · RA ${c.ra} · DEC ${c.dec} (EPOCH J2000.0)`,
+        96,
+        off.height - 88
       );
 
-      const url = out.toDataURL('image/png');
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${c.id.toLowerCase()}-${c.name.toLowerCase().replace(/\s+/g, '-')}.png`;
-      a.click();
+      off.toBlob((blob) => {
+        if (!blob) return;
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${c.id}-${c.name.toLowerCase().replace(/\s+/g, '-')}.png`;
+        a.click();
+        setTimeout(() => URL.revokeObjectURL(url), 3000);
+      }, 'image/png');
     }
   }
 

@@ -13,73 +13,258 @@ const { publications, books, classes } = Astro.props;
 ---
 
 <drc-workspace class="academic-shell">
+  <div class="workspace-light-spill" aria-hidden="true"></div>
   <PublicationsWorkspace publications={publications} />
   <BooksWorkspace books={books} />
   <ClassesWorkspace classes={classes} />
 </drc-workspace>
 
 <script>
+  const VIEW_ORDER = ['view-publications', 'view-books', 'view-classes'] as const;
+  const CHANNEL_LABELS = [
+    '01 // PUBLICATIONS',
+    '02 // BOOKS',
+    '03 // CLASSES',
+  ];
+
+  function scrambleElementText(el: HTMLElement | null, target: string) {
+    if (!el) return;
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789//·';
+    let iter = 0;
+    const interval = window.setInterval(() => {
+      el.textContent = target
+        .split('')
+        .map((ch, idx) => {
+          if (ch === ' ') return ' ';
+          if (idx < iter) return target[idx];
+          return chars[Math.floor(Math.random() * chars.length)];
+        })
+        .join('');
+      if (iter >= target.length) {
+        clearInterval(interval);
+        el.textContent = target;
+      }
+      iter += 0.8;
+    }, 22);
+  }
+
   class DrcWorkspace extends HTMLElement {
+    private activeViewIndex = 0;
+    private scrollCharge = 0;
+    private isTransitionLocked = false;
+    private chargeDecayTimer: number | null = null;
+
     connectedCallback() {
-      this.initViewTabs();
-      this.initSidebarCollapse();
+      this.initViewTabsAndJumpBridges();
+      this.initSeamlessSectionScroll();
+      this.initSidebarCollapseInsidePane();
       this.initItemSelectors();
       this.initSearchAndFilters();
       this.initMobileStackDrillDown();
       this.initScrollspyFallback();
+      this.initAmbientLightSpill();
     }
 
-    // 1. Switch between PUBLICATIONS, BOOKS, and CLASSES via content-visibility: hidden
-    private initViewTabs() {
+    // Switch active workspace view (0 = Publications, 1 = Books, 2 = Classes)
+    private switchToViewIndex(nextIndex: number, direction: 'down' | 'up' | 'jump' = 'jump') {
+      if (nextIndex < 0 || nextIndex >= VIEW_ORDER.length) return;
+      if (nextIndex === this.activeViewIndex && direction !== 'jump') return;
+
+      this.activeViewIndex = nextIndex;
+      this.scrollCharge = 0;
+      this.updateChargeMeters(0);
+
+      const targetId = VIEW_ORDER[nextIndex];
       const navButtons = document.querySelectorAll<HTMLButtonElement>('.nav-strip-btn[data-target-view]');
       const views = this.querySelectorAll<HTMLElement>('.spa-view');
 
+      navButtons.forEach((b) => {
+        b.setAttribute('aria-current', b.dataset.targetView === targetId ? 'page' : 'false');
+      });
+
+      // Update NavStrip horizontal scrub & cathode channel readout
+      const navTrack = document.getElementById('nav-strip-track');
+      if (navTrack) {
+        const scrubPx = -nextIndex * 28;
+        navTrack.style.setProperty('--nav-scrub-offset', `${scrubPx}px`);
+      }
+
+      const flowFill = document.getElementById('nav-scroll-flow-fill');
+      if (flowFill) {
+        flowFill.style.width = `${((nextIndex + 1) / VIEW_ORDER.length) * 100}%`;
+      }
+
+      const cathodeEl = document.getElementById('nav-cathode-status');
+      scrambleElementText(cathodeEl, CHANNEL_LABELS[nextIndex]);
+
+      views.forEach((view) => {
+        const isTarget = view.id === targetId;
+        view.classList.toggle('inactive', !isTarget);
+        view.setAttribute('aria-hidden', isTarget ? 'false' : 'true');
+
+        if (isTarget) {
+          view.dataset.enterDir = direction;
+          const primaryReader = view.querySelector<HTMLElement>('[data-primary-reader]');
+          if (primaryReader) {
+            if (direction === 'down' || direction === 'jump') {
+              primaryReader.scrollTop = 0;
+            }
+          }
+          const activeEyebrow = view.querySelector<HTMLElement>(
+            ':not(.entry-hidden) [data-scramble-eyebrow]'
+          );
+          if (activeEyebrow && activeEyebrow.textContent) {
+            scrambleElementText(activeEyebrow, activeEyebrow.textContent.trim());
+          }
+        }
+      });
+    }
+
+    // 1. NavStrip buttons & in-pane horizon jump bridges
+    private initViewTabsAndJumpBridges() {
+      const navButtons = document.querySelectorAll<HTMLButtonElement>('.nav-strip-btn[data-target-view]');
       navButtons.forEach((btn) => {
         btn.addEventListener('click', () => {
           const targetId = btn.dataset.targetView;
-          if (!targetId) return;
-
-          navButtons.forEach((b) => {
-            b.setAttribute('aria-current', b === btn ? 'page' : 'false');
-          });
-
-          views.forEach((view) => {
-            const isTarget = view.id === targetId;
-            view.classList.toggle('inactive', !isTarget);
-            view.setAttribute('aria-hidden', isTarget ? 'false' : 'true');
-            if (isTarget) {
-              view.focus({ preventScroll: true });
-            }
-          });
-
-          // If user clicks a nav strip item while on Stage 1 or 2, scroll cleanly into Stage 3
+          const idx = VIEW_ORDER.indexOf(targetId as any);
+          if (idx !== -1) {
+            this.switchToViewIndex(idx, 'jump');
+          }
           const stage3 = document.getElementById('stage-3');
           if (stage3 && document.body.dataset.stage !== 'stage-3') {
-            stage3.scrollIntoView({ behavior: 'auto' });
+            stage3.scrollIntoView({ behavior: 'smooth' });
+          }
+        });
+      });
+
+      this.querySelectorAll<HTMLElement>('[data-jump-view]').forEach((bridge) => {
+        bridge.addEventListener('click', () => {
+          const targetId = bridge.dataset.jumpView;
+          const idx = VIEW_ORDER.indexOf(targetId as any);
+          if (idx !== -1) {
+            this.switchToViewIndex(idx, idx > this.activeViewIndex ? 'down' : 'up');
           }
         });
       });
     }
 
-    // 2. Desktop collapsible left sidebar (toggles inert so tab focus skips hidden pane)
-    private initSidebarCollapse() {
-      const toggleBtn = document.getElementById('btn-toggle-sidebar');
-      if (!toggleBtn) return;
-
-      toggleBtn.addEventListener('click', () => {
-        const isCollapsed = toggleBtn.getAttribute('aria-pressed') === 'true';
-        const nextCollapsed = !isCollapsed;
-        toggleBtn.setAttribute('aria-pressed', String(nextCollapsed));
-
-        this.querySelectorAll<HTMLElement>('.workspace-split').forEach((split) => {
-          split.dataset.sidebarCollapsed = String(nextCollapsed);
-          const leftPane = split.querySelector<HTMLElement>('.workspace-pane-left');
-          leftPane?.toggleAttribute('inert', nextCollapsed);
-        });
+    private updateChargeMeters(ratio: number) {
+      const pct = `${Math.min(100, Math.max(0, ratio * 100)).toFixed(1)}%`;
+      this.querySelectorAll<HTMLElement>('[data-scroll-charge-fill]').forEach((el) => {
+        el.style.width = pct;
       });
     }
 
-    // 3. Master-detail item selection + Mobile horizontal drill-down scroll
+    // 2. Seamless Scroll Progression (Publications -> Books -> Classes & back up without clicking)
+    private initSeamlessSectionScroll() {
+      const THRESHOLD = 95;
+
+      this.addEventListener(
+        'wheel',
+        (e: WheelEvent) => {
+          if (this.isTransitionLocked) {
+            e.preventDefault();
+            return;
+          }
+
+          const activeView = this.querySelector<HTMLElement>(`#${VIEW_ORDER[this.activeViewIndex]}`);
+          if (!activeView) return;
+
+          // Determine which scrollable pane the user is scrolling inside (default to primary right reader)
+          const targetEl = e.target as HTMLElement | null;
+          const scrollPane =
+            targetEl?.closest<HTMLElement>('[data-scrollable-pane]') ||
+            activeView.querySelector<HTMLElement>('[data-primary-reader]');
+
+          if (!scrollPane) return;
+
+          const { scrollTop, scrollHeight, clientHeight } = scrollPane;
+          const atBottom = scrollTop + clientHeight >= scrollHeight - 6;
+          const atTop = scrollTop <= 4;
+
+          // Update continuous progress bar inside NavStrip based on current scroll + view index
+          const maxScroll = Math.max(1, scrollHeight - clientHeight);
+          const localProgress = Math.min(1, Math.max(0, scrollTop / maxScroll));
+          const totalProgress = ((this.activeViewIndex + localProgress) / VIEW_ORDER.length) * 100;
+          const flowFill = document.getElementById('nav-scroll-flow-fill');
+          if (flowFill) {
+            flowFill.style.width = `${Math.max(12, totalProgress).toFixed(1)}%`;
+          }
+
+          // Case A: Scrolling down at bottom boundary -> Advance to next section (Publications -> Books -> Classes)
+          if (e.deltaY > 0 && atBottom && this.activeViewIndex < VIEW_ORDER.length - 1) {
+            e.preventDefault();
+            this.scrollCharge = Math.max(0, this.scrollCharge) + e.deltaY;
+            this.updateChargeMeters(this.scrollCharge / THRESHOLD);
+
+            if (this.chargeDecayTimer) clearTimeout(this.chargeDecayTimer);
+            this.chargeDecayTimer = window.setTimeout(() => {
+              this.scrollCharge = 0;
+              this.updateChargeMeters(0);
+            }, 320);
+
+            if (this.scrollCharge >= THRESHOLD) {
+              this.isTransitionLocked = true;
+              this.switchToViewIndex(this.activeViewIndex + 1, 'down');
+              setTimeout(() => {
+                this.isTransitionLocked = false;
+              }, 520);
+            }
+            return;
+          }
+
+          // Case B: Scrolling up at top boundary of Books or Classes -> Return to previous section
+          if (e.deltaY < 0 && atTop && this.activeViewIndex > 0) {
+            e.preventDefault();
+            this.scrollCharge = Math.min(0, this.scrollCharge) + e.deltaY;
+            this.updateChargeMeters(Math.abs(this.scrollCharge) / THRESHOLD);
+
+            if (this.chargeDecayTimer) clearTimeout(this.chargeDecayTimer);
+            this.chargeDecayTimer = window.setTimeout(() => {
+              this.scrollCharge = 0;
+              this.updateChargeMeters(0);
+            }, 320);
+
+            if (Math.abs(this.scrollCharge) >= THRESHOLD) {
+              this.isTransitionLocked = true;
+              this.switchToViewIndex(this.activeViewIndex - 1, 'up');
+              setTimeout(() => {
+                this.isTransitionLocked = false;
+              }, 520);
+            }
+            return;
+          }
+
+          // Otherwise reset boundary charge
+          if (this.scrollCharge !== 0) {
+            this.scrollCharge = 0;
+            this.updateChargeMeters(0);
+          }
+        },
+        { passive: false }
+      );
+    }
+
+    // 3. In-Pane Collapse & Re-Open Index Controls
+    private initSidebarCollapseInsidePane() {
+      const setCollapsed = (collapsed: boolean) => {
+        this.querySelectorAll<HTMLElement>('.workspace-split').forEach((split) => {
+          split.dataset.sidebarCollapsed = String(collapsed);
+          const leftPane = split.querySelector<HTMLElement>('.workspace-pane-left');
+          leftPane?.toggleAttribute('inert', collapsed);
+        });
+      };
+
+      this.querySelectorAll<HTMLButtonElement>('[data-collapse-index]').forEach((btn) => {
+        btn.addEventListener('click', () => setCollapsed(true));
+      });
+
+      this.querySelectorAll<HTMLButtonElement>('[data-expand-index]').forEach((btn) => {
+        btn.addEventListener('click', () => setCollapsed(false));
+      });
+    }
+
+    // 4. Master-detail item selection + Title Scramble + Mobile horizontal drill-down scroll
     private initItemSelectors() {
       const drillToRightPane = (splitContainer: HTMLElement | null) => {
         if (!splitContainer) return;
@@ -96,7 +281,12 @@ const { publications, books, classes } = Astro.props;
             b.setAttribute('aria-current', b === btn ? 'true' : 'false')
           );
           this.querySelectorAll<HTMLElement>('[data-pub-entry]').forEach((entry) => {
-            entry.classList.toggle('entry-hidden', entry.dataset.pubEntry !== id);
+            const isMatch = entry.dataset.pubEntry === id;
+            entry.classList.toggle('entry-hidden', !isMatch);
+            if (isMatch) {
+              const eyebrow = entry.querySelector<HTMLElement>('[data-scramble-eyebrow]');
+              if (eyebrow?.textContent) scrambleElementText(eyebrow, eyebrow.textContent.trim());
+            }
           });
           drillToRightPane(btn.closest('.workspace-split'));
         });
@@ -110,7 +300,12 @@ const { publications, books, classes } = Astro.props;
             b.setAttribute('aria-current', b === btn ? 'true' : 'false')
           );
           this.querySelectorAll<HTMLElement>('[data-book-entry]').forEach((entry) => {
-            entry.classList.toggle('entry-hidden', entry.dataset.bookEntry !== id);
+            const isMatch = entry.dataset.bookEntry === id;
+            entry.classList.toggle('entry-hidden', !isMatch);
+            if (isMatch) {
+              const eyebrow = entry.querySelector<HTMLElement>('[data-scramble-eyebrow]');
+              if (eyebrow?.textContent) scrambleElementText(eyebrow, eyebrow.textContent.trim());
+            }
           });
           drillToRightPane(btn.closest('.workspace-split'));
         });
@@ -124,7 +319,12 @@ const { publications, books, classes } = Astro.props;
             b.setAttribute('aria-current', b === btn ? 'true' : 'false')
           );
           this.querySelectorAll<HTMLElement>('[data-class-entry]').forEach((entry) => {
-            entry.classList.toggle('entry-hidden', entry.dataset.classEntry !== id);
+            const isMatch = entry.dataset.classEntry === id;
+            entry.classList.toggle('entry-hidden', !isMatch);
+            if (isMatch) {
+              const eyebrow = entry.querySelector<HTMLElement>('[data-scramble-eyebrow]');
+              if (eyebrow?.textContent) scrambleElementText(eyebrow, eyebrow.textContent.trim());
+            }
           });
           drillToRightPane(btn.closest('.workspace-split'));
         });
@@ -142,7 +342,7 @@ const { publications, books, classes } = Astro.props;
       });
     }
 
-    // 4. Live search & course level filter pills
+    // 5. Live search & course level filter pills
     private initSearchAndFilters() {
       const pubInput = document.getElementById('pub-filter-input') as HTMLInputElement | null;
       pubInput?.addEventListener('input', () => {
@@ -180,7 +380,7 @@ const { publications, books, classes } = Astro.props;
       });
     }
 
-    // 5. Mobile Stack Drill-Down Back Button & scrollsnapchange inert sync
+    // 6. Mobile Stack Drill-Down Back Button & scrollsnapchange inert sync
     private initMobileStackDrillDown() {
       this.querySelectorAll<HTMLButtonElement>('[data-stack-back]').forEach((backBtn) => {
         backBtn.addEventListener('click', () => {
@@ -224,7 +424,7 @@ const { publications, books, classes } = Astro.props;
       });
     }
 
-    // 6. Scrollspy fallback for browsers without CSS scroll-target-group: auto
+    // 7. Scrollspy fallback for browsers without CSS scroll-target-group: auto
     private initScrollspyFallback() {
       const readerScroll = document.getElementById('pub-reader-scroll');
       if (!readerScroll) return;
@@ -258,6 +458,21 @@ const { publications, books, classes } = Astro.props;
         );
         sections.forEach((sec) => obs.observe(sec));
       }
+    }
+
+    // 8. Cursor-Tracked Ambient Light Spill (from portyxb InstrumentPanel.ts updateLightPosition)
+    private initAmbientLightSpill() {
+      this.addEventListener(
+        'pointermove',
+        (e: PointerEvent) => {
+          const rect = this.getBoundingClientRect();
+          const x = e.clientX - rect.left;
+          const y = e.clientY - rect.top;
+          this.style.setProperty('--light-x', `${x}px`);
+          this.style.setProperty('--light-y', `${y}px`);
+        },
+        { passive: true }
+      );
     }
   }
 

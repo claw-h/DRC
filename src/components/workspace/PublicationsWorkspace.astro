@@ -10,16 +10,29 @@ const sortedPubs = [...publications].sort((a, b) => b.data.year - a.data.year);
 <section
   id="view-publications"
   class="spa-view workspace-split"
+  data-view-idx="0"
   tabindex="-1"
   aria-label="Publications Archive and Reader"
 >
-  <!-- LEFT PANE: Collapsible Publications Index -->
+  <!-- LEFT PANE: Collapsible Publications Index (with Close button inside the index pane) -->
   <aside class="workspace-pane-left">
-    <div class="pane-inner-scroll">
+    <div class="pane-inner-scroll" data-scrollable-pane>
       <header class="pane-toolbar">
-        <h2 class="pane-heading">
-          Publications <span class="count-badge tabular">[{String(sortedPubs.length).padStart(2, '0')}]</span>
-        </h2>
+        <div class="pane-toolbar-title">
+          <span class="led-socket is-on" aria-hidden="true"></span>
+          <h2 class="pane-heading">
+            Publications <span class="count-badge tabular">[{String(sortedPubs.length).padStart(2, '0')}]</span>
+          </h2>
+        </div>
+        <button
+          type="button"
+          class="pane-close-index-btn tabular"
+          data-collapse-index
+          aria-label="Close Index Pane"
+          title="Close left index pane"
+        >
+          ◁ Close Index
+        </button>
       </header>
 
       <search class="pane-search-box" style="padding: 0.75rem 1.25rem; border-block-end: 1px solid var(--border-subtle);">
@@ -30,7 +43,7 @@ const sortedPubs = [...publications].sort((a, b) => b.data.year - a.data.year);
           placeholder="Search title, journal, or year..."
           spellcheck="false"
           autocomplete="off"
-          style="inline-size: 100%; padding: 0.45rem 0.7rem; font-size: 0.82rem; border-radius: 4px; border: 1px solid var(--border-subtle); background: var(--bg-canvas);"
+          class="telemetry-input"
         />
       </search>
 
@@ -43,9 +56,12 @@ const sortedPubs = [...publications].sort((a, b) => b.data.year - a.data.year);
               aria-current={idx === 0 ? 'true' : 'false'}
               data-pub-select={pub.data.id}
             >
-              <span class="pub-item-meta tabular">
-                {pub.data.year} · {pub.data.id.toUpperCase()}
-              </span>
+              <div class="pub-item-top-row">
+                <span class="index-slot-num tabular">{String(idx + 1).padStart(2, '0')}</span>
+                <span class="pub-item-meta tabular">
+                  {pub.data.year} · {pub.data.id.toUpperCase()}
+                </span>
+              </div>
               <span class="pub-item-title">{pub.data.title}</span>
               <span class="pub-item-venue">{pub.data.venue}</span>
             </button>
@@ -57,7 +73,18 @@ const sortedPubs = [...publications].sort((a, b) => b.data.year - a.data.year);
 
   <!-- RIGHT PANE: Open Publication Reader -->
   <div class="workspace-pane-right">
-    <div class="pane-inner-scroll" id="pub-reader-scroll">
+    <!-- Re-Open Index Tab (visible when index pane is closed) -->
+    <button
+      type="button"
+      class="pane-reopen-index-btn tabular"
+      data-expand-index
+      aria-label="Open Index Pane"
+      title="Re-open left index pane"
+    >
+      ▷ Open Index
+    </button>
+
+    <div class="pane-inner-scroll" id="pub-reader-scroll" data-scrollable-pane data-primary-reader>
       <div class="mobile-back-bar">
         <button type="button" class="btn-mobile-back tabular" data-stack-back>
           ◄ Back to Index
@@ -75,10 +102,13 @@ const sortedPubs = [...publications].sort((a, b) => b.data.year - a.data.year);
             <div class="reader-layout">
               <article class="reader-article">
                 <header class="reader-header" style="border-block-end: 1px solid var(--border-subtle); padding-block-end: 1.5rem; margin-block-end: 1.75rem;">
-                  <p class="tabular" style="font-size: 0.74rem; color: var(--accent); letter-spacing: 0.12em; margin-block-end: 0.45rem;">
-                    CATALOG ID // {p.id.toUpperCase()} · {p.year}
-                  </p>
-                  <h3 style="font-size: clamp(1.35rem, 2.4vw, 1.95rem); margin-block-end: 0.35rem;">
+                  <div class="reader-eyebrow-row">
+                    <span class="cathode-tag tabular" data-scramble-eyebrow>
+                      CATALOG ID // {p.id.toUpperCase()} · {p.year}
+                    </span>
+                    <span class="telemetry-stamp tabular">PEER-REVIEWED MONOGRAPH</span>
+                  </div>
+                  <h3 class="reader-main-title" data-scramble-title>
                     {p.title}
                   </h3>
                   {p.subtitle && (
@@ -122,11 +152,15 @@ const sortedPubs = [...publications].sort((a, b) => b.data.year - a.data.year);
                   </div>
                 </header>
 
-                <section id={`${p.id}-abstract`} style="margin-block-end: 2rem; padding: 1.15rem; border-radius: 6px; background: var(--bg-elevated); border: 1px solid var(--border-subtle);">
+                <section id={`${p.id}-abstract`} class="recessed-abstract-box">
+                  <div class="chassis-bolt chassis-bolt--tl"></div>
+                  <div class="chassis-bolt chassis-bolt--tr"></div>
+                  <div class="chassis-bolt chassis-bolt--bl"></div>
+                  <div class="chassis-bolt chassis-bolt--br"></div>
                   <h4 class="tabular" style="font-size: 0.72rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--accent); margin-block-end: 0.5rem;">
-                    Abstract
+                    Abstract // Archival Synopsis
                   </h4>
-                  <p style="font-size: 0.94rem; color: var(--text-primary);">
+                  <p style="font-size: 0.96rem; color: var(--text-primary); font-family: var(--font-serif); line-height: 1.68;">
                     {p.abstract}
                   </p>
                 </section>
@@ -137,10 +171,10 @@ const sortedPubs = [...publications].sort((a, b) => b.data.year - a.data.year);
                   const hoverId = `cite-hover-${p.id}-${sIdx}`;
                   return (
                     <section id={`${p.id}-${sec.id}`} class="reader-section" style="margin-block-end: 2rem;">
-                      <h4 style="font-size: 1.15rem; margin-block-end: 0.65rem;">
+                      <h4 style="font-size: 1.15rem; margin-block-end: 0.65rem; font-family: var(--font-serif);">
                         {sec.heading}
                       </h4>
-                      <p style="font-size: 0.98rem; color: var(--text-secondary); line-height: 1.68;">
+                      <p style="font-size: 1rem; color: var(--text-secondary); line-height: 1.72; font-family: var(--font-serif);">
                         {sec.body.replace(/\[\d+\]/g, '')}
                         {refObj && (
                           <>
@@ -210,6 +244,18 @@ const sortedPubs = [...publications].sort((a, b) => b.data.year - a.data.year);
           </div>
         );
       })}
+
+      <!-- Seamless Scroll Horizon Cue: Publications -> Books -->
+      <div class="scroll-horizon-bridge" data-jump-view="view-books">
+        <div class="horizon-bridge-meta">
+          <span class="horizon-kicker tabular">CONTINUOUS SCROLL HORIZON // NEXT CHANNEL</span>
+          <strong class="horizon-title">02 · BOOKS &amp; MONOGRAPHS →</strong>
+        </div>
+        <div class="horizon-charge-track">
+          <div class="horizon-charge-fill" data-scroll-charge-fill></div>
+        </div>
+        <span class="horizon-hint tabular">Keep scrolling down to transition seamlessly into Books</span>
+      </div>
     </div>
   </div>
 </section>
