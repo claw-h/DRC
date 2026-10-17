@@ -1,0 +1,883 @@
+---
+export const prerender = false;
+
+import fs from 'node:fs/promises';
+import path from 'node:path';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { verifyAdminSession, getCsrfToken } from '../../lib/admin-auth';
+import { getSystemState, getFacultyProfile } from '../../lib/system-state';
+
+if (!verifyAdminSession(Astro.cookies)) {
+  return Astro.redirect('/admin/login');
+}
+
+const csrfToken = getCsrfToken(Astro.cookies);
+const systemState = await getSystemState();
+const profile = await getFacultyProfile();
+
+const skyIndexPath = path.resolve(process.cwd(), 'public/data/sky/index.json');
+const skyIndexRaw = await fs.readFile(skyIndexPath, 'utf8');
+const skyIndex = JSON.parse(skyIndexRaw);
+const sampleCatalog = skyIndex.catalog.slice(0, 60);
+---
+
+<BaseLayout
+  title="Sovereign Control Panel — DRC Observatory"
+  description="Total administrative control panel for Professor Duncan R. Cordry."
+>
+  <div class="admin-shell" data-csrf={csrfToken}>
+    <header class="admin-topbar">
+      <div>
+        <span class="admin-badge">SOVEREIGN CONTROL PANEL · EPOCH J2000.0</span>
+        <h1>{profile.name} — Observatory Command</h1>
+      </div>
+      <div class="admin-top-actions">
+        <a href="/" class="admin-btn-outline">View Live Observatory ↗</a>
+        <form method="POST" action="/api/admin/auth">
+          <input type="hidden" name="action" value="logout" />
+          <button type="submit" class="admin-btn-outline">Lock Terminal</button>
+        </form>
+      </div>
+    </header>
+
+    <div class="admin-grid">
+      <!-- Module 1: One-Paste DOI Importer & Publication Creator -->
+      <section class="admin-panel" aria-labelledby="panel-doi">
+        <div class="panel-head">
+          <span class="panel-kicker">01 · ARCHIVAL INGESTION</span>
+          <h2 id="panel-doi">One-Paste DOI Importer & Manuscript Publisher</h2>
+        </div>
+
+        <div class="doi-bar">
+          <input
+            type="text"
+            id="doi-input"
+            placeholder="Paste DOI (e.g. 10.1086/734192)…"
+            aria-label="Digital Object Identifier"
+          />
+          <button type="button" id="doi-fetch-btn" class="admin-btn-accent">
+            Auto-Populate via Crossref
+          </button>
+        </div>
+
+        <form id="pub-create-form" class="admin-form">
+          <div class="form-row-2">
+            <label>
+              <span>Title</span>
+              <input type="text" name="title" id="pub-title" required />
+            </label>
+            <label>
+              <span>Year</span>
+              <input type="number" name="year" id="pub-year" value="2026" required />
+            </label>
+          </div>
+          <div class="form-row-2">
+            <label>
+              <span>Journal / Venue</span>
+              <input type="text" name="venue" id="pub-venue" required />
+            </label>
+            <label>
+              <span>DOI</span>
+              <input type="text" name="doi" id="pub-doi" />
+            </label>
+          </div>
+          <label>
+            <span>Abstract</span>
+            <textarea name="abstract" id="pub-abstract" rows="3" required></textarea>
+          </label>
+          <button type="submit" class="admin-btn-primary">
+            Commit Manuscript to Content Collection
+          </button>
+        </form>
+      </section>
+
+      <!-- Module 2: Seminar & Course Dispatch -->
+      <section class="admin-panel" aria-labelledby="panel-classes">
+        <div class="panel-head">
+          <span class="panel-kicker">02 · CURRICULUM DISPATCH</span>
+          <h2 id="panel-classes">Add University Seminar / Course</h2>
+        </div>
+
+        <form id="class-create-form" class="admin-form">
+          <div class="form-row-2">
+            <label>
+              <span>Course Code</span>
+              <input type="text" name="code" placeholder="ASTR 510" required />
+            </label>
+            <label>
+              <span>Academic Term</span>
+              <input type="text" name="term" value="Fall 2026" required />
+            </label>
+          </div>
+          <div class="form-row-2">
+            <label>
+              <span>Seminar Title</span>
+              <input type="text" name="title" placeholder="Relativistic Epistemology" required />
+            </label>
+            <label>
+              <span>Level</span>
+              <select name="level">
+                <option value="Graduate">Graduate</option>
+                <option value="Undergraduate">Undergraduate</option>
+              </select>
+            </label>
+          </div>
+          <label>
+            <span>Lecture Hall / Observatory Location</span>
+            <input type="text" name="location" value="Observatory West Wing, Seminar 204" required />
+          </label>
+          <label>
+            <span>Syllabus Synopsis</span>
+            <textarea name="description" rows="3" required></textarea>
+          </label>
+          <button type="submit" class="admin-btn-primary">
+            Publish Course Syllabus
+          </button>
+        </form>
+      </section>
+
+      <!-- Module 3: Faculty ID Portrait 4:5 Cropper & Office Hours -->
+      <section class="admin-panel" aria-labelledby="panel-media">
+        <div class="panel-head">
+          <span class="panel-kicker">03 · CREDENTIAL & PORTRAIT STUDIO</span>
+          <h2 id="panel-media">Faculty ID Card Portrait & Telemetry</h2>
+        </div>
+
+        <form id="media-form" class="admin-form">
+          <div class="portrait-studio">
+            <canvas
+              id="portrait-crop-canvas"
+              width="320"
+              height="400"
+              class="crop-canvas"
+            ></canvas>
+            <div class="portrait-controls">
+              <label>
+                <span>Upload New Portrait (Auto-Cropped 4:5 on Client Canvas)</span>
+                <input type="file" id="portrait-file" accept="image/*" />
+              </label>
+              <label>
+                <span>Office Location</span>
+                <input type="text" name="office" id="profile-office" value={profile.office} />
+              </label>
+              <label>
+                <span>Office Hours</span>
+                <input
+                  type="text"
+                  name="officeHours"
+                  id="profile-hours"
+                  value={profile.officeHours}
+                />
+              </label>
+              <button type="submit" class="admin-btn-primary">
+                Save Portrait & ID Card Telemetry
+              </button>
+            </div>
+          </div>
+        </form>
+      </section>
+
+      <!-- Module 4: Celestial Catalog Inspector & Constellation Deletion -->
+      <section class="admin-panel" aria-labelledby="panel-constellations">
+        <div class="panel-head">
+          <span class="panel-kicker">04 · URANOMETRIA SHARD REGISTRY</span>
+          <h2 id="panel-constellations">
+            Constellation Inspector ({skyIndex.total} Active Artifacts)
+          </h2>
+        </div>
+
+        <div class="constellation-search-bar">
+          <input
+            type="search"
+            id="constellation-filter"
+            placeholder="Filter by ID or Latin designation (e.g. DRC-0001)…"
+          />
+        </div>
+
+        <div class="constellation-table-wrap">
+          <table class="constellation-table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Latin Designation</th>
+                <th>Epoch Coordinates</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="constellation-tbody">
+              {sampleCatalog.map((item: any) => (
+                <tr data-con-row={`${item.id} ${item.name} ${item.english}`.toLowerCase()}>
+                  <td class="mono">{item.id}</td>
+                  <td>
+                    <strong>{item.name}</strong>
+                    <span class="sub-eng">{item.english}</span>
+                  </td>
+                  <td class="mono">{item.ra} · {item.dec}</td>
+                  <td>
+                    <div class="row-actions">
+                      <a href={`/?sky=${item.id}`} target="_blank" class="admin-link">
+                        Inspect ↗
+                      </a>
+                      <button
+                        type="button"
+                        class="btn-danger-sm"
+                        data-delete-constellation={item.id}
+                      >
+                        Purge
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Module 5: 3-Stage Sovereign System Lifecycle Switchboard -->
+      <section class="admin-panel admin-panel-danger" aria-labelledby="panel-lifecycle">
+        <div class="panel-head">
+          <span class="panel-kicker">05 · SOVEREIGN LIFECYCLE SWITCHBOARD</span>
+          <h2 id="panel-lifecycle">Server Offline Shutter, SIGTERM & Codebase Purge</h2>
+        </div>
+
+        <div class="lifecycle-tiers">
+          <!-- Tier 1: Soft HTTP 503 Shutter -->
+          <div class="lifecycle-card">
+            <div>
+              <h3>Tier 1 · Observatory Maintenance Shutter (HTTP 503)</h3>
+              <p>
+                Diverts public visitors to the HTTP 503 maintenance screen while keeping
+                <code>/admin</code> live. Current state:{' '}
+                <strong id="shutter-status-label">
+                  {systemState.offlineMode ? 'OFFLINE (503 ACTIVE)' : 'ONLINE (PUBLIC)'}
+                </strong>
+              </p>
+            </div>
+            <button
+              type="button"
+              id="toggle-offline-btn"
+              data-currently-offline={String(systemState.offlineMode)}
+              class="admin-btn-accent"
+            >
+              {systemState.offlineMode ? 'Re-Open Observatory Dome' : 'Take Observatory Offline (503)'}
+            </button>
+          </div>
+
+          <!-- Tier 2: Hard Node Server Termination -->
+          <div class="lifecycle-card">
+            <div>
+              <h3>Tier 2 · Hard Node Process Shutdown (SIGTERM)</h3>
+              <p>Dispatches <code>SIGTERM</code> to halt the running Node server process.</p>
+            </div>
+            <div class="inline-action">
+              <input
+                type="password"
+                id="shutdown-password"
+                placeholder="Confirm passphrase…"
+                aria-label="Passphrase for server shutdown"
+              />
+              <button type="button" id="shutdown-server-btn" class="btn-danger">
+                Halt Server Process
+              </button>
+            </div>
+          </div>
+
+          <!-- Tier 3: Guarded Codebase Purge -->
+          <div class="lifecycle-card">
+            <div>
+              <h3>Tier 3 · Sovereign Archive & Codebase Purge</h3>
+              <p>
+                Decommissions the observatory archive. Requires typing the exact confirmation
+                phrase and sovereign passphrase.
+              </p>
+            </div>
+            <button
+              type="button"
+              commandfor="purge-confirm-dialog"
+              command="show-modal"
+              id="open-purge-modal-btn"
+              class="btn-danger"
+            >
+              Initiate Sovereign Purge…
+            </button>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- Guarded Tier 3 Confirmation Modal -->
+    <dialog id="purge-confirm-dialog" closedby="any" class="purge-dialog">
+      <form id="purge-form" class="admin-form">
+        <h3>Confirm Sovereign Archive Decommission</h3>
+        <p>
+          Type <code>DESTROY-DRC-OBSERVATORY</code> and enter your sovereign passphrase to execute.
+        </p>
+        <label>
+          <span>Confirmation Phrase</span>
+          <input
+            type="text"
+            name="confirmationPhrase"
+            placeholder="DESTROY-DRC-OBSERVATORY"
+            required
+          />
+        </label>
+        <label>
+          <span>Sovereign Passphrase</span>
+          <input type="password" name="password" required />
+        </label>
+        <div class="dialog-actions">
+          <button
+            type="button"
+            commandfor="purge-confirm-dialog"
+            command="close"
+            id="cancel-purge-btn"
+            class="admin-btn-outline"
+          >
+            Abort
+          </button>
+          <button type="submit" class="btn-danger">
+            Execute Sovereign Purge
+          </button>
+        </div>
+      </form>
+    </dialog>
+
+    <!-- Top-Layer Telemetry Toast (popover="manual") -->
+    <div id="admin-toast" popover="manual" class="admin-toast" role="status" aria-live="polite">
+      <span id="admin-toast-text">Ready.</span>
+    </div>
+  </div>
+
+  <script>
+    const shell = document.querySelector('.admin-shell') as HTMLElement | null;
+    const csrfToken = shell?.dataset.csrf || '';
+    const toast = document.getElementById('admin-toast') as HTMLElement & {
+      showPopover?: () => void;
+      hidePopover?: () => void;
+    };
+    const toastText = document.getElementById('admin-toast-text');
+
+    function notify(message: string) {
+      if (toastText) toastText.textContent = message;
+      try {
+        toast?.showPopover?.();
+        setTimeout(() => toast?.hidePopover?.(), 4200);
+      } catch {
+        // Fallback if popover API is unavailable
+      }
+    }
+
+    async function postAdmin(url: string, payload: Record<string, any>) {
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...payload, csrfToken }),
+      });
+      return res.json();
+    }
+
+    // 1. DOI Importer
+    document.getElementById('doi-fetch-btn')?.addEventListener('click', async () => {
+      const doiInput = document.getElementById('doi-input') as HTMLInputElement | null;
+      if (!doiInput?.value.trim()) return;
+      notify('Querying Crossref metadata registry…');
+      const data = await postAdmin('/api/admin/content', {
+        action: 'import-doi',
+        doi: doiInput.value.trim(),
+      });
+      if (data.ok && data.metadata) {
+        (document.getElementById('pub-title') as HTMLInputElement).value = data.metadata.title;
+        (document.getElementById('pub-year') as HTMLInputElement).value = String(data.metadata.year);
+        (document.getElementById('pub-venue') as HTMLInputElement).value = data.metadata.venue;
+        (document.getElementById('pub-doi') as HTMLInputElement).value = data.metadata.doi;
+        notify(`Imported DOI metadata: ${data.metadata.title}`);
+      } else {
+        notify(data.error || 'Could not resolve DOI.');
+      }
+    });
+
+    // 2. Create Publication
+    document.getElementById('pub-create-form')?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const form = e.currentTarget as HTMLFormElement;
+      const fd = new FormData(form);
+      const data = await postAdmin('/api/admin/content', {
+        action: 'create-publication',
+        title: fd.get('title'),
+        year: fd.get('year'),
+        venue: fd.get('venue'),
+        doi: fd.get('doi'),
+        abstract: fd.get('abstract'),
+      });
+      notify(data.message || data.error || 'Completed.');
+      if (data.ok) form.reset();
+    });
+
+    // 3. Create Class
+    document.getElementById('class-create-form')?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const form = e.currentTarget as HTMLFormElement;
+      const fd = new FormData(form);
+      const data = await postAdmin('/api/admin/content', {
+        action: 'create-class',
+        code: fd.get('code'),
+        term: fd.get('term'),
+        title: fd.get('title'),
+        level: fd.get('level'),
+        location: fd.get('location'),
+        description: fd.get('description'),
+      });
+      notify(data.message || data.error || 'Completed.');
+      if (data.ok) form.reset();
+    });
+
+    // 4. Portrait 4:5 Client Cropper
+    const cropCanvas = document.getElementById('portrait-crop-canvas') as HTMLCanvasElement | null;
+    const ctx = cropCanvas?.getContext('2d');
+    let croppedDataUrl = '';
+
+    if (ctx && cropCanvas) {
+      ctx.fillStyle = '#141720';
+      ctx.fillRect(0, 0, cropCanvas.width, cropCanvas.height);
+      ctx.strokeStyle = 'rgba(220, 195, 130, 0.45)';
+      ctx.strokeRect(12, 12, cropCanvas.width - 24, cropCanvas.height - 24);
+      ctx.fillStyle = '#9ca3af';
+      ctx.font = '12px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText('4:5 PORTRAIT FRAME (320×400)', cropCanvas.width / 2, cropCanvas.height / 2);
+    }
+
+    document.getElementById('portrait-file')?.addEventListener('change', (e) => {
+      const file = (e.currentTarget as HTMLInputElement).files?.[0];
+      if (!file || !cropCanvas || !ctx) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        const img = new Image();
+        img.onload = () => {
+          const targetAspect = 4 / 5;
+          const srcAspect = img.width / img.height;
+          let sx = 0,
+            sy = 0,
+            sw = img.width,
+            sh = img.height;
+          if (srcAspect > targetAspect) {
+            sw = img.height * targetAspect;
+            sx = (img.width - sw) / 2;
+          } else {
+            sh = img.width / targetAspect;
+            sy = (img.height - sh) / 2;
+          }
+          ctx.clearRect(0, 0, cropCanvas.width, cropCanvas.height);
+          ctx.drawImage(img, sx, sy, sw, sh, 0, 0, cropCanvas.width, cropCanvas.height);
+          croppedDataUrl = cropCanvas.toDataURL('image/jpeg', 0.9);
+          notify('Portrait center-cropped to 4:5 ratio on client canvas.');
+        };
+        img.src = String(reader.result);
+      };
+      reader.readAsDataURL(file);
+    });
+
+    document.getElementById('media-form')?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const office = (document.getElementById('profile-office') as HTMLInputElement).value;
+      const officeHours = (document.getElementById('profile-hours') as HTMLInputElement).value;
+      const data = await postAdmin('/api/admin/media', {
+        dataUrl: croppedDataUrl,
+        office,
+        officeHours,
+      });
+      notify(data.message || data.error || 'Updated.');
+    });
+
+    // 5. Constellation Filter & Deletion
+    document.getElementById('constellation-filter')?.addEventListener('input', (e) => {
+      const q = (e.currentTarget as HTMLInputElement).value.trim().toLowerCase();
+      document.querySelectorAll<HTMLElement>('[data-con-row]').forEach((row) => {
+        const text = row.dataset.conRow || '';
+        row.hidden = q.length > 0 && !text.includes(q);
+      });
+    });
+
+    document.querySelectorAll<HTMLButtonElement>('[data-delete-constellation]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const id = btn.dataset.deleteConstellation;
+        if (!id) return;
+        const data = await postAdmin('/api/admin/constellations', { id });
+        if (data.ok) {
+          btn.closest('tr')?.remove();
+        }
+        notify(data.message || data.error || 'Deleted.');
+      });
+    });
+
+    // 6. Lifecycle Controls
+    const offlineBtn = document.getElementById('toggle-offline-btn');
+    const statusLabel = document.getElementById('shutter-status-label');
+    offlineBtn?.addEventListener('click', async () => {
+      const currentlyOffline = offlineBtn.getAttribute('data-currently-offline') === 'true';
+      const nextOffline = !currentlyOffline;
+      const data = await postAdmin('/api/admin/lifecycle', {
+        action: 'toggle-offline',
+        offline: nextOffline,
+      });
+      if (data.ok) {
+        offlineBtn.setAttribute('data-currently-offline', String(nextOffline));
+        offlineBtn.textContent = nextOffline
+          ? 'Re-Open Observatory Dome'
+          : 'Take Observatory Offline (503)';
+        if (statusLabel) {
+          statusLabel.textContent = nextOffline ? 'OFFLINE (503 ACTIVE)' : 'ONLINE (PUBLIC)';
+        }
+      }
+      notify(data.message || data.error);
+    });
+
+    document.getElementById('shutdown-server-btn')?.addEventListener('click', async () => {
+      const pw = (document.getElementById('shutdown-password') as HTMLInputElement).value;
+      const data = await postAdmin('/api/admin/lifecycle', {
+        action: 'shutdown-server',
+        password: pw,
+      });
+      notify(data.message || data.error);
+    });
+
+    const purgeDialog = document.getElementById('purge-confirm-dialog') as HTMLDialogElement | null;
+    document.getElementById('open-purge-modal-btn')?.addEventListener('click', () => {
+      if (purgeDialog && !purgeDialog.open) purgeDialog.showModal();
+    });
+    document.getElementById('cancel-purge-btn')?.addEventListener('click', () => {
+      purgeDialog?.close();
+    });
+
+    document.getElementById('purge-form')?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const fd = new FormData(e.currentTarget as HTMLFormElement);
+      const data = await postAdmin('/api/admin/lifecycle', {
+        action: 'purge-codebase',
+        confirmationPhrase: fd.get('confirmationPhrase'),
+        password: fd.get('password'),
+      });
+      purgeDialog?.close();
+      notify(data.message || data.error);
+    });
+  </script>
+</BaseLayout>
+
+<style>
+  .admin-shell {
+    max-width: 1320px;
+    margin: 0 auto;
+    padding: 2rem 1.5rem 5rem;
+  }
+
+  .admin-topbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    flex-wrap: wrap;
+    gap: 1rem;
+    padding-bottom: 1.25rem;
+    margin-bottom: 2rem;
+    border-bottom: 1px solid var(--border-hairline);
+  }
+
+  .admin-badge {
+    font-family: var(--font-mono);
+    font-size: var(--step--1);
+    letter-spacing: 0.14em;
+    color: var(--accent);
+  }
+
+  .admin-topbar h1 {
+    margin: 0.25rem 0 0;
+    font-size: var(--step-2);
+  }
+
+  .admin-top-actions {
+    display: flex;
+    gap: 0.65rem;
+    align-items: center;
+  }
+
+  .admin-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 540px), 1fr));
+    gap: 1.5rem;
+  }
+
+  .admin-panel {
+    padding: 1.5rem;
+    border-radius: 0.75rem;
+    border: 1px solid var(--border-hairline);
+    background: var(--bg-elevated);
+    display: flex;
+    flex-direction: column;
+    gap: 1.15rem;
+  }
+
+  .admin-panel-danger {
+    grid-column: 1 / -1;
+    border-color: color-mix(in oklch, oklch(62% 0.2 25) 45%, var(--border-hairline));
+  }
+
+  .panel-kicker {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    letter-spacing: 0.12em;
+    color: var(--accent);
+  }
+
+  .panel-head h2 {
+    margin: 0.25rem 0 0;
+    font-size: var(--step-1);
+  }
+
+  .doi-bar,
+  .constellation-search-bar {
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  .doi-bar input,
+  .constellation-search-bar input {
+    flex: 1;
+    padding: 0.55rem 0.75rem;
+    border-radius: 0.375rem;
+    border: 1px solid var(--border-hairline);
+    background: var(--bg-canvas);
+    color: var(--text-primary);
+    font-family: var(--font-mono);
+    font-size: var(--step--1);
+  }
+
+  .admin-form {
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+  }
+
+  .form-row-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+  }
+
+  .admin-form label {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    color: var(--text-muted);
+  }
+
+  .admin-form input,
+  .admin-form select,
+  .admin-form textarea {
+    padding: 0.55rem 0.7rem;
+    border-radius: 0.375rem;
+    border: 1px solid var(--border-hairline);
+    background: var(--bg-canvas);
+    color: var(--text-primary);
+    font-family: var(--font-sans);
+    font-size: var(--step--1);
+  }
+
+  .portrait-studio {
+    display: grid;
+    grid-template-columns: 160px 1fr;
+    gap: 1.25rem;
+    align-items: start;
+  }
+
+  .crop-canvas {
+    width: 160px;
+    height: 200px;
+    border-radius: 0.5rem;
+    border: 1px solid var(--border-hairline);
+    background: var(--bg-canvas);
+  }
+
+  .portrait-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .constellation-table-wrap {
+    max-height: 310px;
+    overflow-y: auto;
+    border: 1px solid var(--border-hairline);
+    border-radius: 0.5rem;
+  }
+
+  .constellation-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: var(--step--1);
+  }
+
+  .constellation-table th,
+  .constellation-table td {
+    padding: 0.55rem 0.75rem;
+    border-bottom: 1px solid var(--border-hairline);
+    text-align: left;
+  }
+
+  .constellation-table th {
+    position: sticky;
+    top: 0;
+    background: var(--bg-elevated);
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+
+  .mono {
+    font-family: var(--font-mono);
+  }
+
+  .sub-eng {
+    display: block;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+  }
+
+  .row-actions {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+  }
+
+  .admin-link {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    color: var(--accent);
+    text-decoration: none;
+  }
+
+  .lifecycle-tiers {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .lifecycle-card {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+    padding: 1rem 1.25rem;
+    border-radius: 0.5rem;
+    border: 1px solid var(--border-hairline);
+    background: var(--bg-canvas);
+  }
+
+  .lifecycle-card h3 {
+    margin: 0 0 0.25rem;
+    font-size: var(--step-0);
+  }
+
+  .lifecycle-card p {
+    margin: 0;
+    font-size: var(--step--1);
+    color: var(--text-muted);
+  }
+
+  .inline-action {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+  }
+
+  .inline-action input {
+    padding: 0.5rem 0.7rem;
+    border-radius: 0.375rem;
+    border: 1px solid var(--border-hairline);
+    background: var(--bg-elevated);
+    color: var(--text-primary);
+    font-family: var(--font-mono);
+    font-size: var(--step--1);
+  }
+
+  .admin-btn-primary,
+  .admin-btn-accent,
+  .admin-btn-outline,
+  .btn-danger,
+  .btn-danger-sm {
+    padding: 0.55rem 0.95rem;
+    border-radius: 0.375rem;
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    cursor: pointer;
+    text-decoration: none;
+  }
+
+  .admin-btn-primary {
+    border: 1px solid var(--accent);
+    background: color-mix(in oklch, var(--accent) 20%, transparent);
+    color: var(--text-primary);
+  }
+
+  .admin-btn-accent {
+    border: 1px solid var(--accent);
+    background: transparent;
+    color: var(--accent);
+  }
+
+  .admin-btn-outline {
+    border: 1px solid var(--border-hairline);
+    background: transparent;
+    color: var(--text-primary);
+  }
+
+  .btn-danger,
+  .btn-danger-sm {
+    border: 1px solid oklch(62% 0.2 25);
+    background: color-mix(in oklch, oklch(62% 0.2 25) 18%, transparent);
+    color: var(--text-primary);
+  }
+
+  .btn-danger-sm {
+    padding: 0.25rem 0.55rem;
+    font-size: 0.72rem;
+  }
+
+  .purge-dialog {
+    width: min(460px, 92vw);
+    padding: 1.75rem;
+    border-radius: 0.75rem;
+    border: 1px solid oklch(62% 0.2 25);
+    background: var(--bg-elevated);
+    color: var(--text-primary);
+  }
+
+  .purge-dialog::backdrop {
+    background: rgba(5, 7, 12, 0.75);
+    backdrop-filter: blur(6px);
+  }
+
+  .dialog-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.65rem;
+    margin-top: 0.5rem;
+  }
+
+  .admin-toast {
+    position: fixed;
+    inset: auto 1.5rem 1.5rem auto;
+    margin: 0;
+    padding: 0.75rem 1.15rem;
+    border-radius: 0.5rem;
+    border: 1px solid var(--accent);
+    background: var(--bg-elevated);
+    color: var(--text-primary);
+    font-family: var(--font-mono);
+    font-size: var(--step--1);
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+  }
+</style>

@@ -1,0 +1,123 @@
+---
+interface Props {
+  pubCount: number;
+  bookCount: number;
+  classCount: number;
+}
+
+const { pubCount, bookCount, classCount } = Astro.props;
+---
+
+<nav class="nav-strip-wrapper" aria-label="Academic Sections">
+  <ul class="nav-strip-track">
+    <li>
+      <button
+        type="button"
+        class="nav-strip-btn"
+        data-target-view="view-publications"
+        aria-current="page"
+      >
+        <span class="nav-strip-idx tabular">01</span>
+        <span>PUBLICATIONS</span>
+        <span class="nav-strip-count tabular">[{String(pubCount).padStart(2, '0')}]</span>
+      </button>
+    </li>
+    <li>
+      <button
+        type="button"
+        class="nav-strip-btn"
+        data-target-view="view-books"
+        aria-current="false"
+      >
+        <span class="nav-strip-idx tabular">02</span>
+        <span>BOOKS</span>
+        <span class="nav-strip-count tabular">[{String(bookCount).padStart(2, '0')}]</span>
+      </button>
+    </li>
+    <li>
+      <button
+        type="button"
+        class="nav-strip-btn"
+        data-target-view="view-classes"
+        aria-current="false"
+      >
+        <span class="nav-strip-idx tabular">03</span>
+        <span>CLASSES</span>
+        <span class="nav-strip-count tabular">[{String(classCount).padStart(2, '0')}]</span>
+      </button>
+    </li>
+  </ul>
+
+  <div class="nav-strip-right">
+    <button
+      type="button"
+      id="btn-toggle-sidebar"
+      class="sidebar-collapse-btn tabular"
+      aria-pressed="false"
+      title="Collapse or expand the left index pane"
+    >
+      ◧ Index Pane
+    </button>
+  </div>
+</nav>
+
+<style>
+  .nav-strip-wrapper {
+    justify-content: space-between;
+  }
+
+  .nav-strip-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.35rem 0.2rem;
+    background: none;
+    border: none;
+    border-block-end: 2px solid transparent;
+    font-family: var(--font-mono);
+    font-size: 0.76rem;
+    letter-spacing: 0.14em;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: color 0.18s ease, border-color 0.18s ease;
+  }
+
+  .nav-strip-btn:hover {
+    color: var(--text-primary);
+  }
+
+  .nav-strip-btn[aria-current="page"] {
+    color: var(--text-primary);
+    border-block-end-color: var(--accent);
+    font-weight: 600;
+  }
+
+  .nav-strip-idx {
+    font-size: 0.66rem;
+    color: var(--accent);
+  }
+
+  .nav-strip-count {
+    font-size: 0.68rem;
+    color: var(--text-muted);
+  }
+
+  .sidebar-collapse-btn {
+    display: none;
+    font-size: 0.7rem;
+    letter-spacing: 0.08em;
+    padding: 0.3rem 0.65rem;
+    border-radius: 4px;
+    border: 1px solid var(--border-subtle);
+    background: var(--bg-surface);
+    color: var(--text-secondary);
+    cursor: pointer;
+  }
+
+  @media (min-width: 768px) {
+    .sidebar-collapse-btn {
+      display: inline-flex;
+      align-items: center;
+    }
+  }
+</style>

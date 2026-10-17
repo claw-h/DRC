@@ -1,0 +1,169 @@
+---
+import { getCollection } from 'astro:content';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import ConstellationStage from '../components/sky/ConstellationStage.astro';
+import PersistentHeader from '../components/chrome/PersistentHeader.astro';
+import AcademicWorkspace from '../components/workspace/AcademicWorkspace.astro';
+import { getFacultyProfile, getSystemState } from '../lib/system-state';
+
+const publications = (await getCollection('publications')).sort(
+  (a, b) => b.data.year - a.data.year
+);
+const books = (await getCollection('books')).sort(
+  (a, b) => b.data.year - a.data.year
+);
+const classes = await getCollection('classes');
+
+const profile = await getFacultyProfile();
+const systemState = await getSystemState();
+---
+
+<BaseLayout
+  title={`${profile.name} — Astrophysics & Formal Epistemology`}
+  description={`Academic portfolio, celestial cartography observatory, publications, monographs, and teaching archive of ${profile.name} (${profile.monogram}).`}
+  isPortfolioRoot={true}
+>
+  <PersistentHeader
+    profile={profile}
+    pubCount={publications.length}
+    bookCount={books.length}
+    classCount={classes.length}
+  />
+
+  <!-- Stage 1: Full-Viewport Generative Constellation Sky -->
+  <ConstellationStage featuredConstellationId={systemState.featuredConstellationId} />
+
+  <!-- Stage 2: Scroll-Snap Transition Pull-Up Horizon -->
+  <section
+    id="stage-2"
+    class="snap-stage stage-pullup"
+    aria-label="Observatory Transition Horizon"
+  >
+    <div class="pullup-card">
+      <p class="pullup-eyebrow">{profile.institution} · {profile.department}</p>
+      <h2 class="pullup-headline">{profile.title}</h2>
+      <p class="pullup-bio">
+        Investigating the metric geometry of observational cosmology, celestial mechanics, and the formal epistemology of astronomical instruments from the Renaissance astrolabe to interferometric arrays.
+      </p>
+      <div class="pullup-coords">
+        <span>Epoch J2000.0</span>
+        <span aria-hidden="true">·</span>
+        <span>Credential {profile.credentialId}</span>
+        <span aria-hidden="true">·</span>
+        <a href="/cv" class="pullup-cv-link">Curriculum Vitae (Print / LaTeX) ↗</a>
+        <span aria-hidden="true">·</span>
+        <a href="#stage-3" class="pullup-cv-link">Enter Bipartite Archive ↓</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Stage 3: Docked Bipartite Academic Workspace -->
+  <section id="stage-3" class="snap-stage" aria-label="Academic Workspace">
+    <AcademicWorkspace
+      publications={publications}
+      books={books}
+      classes={classes}
+    />
+  </section>
+
+  <script>
+    const stages = ['stage-1', 'stage-2', 'stage-3'];
+
+    if ('onscrollsnapchange' in window) {
+      window.addEventListener('scrollsnapchange', (e: any) => {
+        const target = e.snapTargetBlock as HTMLElement | null;
+        if (target && stages.includes(target.id)) {
+          document.body.dataset.stage = target.id;
+        }
+      });
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting && entry.intersectionRatio >= 0.4) {
+            if (stages.includes(entry.target.id)) {
+              document.body.dataset.stage = entry.target.id;
+            }
+          }
+        });
+      },
+      { threshold: [0.4, 0.7] }
+    );
+
+    stages.forEach((id) => {
+      const el = document.getElementById(id);
+      if (el) observer.observe(el);
+    });
+  </script>
+</BaseLayout>
+
+<style>
+  .stage-pullup {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+    z-index: 5;
+  }
+
+  .pullup-card {
+    max-width: 660px;
+    padding: 2.25rem 2.5rem;
+    border-radius: 0.75rem;
+    border: 1px solid var(--border-subtle);
+    background: color-mix(in oklab, var(--bg-surface) 86%, transparent);
+    backdrop-filter: blur(16px);
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+  }
+
+  .pullup-eyebrow {
+    margin: 0;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: var(--accent);
+  }
+
+  .pullup-headline {
+    margin: 0;
+    font-size: clamp(1.35rem, 2.5vw, 1.85rem);
+    font-weight: 500;
+    letter-spacing: -0.02em;
+    color: var(--text-primary);
+  }
+
+  .pullup-bio {
+    margin: 0;
+    font-family: var(--font-serif);
+    font-size: 1.05rem;
+    line-height: 1.65;
+    color: var(--text-secondary);
+  }
+
+  .pullup-coords {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.65rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--border-subtle);
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    color: var(--text-muted);
+  }
+
+  .pullup-cv-link {
+    color: var(--text-primary);
+    text-decoration: none;
+    border-bottom: 1px solid var(--border-subtle);
+  }
+
+  .pullup-cv-link:hover {
+    color: var(--accent);
+    border-color: var(--accent);
+  }
+</style>

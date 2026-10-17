@@ -1,0 +1,250 @@
+---
+import { getCollection } from 'astro:content';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { getFacultyProfile } from '../lib/system-state';
+
+const publications = (await getCollection('publications')).sort(
+  (a, b) => b.data.year - a.data.year
+);
+const books = (await getCollection('books')).sort(
+  (a, b) => b.data.year - a.data.year
+);
+const classes = await getCollection('classes');
+const profile = await getFacultyProfile();
+---
+
+<BaseLayout
+  title={`Curriculum Vitae — ${profile.name}`}
+  description={`Academic Curriculum Vitae of ${profile.name}, ${profile.title}.`}
+>
+  <main class="cv-document">
+    <div class="cv-toolbar no-print">
+      <a href="/" class="cv-back">← Back to Observatory</a>
+      <button type="button" class="cv-print-btn" id="cv-print-trigger">
+        Print / Export LaTeX-Grade PDF (⌘P)
+      </button>
+    </div>
+
+    <header class="cv-header">
+      <div>
+        <h1>{profile.name}</h1>
+        <p class="cv-subtitle">{profile.title}</p>
+        <p class="cv-affiliation">{profile.department} · {profile.institution}</p>
+      </div>
+      <dl class="cv-contact-list">
+        <div>
+          <dt>Office</dt>
+          <dd>{profile.office}</dd>
+        </div>
+        <div>
+          <dt>Direct Line</dt>
+          <dd>{profile.phone}</dd>
+        </div>
+        <div>
+          <dt>Electronic Mail</dt>
+          <dd>{profile.email}</dd>
+        </div>
+        <div>
+          <dt>Credential ID</dt>
+          <dd>{profile.credentialId}</dd>
+        </div>
+      </dl>
+    </header>
+
+    <section class="cv-section">
+      <h2>I. Monographs & Treatises</h2>
+      <ol class="cv-list">
+        {books.map((book) => (
+          <li>
+            <strong>{book.data.title}</strong>
+            {book.data.subtitle ? `: ${book.data.subtitle}` : ''}.{' '}
+            <span>{book.data.publisher}, {book.data.year}.</span>{' '}
+            <span class="cv-mono">ISBN: {book.data.isbn} ({book.data.pages} pp.)</span>
+          </li>
+        ))}
+      </ol>
+    </section>
+
+    <section class="cv-section">
+      <h2>II. Peer-Reviewed Publications & Archival Preprints</h2>
+      <ol class="cv-list">
+        {publications.map((pub) => (
+          <li>
+            <span class="cv-authors">
+              {[profile.name, ...pub.data.coAuthors].join(', ')}
+            </span>{' '}
+            ({pub.data.year}).{' '}
+            <a href={`/publications/${pub.data.id}`} class="cv-pub-title">
+              “{pub.data.title}.”
+            </a>{' '}
+            <em>{pub.data.venue}</em>
+            {pub.data.volumeIssue ? `, ${pub.data.volumeIssue}` : ''}.{' '}
+            {pub.data.doi && <span class="cv-mono">doi:{pub.data.doi}</span>}
+          </li>
+        ))}
+      </ol>
+    </section>
+
+    <section class="cv-section">
+      <h2>III. University Seminars & Instruction</h2>
+      <ul class="cv-list">
+        {classes.map((cls) => (
+          <li>
+            <strong class="cv-mono">{cls.data.courseCode}</strong> —{' '}
+            <strong>{cls.data.title}</strong> ({cls.data.term} {cls.data.academicYear},{' '}
+            {cls.data.level}). <span class="cv-muted">{cls.data.schedule}</span>
+          </li>
+        ))}
+      </ul>
+    </section>
+  </main>
+
+  <script>
+    document.getElementById('cv-print-trigger')?.addEventListener('click', () => {
+      window.print();
+    });
+  </script>
+</BaseLayout>
+
+<style>
+  @page {
+    size: A4;
+    margin: 18mm 16mm;
+  }
+
+  .cv-document {
+    max-width: 820px;
+    margin: 0 auto;
+    padding: 3rem 1.75rem 5rem;
+    font-family: var(--font-serif);
+    color: var(--text-primary);
+  }
+
+  .cv-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--border-subtle);
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+  }
+
+  .cv-back {
+    color: var(--accent);
+    text-decoration: none;
+  }
+
+  .cv-print-btn {
+    padding: 0.45rem 0.9rem;
+    border-radius: 0.375rem;
+    border: 1px solid var(--accent);
+    background: var(--bg-surface);
+    color: var(--text-primary);
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    cursor: pointer;
+  }
+
+  .cv-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 1.5rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 2px solid var(--text-primary);
+    margin-bottom: 2rem;
+  }
+
+  .cv-header h1 {
+    margin: 0;
+    font-family: var(--font-sans);
+    font-size: 2rem;
+    letter-spacing: -0.02em;
+  }
+
+  .cv-subtitle {
+    margin: 0.25rem 0 0;
+    font-size: 1.1rem;
+    font-style: italic;
+  }
+
+  .cv-affiliation {
+    margin: 0.15rem 0 0;
+    color: var(--text-muted);
+    font-family: var(--font-sans);
+    font-size: 0.85rem;
+  }
+
+  .cv-contact-list {
+    margin: 0;
+    display: grid;
+    grid-template-columns: auto auto;
+    gap: 0.25rem 0.85rem;
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+  }
+
+  .cv-contact-list dt {
+    color: var(--text-muted);
+    text-align: right;
+  }
+
+  .cv-contact-list dd {
+    margin: 0;
+  }
+
+  .cv-section {
+    margin-bottom: 2.25rem;
+  }
+
+  .cv-section h2 {
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    border-bottom: 1px solid var(--border-subtle);
+    padding-bottom: 0.35rem;
+    margin: 0 0 1rem;
+  }
+
+  .cv-list {
+    margin: 0;
+    padding-left: 1.35rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    line-height: 1.6;
+  }
+
+  .cv-pub-title {
+    color: var(--text-primary);
+    text-decoration: none;
+  }
+
+  .cv-mono {
+    font-family: var(--font-mono);
+    font-size: 0.82rem;
+  }
+
+  .cv-muted {
+    color: var(--text-muted);
+  }
+
+  @media print {
+    .no-print {
+      display: none !important;
+    }
+
+    .cv-document {
+      padding: 0;
+      color: #000;
+    }
+
+    li {
+      break-inside: avoid;
+    }
+  }
+</style>

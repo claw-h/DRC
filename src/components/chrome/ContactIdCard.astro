@@ -1,0 +1,139 @@
+---
+import type { FacultyProfile } from '../../lib/system-state';
+
+interface Props {
+  profile: FacultyProfile;
+}
+
+const { profile } = Astro.props;
+---
+
+<dialog id="contact-id-card" class="id-card-dialog" closedby="any" aria-labelledby="id-card-name">
+  <div class="id-card-surface">
+    <header class="id-card-strip">
+      <span>{profile.institution.toUpperCase()}</span>
+      <span>ID // {profile.credentialId}</span>
+    </header>
+
+    <div class="id-card-body">
+      <img
+        src={profile.portraitUrl}
+        alt={`Portrait of ${profile.name}`}
+        width="96"
+        height="120"
+        class="id-card-photo"
+      />
+      <div class="id-card-identity">
+        <h2 id="id-card-name" class="id-card-name">{profile.name}</h2>
+        <p class="id-card-title">{profile.title}</p>
+        <p class="id-card-dept">{profile.department} · {profile.office}</p>
+      </div>
+    </div>
+
+    <dl class="id-card-telemetry">
+      <div>
+        <dt>OFFICE HOURS</dt>
+        <dd>{profile.officeHours}</dd>
+      </div>
+      <div>
+        <dt>DIRECT LINE</dt>
+        <dd><a href={`tel:${profile.phone.replace(/[^+\d]/g, '')}`} style="color: inherit;">{profile.phone}</a></dd>
+      </div>
+    </dl>
+
+    <footer class="id-card-actions">
+      <a
+        href={`mailto:${profile.email}?subject=Academic%20Inquiry%20for%20Prof.%20Cordry`}
+        class="id-card-email-btn"
+      >
+        ✉ Email {profile.name} ↗
+      </a>
+      <div class="id-card-secondary-row">
+        <button type="button" class="id-card-sub-btn" id="btn-copy-faculty-email" data-email={profile.email}>
+          ⎘ Copy Email
+        </button>
+        <a href="/cv" class="id-card-sub-btn">
+          ↓ Printable CV
+        </a>
+      </div>
+    </footer>
+  </div>
+</dialog>
+
+<script>
+  const triggerBtn = document.getElementById('contact-trigger-btn');
+  const dialog = document.getElementById('contact-id-card') as HTMLDialogElement | null;
+  const copyBtn = document.getElementById('btn-copy-faculty-email') as HTMLButtonElement | null;
+
+  let supportsDisplayTransition: boolean | undefined;
+  function canTransitionDisplay(): boolean {
+    if (supportsDisplayTransition !== undefined) return supportsDisplayTransition;
+    if (!window.CSS?.supports?.('transition-behavior', 'allow-discrete') || !document.body) {
+      return false;
+    }
+    const probe = document.createElement('div');
+    probe.style.cssText = 'transition: display 1s allow-discrete !important; display: block;';
+    document.body.appendChild(probe);
+    getComputedStyle(probe).display;
+    probe.style.display = 'none';
+    supportsDisplayTransition = getComputedStyle(probe).display === 'block';
+    probe.remove();
+    return supportsDisplayTransition;
+  }
+
+  function supportsTopLayerExit(): boolean {
+    return Boolean(window.CSS?.supports?.('overlay', 'auto') && canTransitionDisplay());
+  }
+
+  async function closeIdCard() {
+    if (!dialog) return;
+    if (!supportsTopLayerExit()) {
+      dialog.setAttribute('data-closing', '');
+      const animations = dialog.getAnimations({ subtree: true });
+      if (animations.length > 0) {
+        await Promise.race([
+          Promise.allSettled(animations.map((a) => a.finished)),
+          new Promise((r) => setTimeout(r, 400)),
+        ]);
+      }
+      if (!dialog.hasAttribute('data-closing')) return;
+      dialog.removeAttribute('data-closing');
+    }
+    dialog.close();
+  }
+
+  // Fallback for browsers without Invoker Commands API (commandfor / command)
+  if (!('commandForElement' in HTMLButtonElement.prototype)) {
+    triggerBtn?.addEventListener('click', () => {
+      if (dialog && !dialog.open) dialog.showModal();
+    });
+  }
+
+  dialog?.addEventListener('cancel', (event) => {
+    event.preventDefault();
+    closeIdCard();
+  });
+
+  // Fallback light-dismiss for browsers without <dialog closedby="any">
+  dialog?.addEventListener('click', (event) => {
+    if (event.target !== dialog) return;
+    const rect = dialog.getBoundingClientRect();
+    const isInside =
+      rect.top <= event.clientY &&
+      event.clientY <= rect.top + rect.height &&
+      rect.left <= event.clientX &&
+      event.clientX <= rect.left + rect.width;
+
+    if (!isInside) {
+      closeIdCard();
+    }
+  });
+
+  copyBtn?.addEventListener('click', () => {
+    const email = copyBtn.dataset.email || '';
+    navigator.clipboard?.writeText(email);
+    const orig = copyBtn.textContent;
+    copyBtn.textContent = '✓ Copied';
+    setTimeout(() => (copyBtn.textContent = orig), 1600);
+  });
+</script>

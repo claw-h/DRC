@@ -1,0 +1,113 @@
+---
+export const prerender = false;
+
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { getSystemState } from '../lib/system-state';
+
+const state = await getSystemState();
+Astro.response.status = 503;
+Astro.response.headers.set('Retry-After', '3600');
+---
+
+<BaseLayout
+  title="503 — Observatory Dome Closed · Duncan R. Cordry"
+  description="The Duncan R. Cordry Celestial & Epistemic Observatory is temporarily offline for scheduled maintenance."
+>
+  <main class="offline-screen">
+    <div class="offline-card">
+      <div class="offline-reticle" aria-hidden="true">
+        <span class="reticle-ring"></span>
+        <span class="reticle-dot"></span>
+      </div>
+      <p class="offline-code">HTTP 503 · OBSERVATORY SHUTTER ENGAGED</p>
+      <h1>Observatory Temporarily Offline</h1>
+      <p class="offline-message">
+        The Duncan R. Cordry Celestial &amp; Epistemic Observatory is temporarily closed for archival calibration.
+      </p>
+      <p class="offline-timestamp">
+        Last state transition: <time datetime={state.updatedAt}>{state.updatedAt}</time>
+      </p>
+      <div class="offline-actions">
+        <a href="/admin" class="offline-admin-link">Sovereign Control Panel (/admin) →</a>
+      </div>
+    </div>
+  </main>
+</BaseLayout>
+
+<style>
+  .offline-screen {
+    min-height: 100dvh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+  }
+
+  .offline-card {
+    max-width: 520px;
+    padding: 2.5rem;
+    border-radius: 0.75rem;
+    border: 1px solid var(--border-subtle);
+    background: var(--bg-surface);
+    text-align: center;
+  }
+
+  .offline-reticle {
+    position: relative;
+    width: 48px;
+    height: 48px;
+    margin: 0 auto 1.25rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .reticle-ring {
+    position: absolute;
+    inset: 0;
+    border: 1px dashed var(--accent);
+    border-radius: 50%;
+  }
+
+  .reticle-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--accent);
+  }
+
+  .offline-code {
+    margin: 0 0 0.5rem;
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    letter-spacing: 0.14em;
+    color: var(--accent);
+  }
+
+  .offline-card h1 {
+    margin: 0 0 0.75rem;
+    font-size: 1.6rem;
+  }
+
+  .offline-message {
+    margin: 0 0 1.25rem;
+    font-family: var(--font-serif);
+    color: var(--text-muted);
+    line-height: 1.6;
+  }
+
+  .offline-timestamp {
+    margin: 0 0 1.5rem;
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    color: var(--text-muted);
+  }
+
+  .offline-admin-link {
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    color: var(--text-primary);
+    text-decoration: none;
+    border-bottom: 1px solid var(--border-subtle);
+  }
+</style>

@@ -1,0 +1,230 @@
+---
+interface Props {
+  publications: any[];
+}
+
+const { publications } = Astro.props;
+const sortedPubs = [...publications].sort((a, b) => b.data.year - a.data.year);
+---
+
+<section
+  id="view-publications"
+  class="spa-view workspace-split"
+  tabindex="-1"
+  aria-label="Publications Archive and Reader"
+>
+  <!-- LEFT PANE: Collapsible Publications Index -->
+  <aside class="workspace-pane-left">
+    <div class="pane-inner-scroll">
+      <header class="pane-toolbar">
+        <h2 class="pane-heading">
+          Publications <span class="count-badge tabular">[{String(sortedPubs.length).padStart(2, '0')}]</span>
+        </h2>
+      </header>
+
+      <search class="pane-search-box" style="padding: 0.75rem 1.25rem; border-block-end: 1px solid var(--border-subtle);">
+        <label for="pub-filter-input" class="sr-only">Filter publications</label>
+        <input
+          type="search"
+          id="pub-filter-input"
+          placeholder="Search title, journal, or year..."
+          spellcheck="false"
+          autocomplete="off"
+          style="inline-size: 100%; padding: 0.45rem 0.7rem; font-size: 0.82rem; border-radius: 4px; border: 1px solid var(--border-subtle); background: var(--bg-canvas);"
+        />
+      </search>
+
+      <ul class="pub-list" id="pub-index-list" role="list">
+        {sortedPubs.map((pub, idx) => (
+          <li data-search-text={`${pub.data.title} ${pub.data.subtitle ?? ''} ${pub.data.venue} ${pub.data.year}`.toLowerCase()}>
+            <button
+              type="button"
+              class="pub-item-btn"
+              aria-current={idx === 0 ? 'true' : 'false'}
+              data-pub-select={pub.data.id}
+            >
+              <span class="pub-item-meta tabular">
+                {pub.data.year} · {pub.data.id.toUpperCase()}
+              </span>
+              <span class="pub-item-title">{pub.data.title}</span>
+              <span class="pub-item-venue">{pub.data.venue}</span>
+            </button>
+          </li>
+        ))}
+      </ul>
+    </div>
+  </aside>
+
+  <!-- RIGHT PANE: Open Publication Reader -->
+  <div class="workspace-pane-right">
+    <div class="pane-inner-scroll" id="pub-reader-scroll">
+      <div class="mobile-back-bar">
+        <button type="button" class="btn-mobile-back tabular" data-stack-back>
+          ◄ Back to Index
+        </button>
+        <span class="tabular" style="font-size: 0.7rem; color: var(--text-muted);">READER VIEW</span>
+      </div>
+
+      {sortedPubs.map((pub, idx) => {
+        const p = pub.data;
+        return (
+          <div
+            class:list={['pub-reader-entry', { 'entry-hidden': idx !== 0 }]}
+            data-pub-entry={p.id}
+          >
+            <div class="reader-layout">
+              <article class="reader-article">
+                <header class="reader-header" style="border-block-end: 1px solid var(--border-subtle); padding-block-end: 1.5rem; margin-block-end: 1.75rem;">
+                  <p class="tabular" style="font-size: 0.74rem; color: var(--accent); letter-spacing: 0.12em; margin-block-end: 0.45rem;">
+                    CATALOG ID // {p.id.toUpperCase()} · {p.year}
+                  </p>
+                  <h3 style="font-size: clamp(1.35rem, 2.4vw, 1.95rem); margin-block-end: 0.35rem;">
+                    {p.title}
+                  </h3>
+                  {p.subtitle && (
+                    <p style="font-family: var(--font-serif); font-style: italic; font-size: 1.15rem; color: var(--text-secondary); margin-block-end: 0.85rem;">
+                      {p.subtitle}
+                    </p>
+                  )}
+                  <p style="font-size: 0.86rem; color: var(--text-secondary); margin-block-end: 0.25rem;">
+                    <strong>Authors:</strong> Duncan R. Cordry{p.coAuthors.length > 0 ? `, ${p.coAuthors.join(', ')}` : ''}
+                  </p>
+                  <p class="tabular" style="font-size: 0.8rem; color: var(--text-muted); margin-block-end: 1.1rem;">
+                    <em>{p.venue}</em> {p.volumeIssue ? `· ${p.volumeIssue}` : ''}
+                  </p>
+
+                  <div style="display: flex; flex-wrap: wrap; gap: 0.55rem;">
+                    <a
+                      href={`/publications/${p.id}`}
+                      class="pill"
+                      style="text-decoration: none; color: var(--text-primary);"
+                    >
+                      ⌖ Standalone Permalink ↗
+                    </a>
+                    {p.doi && (
+                      <a
+                        href={p.doi}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        class="pill"
+                        style="text-decoration: none; color: var(--text-primary);"
+                      >
+                        DOI Record ↗
+                      </a>
+                    )}
+                    <button
+                      type="button"
+                      class="pill btn-copy-bibtex"
+                      data-bibtex={p.citationBibtex}
+                    >
+                      ⎘ Copy BibTeX
+                    </button>
+                  </div>
+                </header>
+
+                <section id={`${p.id}-abstract`} style="margin-block-end: 2rem; padding: 1.15rem; border-radius: 6px; background: var(--bg-elevated); border: 1px solid var(--border-subtle);">
+                  <h4 class="tabular" style="font-size: 0.72rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--accent); margin-block-end: 0.5rem;">
+                    Abstract
+                  </h4>
+                  <p style="font-size: 0.94rem; color: var(--text-primary);">
+                    {p.abstract}
+                  </p>
+                </section>
+
+                {p.sections.map((sec: any, sIdx: number) => {
+                  const refNum = (sIdx % Math.max(1, p.references.length)) + 1;
+                  const refObj = p.references.find((r: any) => r.num === refNum);
+                  const hoverId = `cite-hover-${p.id}-${sIdx}`;
+                  return (
+                    <section id={`${p.id}-${sec.id}`} class="reader-section" style="margin-block-end: 2rem;">
+                      <h4 style="font-size: 1.15rem; margin-block-end: 0.65rem;">
+                        {sec.heading}
+                      </h4>
+                      <p style="font-size: 0.98rem; color: var(--text-secondary); line-height: 1.68;">
+                        {sec.body.replace(/\[\d+\]/g, '')}
+                        {refObj && (
+                          <>
+                            {' '}
+                            <a
+                              href={`#ref-${p.id}-${refObj.num}`}
+                              interestfor={hoverId}
+                              class="cite-trigger tabular"
+                            >
+                              [{refObj.num}]
+                            </a>
+                            <div id={hoverId} popover="hint" class="cite-hovercard">
+                              <p class="tabular" style="font-size: 0.68rem; color: var(--accent); margin-block-end: 0.25rem;">
+                                REFERENCE [{refObj.num}]
+                              </p>
+                              <p style="margin-block-end: 0.35rem; color: var(--text-primary);">
+                                {refObj.citation}
+                              </p>
+                              {refObj.note && (
+                                <p style="font-size: 0.76rem; color: var(--text-secondary);">
+                                  {refObj.note}
+                                </p>
+                              )}
+                            </div>
+                          </>
+                        )}
+                      </p>
+                    </section>
+                  );
+                })}
+
+                {p.references.length > 0 && (
+                  <footer id={`${p.id}-references`} style="border-block-start: 1px solid var(--border-subtle); padding-block-start: 1.5rem; margin-block-start: 2.5rem;">
+                    <h4 class="tabular" style="font-size: 0.76rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-muted); margin-block-end: 0.85rem;">
+                      References &amp; Archival Notes
+                    </h4>
+                    <ol style="padding-inline-start: 1.25rem; display: flex; flex-direction: column; gap: 0.65rem; font-size: 0.86rem; color: var(--text-secondary);">
+                      {p.references.map((r: any) => (
+                        <li id={`ref-${p.id}-${r.num}`}>
+                          <span>{r.citation}</span>
+                          {r.note && (
+                            <span style="display: block; font-size: 0.78rem; color: var(--text-muted); margin-block-start: 0.15rem;">
+                              Note: {r.note}
+                            </span>
+                          )}
+                        </li>
+                      ))}
+                    </ol>
+                  </footer>
+                )}
+              </article>
+
+              <!-- Right Outline Scrollspy (scroll-target-group: auto) -->
+              <nav class="reader-toc-nav" aria-label="Article Sections">
+                <span class="tabular" style="font-size: 0.66rem; letter-spacing: 0.14em; color: var(--text-muted); text-transform: uppercase; margin-block-end: 0.25rem;">
+                  On This Page
+                </span>
+                <a href={`#${p.id}-abstract`}>Abstract</a>
+                {p.sections.map((sec: any) => (
+                  <a href={`#${p.id}-${sec.id}`}>{sec.heading}</a>
+                ))}
+                {p.references.length > 0 && (
+                  <a href={`#${p.id}-references`}>References</a>
+                )}
+              </nav>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  </div>
+</section>
+
+<style>
+  .entry-hidden {
+    display: none;
+  }
+  .btn-mobile-back {
+    font-size: 0.75rem;
+    padding: 0.35rem 0.7rem;
+    border-radius: 4px;
+    border: 1px solid var(--border-subtle);
+    background: var(--bg-elevated);
+    color: var(--accent);
+    cursor: pointer;
+  }
+</style>

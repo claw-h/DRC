@@ -1,0 +1,165 @@
+---
+interface Props {
+  classes: any[];
+}
+
+const { classes } = Astro.props;
+---
+
+<section
+  id="view-classes"
+  class="spa-view workspace-split inactive"
+  tabindex="-1"
+  aria-label="Classes and Syllabi"
+>
+  <!-- LEFT PANE: Semester Ledger & Level Filter -->
+  <aside class="workspace-pane-left">
+    <div class="pane-inner-scroll">
+      <header class="pane-toolbar">
+        <h2 class="pane-heading">
+          Course Archive <span class="count-badge tabular">[{String(classes.length).padStart(2, '0')}]</span>
+        </h2>
+      </header>
+
+      <search class="course-filter-bar" aria-label="Filter courses" style="padding: 0.85rem 1.25rem; border-block-end: 1px solid var(--border-subtle);">
+        <label for="course-search-input" class="sr-only">Search courses by code or title</label>
+        <input
+          type="search"
+          id="course-search-input"
+          placeholder="Filter by course code or topic..."
+          spellcheck="false"
+          autocomplete="off"
+          style="inline-size: 100%; padding: 0.45rem 0.7rem; font-size: 0.82rem; border-radius: 4px; border: 1px solid var(--border-subtle); background: var(--bg-canvas);"
+        />
+        <div class="level-pill-group" role="group" aria-label="Filter by course level">
+          <button type="button" class="pill" data-level-filter="all" aria-pressed="true">All</button>
+          <button type="button" class="pill" data-level-filter="Undergraduate" aria-pressed="false">Undergraduate</button>
+          <button type="button" class="pill" data-level-filter="Graduate" aria-pressed="false">Graduate</button>
+          <button type="button" class="pill" data-level-filter="Seminar" aria-pressed="false">Seminar</button>
+        </div>
+      </search>
+
+      <ul class="pub-list" id="course-index-list" role="list">
+        {classes.map((cls, idx) => (
+          <li
+            data-course-level={cls.data.level}
+            data-search-text={`${cls.data.courseCode} ${cls.data.title} ${cls.data.term}`.toLowerCase()}
+          >
+            <button
+              type="button"
+              class="pub-item-btn"
+              aria-current={idx === 0 ? 'true' : 'false'}
+              data-class-select={cls.data.id}
+            >
+              <span class="pub-item-meta tabular">
+                {cls.data.courseCode} · {cls.data.term.toUpperCase()}
+              </span>
+              <span class="pub-item-title">{cls.data.title}</span>
+              <span class="pub-item-venue tabular">{cls.data.level} · {cls.data.academicYear}</span>
+            </button>
+          </li>
+        ))}
+      </ul>
+    </div>
+  </aside>
+
+  <!-- RIGHT PANE: Syllabus & Weekly Schedule Briefing -->
+  <div class="workspace-pane-right">
+    <div class="pane-inner-scroll">
+      <div class="mobile-back-bar">
+        <button type="button" class="btn-mobile-back tabular" data-stack-back>
+          ◄ Back to Course Ledger
+        </button>
+        <span class="tabular" style="font-size: 0.7rem; color: var(--text-muted);">SYLLABUS BRIEFING</span>
+      </div>
+
+      {classes.map((cls, idx) => {
+        const c = cls.data;
+        return (
+          <article
+            class:list={['class-syllabus-entry', { 'entry-hidden': idx !== 0 }]}
+            data-class-entry={c.id}
+            style="padding: clamp(1.25rem, 3vw, 2.75rem); max-inline-size: 82ch;"
+          >
+            <header style="border-block-end: 1px solid var(--border-subtle); padding-block-end: 1.5rem; margin-block-end: 1.75rem;">
+              <p class="tabular" style="font-size: 0.74rem; letter-spacing: 0.15em; color: var(--accent); margin-block-end: 0.35rem;">
+                COURSE BRIEFING // {c.courseCode}
+              </p>
+              <h3 style="font-size: clamp(1.35rem, 2.4vw, 1.95rem); margin-block-end: 1rem;">
+                {c.title}
+              </h3>
+
+              <dl class="tabular" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 0.75rem; padding: 0.85rem; border-radius: 6px; background: var(--bg-elevated); border: 1px solid var(--border-subtle); font-size: 0.78rem;">
+                <div>
+                  <dt style="font-size: 0.65rem; color: var(--text-muted);">TERM</dt>
+                  <dd style="font-weight: 500;">{c.term} ({c.academicYear})</dd>
+                </div>
+                <div>
+                  <dt style="font-size: 0.65rem; color: var(--text-muted);">LEVEL</dt>
+                  <dd>{c.level}</dd>
+                </div>
+                <div>
+                  <dt style="font-size: 0.65rem; color: var(--text-muted);">MEETING &amp; LOCATION</dt>
+                  <dd>{c.schedule}</dd>
+                </div>
+                <div>
+                  <dt style="font-size: 0.65rem; color: var(--text-muted);">PRINTABLE SYLLABUS</dt>
+                  <dd><a href={c.syllabusPdf || '/cv'} style="color: var(--accent);">Open Syllabus / CV ↗</a></dd>
+                </div>
+              </dl>
+            </header>
+
+            <section style="margin-block-end: 2rem;">
+              <h4 class="tabular" style="font-size: 0.74rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--accent); margin-block-end: 0.5rem;">
+                Course Description
+              </h4>
+              <p style="font-size: 0.96rem; color: var(--text-secondary); line-height: 1.65;">
+                {c.summary}
+              </p>
+            </section>
+
+            {c.weeks.length > 0 && (
+              <section>
+                <h4 class="tabular" style="font-size: 0.74rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--accent); margin-block-end: 0.65rem;">
+                  Weekly Schedule &amp; Required Readings
+                </h4>
+                <div>
+                  {c.weeks.map((wk: any, wIdx: number) => (
+                    <details class="academic-accordion" name={`syllabus-${c.id}`} open={wIdx === 0}>
+                      <summary>
+                        <span class="tabular" style="color: var(--accent); font-size: 0.8rem;">{wk.weekNumber}</span>
+                        <span>{wk.topic}</span>
+                      </summary>
+                      <div class="accordion-body">
+                        <ul style="padding-inline-start: 1.15rem; display: flex; flex-direction: column; gap: 0.35rem;">
+                          {wk.readings.map((reading: string) => (
+                            <li>{reading}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    </details>
+                  ))}
+                </div>
+              </section>
+            )}
+          </article>
+        );
+      })}
+    </div>
+  </div>
+</section>
+
+<style>
+  .entry-hidden {
+    display: none;
+  }
+  .btn-mobile-back {
+    font-size: 0.75rem;
+    padding: 0.35rem 0.7rem;
+    border-radius: 4px;
+    border: 1px solid var(--border-subtle);
+    background: var(--bg-elevated);
+    color: var(--accent);
+    cursor: pointer;
+  }
+</style>

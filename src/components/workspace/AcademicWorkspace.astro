@@ -1,0 +1,267 @@
+---
+import PublicationsWorkspace from './PublicationsWorkspace.astro';
+import BooksWorkspace from './BooksWorkspace.astro';
+import ClassesWorkspace from './ClassesWorkspace.astro';
+
+interface Props {
+  publications: any[];
+  books: any[];
+  classes: any[];
+}
+
+const { publications, books, classes } = Astro.props;
+---
+
+<drc-workspace class="academic-shell">
+  <PublicationsWorkspace publications={publications} />
+  <BooksWorkspace books={books} />
+  <ClassesWorkspace classes={classes} />
+</drc-workspace>
+
+<script>
+  class DrcWorkspace extends HTMLElement {
+    connectedCallback() {
+      this.initViewTabs();
+      this.initSidebarCollapse();
+      this.initItemSelectors();
+      this.initSearchAndFilters();
+      this.initMobileStackDrillDown();
+      this.initScrollspyFallback();
+    }
+
+    // 1. Switch between PUBLICATIONS, BOOKS, and CLASSES via content-visibility: hidden
+    private initViewTabs() {
+      const navButtons = document.querySelectorAll<HTMLButtonElement>('.nav-strip-btn[data-target-view]');
+      const views = this.querySelectorAll<HTMLElement>('.spa-view');
+
+      navButtons.forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const targetId = btn.dataset.targetView;
+          if (!targetId) return;
+
+          navButtons.forEach((b) => {
+            b.setAttribute('aria-current', b === btn ? 'page' : 'false');
+          });
+
+          views.forEach((view) => {
+            const isTarget = view.id === targetId;
+            view.classList.toggle('inactive', !isTarget);
+            view.setAttribute('aria-hidden', isTarget ? 'false' : 'true');
+            if (isTarget) {
+              view.focus({ preventScroll: true });
+            }
+          });
+
+          // If user clicks a nav strip item while on Stage 1 or 2, scroll cleanly into Stage 3
+          const stage3 = document.getElementById('stage-3');
+          if (stage3 && document.body.dataset.stage !== 'stage-3') {
+            stage3.scrollIntoView({ behavior: 'auto' });
+          }
+        });
+      });
+    }
+
+    // 2. Desktop collapsible left sidebar (toggles inert so tab focus skips hidden pane)
+    private initSidebarCollapse() {
+      const toggleBtn = document.getElementById('btn-toggle-sidebar');
+      if (!toggleBtn) return;
+
+      toggleBtn.addEventListener('click', () => {
+        const isCollapsed = toggleBtn.getAttribute('aria-pressed') === 'true';
+        const nextCollapsed = !isCollapsed;
+        toggleBtn.setAttribute('aria-pressed', String(nextCollapsed));
+
+        this.querySelectorAll<HTMLElement>('.workspace-split').forEach((split) => {
+          split.dataset.sidebarCollapsed = String(nextCollapsed);
+          const leftPane = split.querySelector<HTMLElement>('.workspace-pane-left');
+          leftPane?.toggleAttribute('inert', nextCollapsed);
+        });
+      });
+    }
+
+    // 3. Master-detail item selection + Mobile horizontal drill-down scroll
+    private initItemSelectors() {
+      const drillToRightPane = (splitContainer: HTMLElement | null) => {
+        if (!splitContainer) return;
+        if (window.matchMedia('(max-width: 767px)').matches) {
+          splitContainer.scrollBy({ left: splitContainer.clientWidth, behavior: 'auto' });
+        }
+      };
+
+      // Publications
+      this.querySelectorAll<HTMLButtonElement>('[data-pub-select]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const id = btn.dataset.pubSelect;
+          this.querySelectorAll('[data-pub-select]').forEach((b) =>
+            b.setAttribute('aria-current', b === btn ? 'true' : 'false')
+          );
+          this.querySelectorAll<HTMLElement>('[data-pub-entry]').forEach((entry) => {
+            entry.classList.toggle('entry-hidden', entry.dataset.pubEntry !== id);
+          });
+          drillToRightPane(btn.closest('.workspace-split'));
+        });
+      });
+
+      // Books
+      this.querySelectorAll<HTMLButtonElement>('[data-book-select]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const id = btn.dataset.bookSelect;
+          this.querySelectorAll('[data-book-select]').forEach((b) =>
+            b.setAttribute('aria-current', b === btn ? 'true' : 'false')
+          );
+          this.querySelectorAll<HTMLElement>('[data-book-entry]').forEach((entry) => {
+            entry.classList.toggle('entry-hidden', entry.dataset.bookEntry !== id);
+          });
+          drillToRightPane(btn.closest('.workspace-split'));
+        });
+      });
+
+      // Classes
+      this.querySelectorAll<HTMLButtonElement>('[data-class-select]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const id = btn.dataset.classSelect;
+          this.querySelectorAll('[data-class-select]').forEach((b) =>
+            b.setAttribute('aria-current', b === btn ? 'true' : 'false')
+          );
+          this.querySelectorAll<HTMLElement>('[data-class-entry]').forEach((entry) => {
+            entry.classList.toggle('entry-hidden', entry.dataset.classEntry !== id);
+          });
+          drillToRightPane(btn.closest('.workspace-split'));
+        });
+      });
+
+      // Copy BibTeX buttons
+      this.querySelectorAll<HTMLButtonElement>('.btn-copy-bibtex').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const bib = btn.dataset.bibtex || '';
+          navigator.clipboard?.writeText(bib);
+          const orig = btn.textContent;
+          btn.textContent = '✓ BibTeX Copied';
+          setTimeout(() => (btn.textContent = orig), 1600);
+        });
+      });
+    }
+
+    // 4. Live search & course level filter pills
+    private initSearchAndFilters() {
+      const pubInput = document.getElementById('pub-filter-input') as HTMLInputElement | null;
+      pubInput?.addEventListener('input', () => {
+        const q = pubInput.value.trim().toLowerCase();
+        document.querySelectorAll<HTMLElement>('#pub-index-list > li').forEach((li) => {
+          const text = li.dataset.searchText || '';
+          li.style.display = !q || text.includes(q) ? '' : 'none';
+        });
+      });
+
+      const courseInput = document.getElementById('course-search-input') as HTMLInputElement | null;
+      let activeLevel = 'all';
+
+      const applyCourseFilter = () => {
+        const q = (courseInput?.value || '').trim().toLowerCase();
+        document.querySelectorAll<HTMLElement>('#course-index-list > li').forEach((li) => {
+          const text = li.dataset.searchText || '';
+          const level = li.dataset.courseLevel || '';
+          const matchLevel = activeLevel === 'all' || level === activeLevel;
+          const matchQuery = !q || text.includes(q);
+          li.style.display = matchLevel && matchQuery ? '' : 'none';
+        });
+      };
+
+      courseInput?.addEventListener('input', applyCourseFilter);
+
+      this.querySelectorAll<HTMLButtonElement>('[data-level-filter]').forEach((pill) => {
+        pill.addEventListener('click', () => {
+          activeLevel = pill.dataset.levelFilter || 'all';
+          this.querySelectorAll('[data-level-filter]').forEach((p) =>
+            p.setAttribute('aria-pressed', p === pill ? 'true' : 'false')
+          );
+          applyCourseFilter();
+        });
+      });
+    }
+
+    // 5. Mobile Stack Drill-Down Back Button & scrollsnapchange inert sync
+    private initMobileStackDrillDown() {
+      this.querySelectorAll<HTMLButtonElement>('[data-stack-back]').forEach((backBtn) => {
+        backBtn.addEventListener('click', () => {
+          const split = backBtn.closest<HTMLElement>('.workspace-split');
+          split?.scrollTo({ left: 0, behavior: 'auto' });
+        });
+      });
+
+      const isMobile = () => window.matchMedia('(max-width: 767px)').matches;
+
+      this.querySelectorAll<HTMLElement>('.workspace-split').forEach((stack) => {
+        const syncMobileInert = (activePane: Element | null) => {
+          if (!isMobile() || !activePane) {
+            stack.querySelectorAll('.workspace-pane-left, .workspace-pane-right').forEach((p) =>
+              p.removeAttribute('inert')
+            );
+            return;
+          }
+          stack.querySelectorAll('.workspace-pane-left, .workspace-pane-right').forEach((pane) => {
+            pane.toggleAttribute('inert', pane !== activePane);
+          });
+        };
+
+        if ('onscrollsnapchange' in HTMLElement.prototype) {
+          stack.addEventListener('scrollsnapchange', (e: any) => {
+            syncMobileInert(e.snapTargetInline);
+          });
+        } else {
+          const obs = new IntersectionObserver(
+            (entries) => {
+              for (const entry of entries) {
+                if (entry.intersectionRatio >= 0.95) {
+                  syncMobileInert(entry.target);
+                }
+              }
+            },
+            { root: stack, threshold: 0.95 }
+          );
+          stack.querySelectorAll('.workspace-pane-left, .workspace-pane-right').forEach((p) => obs.observe(p));
+        }
+      });
+    }
+
+    // 6. Scrollspy fallback for browsers without CSS scroll-target-group: auto
+    private initScrollspyFallback() {
+      const readerScroll = document.getElementById('pub-reader-scroll');
+      if (!readerScroll) return;
+
+      if (CSS.supports('scroll-target-group: auto')) {
+        const syncAria = () => {
+          this.querySelectorAll('.reader-toc-nav').forEach((nav) => {
+            const current = nav.querySelector('a:target-current');
+            nav.querySelectorAll('a').forEach((a) => {
+              a.setAttribute('aria-current', a === current ? 'true' : 'false');
+            });
+          });
+        };
+        readerScroll.addEventListener('scrollend', syncAria, { passive: true });
+      } else {
+        const sections = readerScroll.querySelectorAll<HTMLElement>('section[id], footer[id]');
+        const obs = new IntersectionObserver(
+          (entries) => {
+            entries.forEach((entry) => {
+              if (entry.isIntersecting) {
+                const id = entry.target.getAttribute('id');
+                this.querySelectorAll<HTMLAnchorElement>('.reader-toc-nav a').forEach((link) => {
+                  const active = link.getAttribute('href') === `#${id}`;
+                  link.classList.toggle(':target-current', active);
+                  link.setAttribute('aria-current', String(active));
+                });
+              }
+            });
+          },
+          { root: readerScroll, rootMargin: '-25% 0px -60% 0px', threshold: 0 }
+        );
+        sections.forEach((sec) => obs.observe(sec));
+      }
+    }
+  }
+
+  if (!customElements.get('drc-workspace')) {
+    customElements.define('drc-workspace', DrcWorkspace);
+  }
+</script>

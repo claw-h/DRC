@@ -1,0 +1,212 @@
+---
+export const prerender = false;
+
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import profile from '../../data/profile.json';
+
+const hasError = Astro.url.searchParams.get('error') === 'invalid';
+---
+
+<BaseLayout
+  title="Sovereign Authentication — DRC Observatory"
+  description="Restricted administrative sign-in for Professor Duncan R. Cordry."
+>
+  <main class="login-shell">
+    <section class="login-card" aria-labelledby="login-heading">
+      <div class="login-header">
+        <span class="login-eyebrow">RESTRICTED TELEMETRY TERMINAL</span>
+        <h1 id="login-heading">DRC Sovereign Control Panel</h1>
+        <p class="login-sub">
+          Authenticate to manage publications, seminars, constellation shards, and server lifecycle.
+        </p>
+      </div>
+
+      {hasError && (
+        <div class="login-alert" role="alert">
+          Authentication failed. Verify your sovereign passphrase (default dev key: <code>cordry-observatory-2026</code>).
+        </div>
+      )}
+
+      <form method="POST" action="/api/admin/auth" class="login-form">
+        <input type="hidden" name="action" value="login" />
+
+        <div class="field-group">
+          <label for="username">Principal Identifier</label>
+          <input
+            id="username"
+            name="username"
+            type="text"
+            value={profile.email}
+            autocomplete="username"
+            required
+          />
+        </div>
+
+        <div class="field-group">
+          <div class="password-label-row">
+            <label for="current-password">Sovereign Passphrase</label>
+            <button
+              type="button"
+              id="toggle-password"
+              class="toggle-pw-btn"
+              aria-label="Show password as plain text. Warning: this will display your password on the screen."
+            >
+              Show passphrase
+            </button>
+          </div>
+          <input
+            id="current-password"
+            name="password"
+            type="password"
+            autocomplete="current-password"
+            placeholder="Enter passphrase…"
+            minlength="8"
+            required
+          />
+        </div>
+
+        <button type="submit" class="login-submit">
+          Unlock Observatory Terminal →
+        </button>
+      </form>
+
+      <footer class="login-footer">
+        <a href="/">← Return to Public Sky Stage</a>
+      </footer>
+    </section>
+  </main>
+
+  <script>
+    const pwInput = document.getElementById('current-password') as HTMLInputElement | null;
+    const toggleBtn = document.getElementById('toggle-password');
+    toggleBtn?.addEventListener('click', () => {
+      if (!pwInput) return;
+      const isPassword = pwInput.type === 'password';
+      pwInput.type = isPassword ? 'text' : 'password';
+      toggleBtn.textContent = isPassword ? 'Hide passphrase' : 'Show passphrase';
+    });
+  </script>
+</BaseLayout>
+
+<style>
+  .login-shell {
+    min-height: 100dvh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1.5rem;
+  }
+
+  .login-card {
+    width: min(440px, 100%);
+    padding: 2.25rem;
+    border-radius: 0.75rem;
+    border: 1px solid var(--border-hairline);
+    background: var(--bg-elevated);
+  }
+
+  .login-eyebrow {
+    font-family: var(--font-mono);
+    font-size: var(--step--1);
+    letter-spacing: 0.14em;
+    color: var(--accent);
+  }
+
+  .login-header h1 {
+    margin: 0.35rem 0 0.5rem;
+    font-size: var(--step-2);
+  }
+
+  .login-sub {
+    margin: 0 0 1.5rem;
+    font-size: var(--step--1);
+    color: var(--text-muted);
+    line-height: 1.5;
+  }
+
+  .login-alert {
+    padding: 0.75rem 1rem;
+    margin-bottom: 1.25rem;
+    border-radius: 0.375rem;
+    border: 1px solid oklch(65% 0.2 25);
+    background: color-mix(in oklch, oklch(65% 0.2 25) 14%, transparent);
+    font-size: var(--step--1);
+  }
+
+  .login-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1.15rem;
+  }
+
+  .field-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+  }
+
+  .field-group label {
+    font-family: var(--font-mono);
+    font-size: var(--step--1);
+    color: var(--text-muted);
+  }
+
+  .password-label-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .toggle-pw-btn {
+    background: none;
+    border: none;
+    padding: 0;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    color: var(--accent);
+    cursor: pointer;
+  }
+
+  .field-group input {
+    padding: 0.65rem 0.8rem;
+    border-radius: 0.375rem;
+    border: 1px solid var(--border-hairline);
+    background: var(--bg-canvas);
+    color: var(--text-primary);
+    font-family: var(--font-mono);
+    font-size: var(--step--1);
+  }
+
+  .field-group input:user-valid {
+    border-color: oklch(68% 0.14 150);
+  }
+
+  .field-group input:user-invalid {
+    border-color: oklch(62% 0.2 25);
+  }
+
+  .login-submit {
+    margin-top: 0.4rem;
+    padding: 0.75rem 1rem;
+    border-radius: 0.375rem;
+    border: 1px solid var(--accent);
+    background: color-mix(in oklch, var(--accent) 18%, transparent);
+    color: var(--text-primary);
+    font-family: var(--font-mono);
+    font-size: var(--step--1);
+    cursor: pointer;
+  }
+
+  .login-footer {
+    margin-top: 1.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border-hairline);
+    font-family: var(--font-mono);
+    font-size: var(--step--1);
+  }
+
+  .login-footer a {
+    color: var(--text-muted);
+    text-decoration: none;
+  }
+</style>

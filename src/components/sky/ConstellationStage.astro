@@ -1,0 +1,732 @@
+---
+interface Props {
+  featuredConstellationId?: string | null;
+}
+
+const { featuredConstellationId = null } = Astro.props;
+---
+
+<div class="sky-backdrop" aria-hidden="true">
+  <drc-constellation-canvas
+    data-featured-id={featuredConstellationId ?? ''}
+    style="display: block; inline-size: 100%; block-size: 100%; position: relative;"
+  >
+    <canvas id="sky-nebula-layer" style="position: absolute; inset: 0; inline-size: 100%; block-size: 100%;"></canvas>
+    <canvas id="sky-artefact-layer" style="position: absolute; inset: 0; inline-size: 100%; block-size: 100%; will-change: transform;"></canvas>
+  </drc-constellation-canvas>
+</div>
+
+<!-- Stage 1 Foreground HUD: Constellation Name, Coordinates & 4K Export -->
+<section id="stage-1" class="snap-stage stage-sky-hud" aria-label="Celestial Cartography">
+  <div class="sky-hud-bottom-left">
+    <p class="sky-hud-epoch tabular" id="hud-constellation-id">EPOCH J2000.0 // DRC-0001</p>
+    <h1 class="sky-hud-name" id="hud-constellation-name">Vela Minor</h1>
+    <p class="sky-hud-meaning" id="hud-constellation-meaning">The Celestial Sail of the Lesser Arc</p>
+    <p class="sky-hud-coords tabular" id="hud-constellation-coords">
+      RA 09h 34m 12.4s · DEC -42° 18' 05"
+    </p>
+  </div>
+
+  <div class="sky-hud-bottom-right">
+    <button type="button" class="sky-hud-btn tabular" id="btn-new-constellation" title="Draw another constellation from the 1,000-entry catalog">
+      ↻ Redraw Sky
+    </button>
+    <button type="button" class="sky-hud-btn tabular" id="btn-copy-sky-link" title="Copy permalink to this exact constellation">
+      ⌖ Permalink
+    </button>
+    <button type="button" class="sky-hud-btn tabular" id="btn-export-chart" title="Export high-resolution PNG Star Chart">
+      ↓ Export Star Chart
+    </button>
+    <a href="#stage-2" class="sky-scroll-cue tabular" aria-label="Scroll down to Duncan R. Cordry archive">
+      SCROLL TO ENTER ARCHIVE ↓
+    </a>
+  </div>
+</section>
+
+<style>
+  .stage-sky-hud {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    padding: clamp(1.25rem, 4vw, 3rem);
+    padding-block-end: calc(clamp(1.5rem, 4vh, 3rem) + env(safe-area-inset-bottom, 0px));
+    z-index: 5;
+    pointer-events: none;
+  }
+
+  .sky-hud-bottom-left {
+    pointer-events: auto;
+    max-inline-size: 34rem;
+  }
+
+  .sky-hud-epoch {
+    font-size: 0.72rem;
+    letter-spacing: 0.2em;
+    color: var(--accent);
+    margin-block-end: 0.35rem;
+  }
+
+  .sky-hud-name {
+    font-size: clamp(1.85rem, 4vw, 3.1rem);
+    font-weight: 400;
+    letter-spacing: 0.04em;
+    color: var(--text-primary);
+    margin-block-end: 0.2rem;
+  }
+
+  .sky-hud-meaning {
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-size: clamp(1rem, 1.6vw, 1.25rem);
+    color: var(--text-secondary);
+    margin-block-end: 0.55rem;
+  }
+
+  .sky-hud-coords {
+    font-size: 0.78rem;
+    letter-spacing: 0.12em;
+    color: var(--text-muted);
+  }
+
+  .sky-hud-bottom-right {
+    pointer-events: auto;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.6rem;
+    margin-block-start: 1.25rem;
+  }
+
+  @media (min-width: 768px) {
+    .stage-sky-hud {
+      flex-direction: row;
+      align-items: flex-end;
+      justify-content: space-between;
+    }
+    .sky-hud-bottom-right {
+      margin-block-start: 0;
+    }
+  }
+
+  .sky-hud-btn,
+  .sky-scroll-cue {
+    font-size: 0.72rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 0.5rem 0.85rem;
+    border-radius: 999px;
+    border: 1px solid var(--border-subtle);
+    background: color-mix(in oklab, var(--bg-surface) 78%, transparent);
+    backdrop-filter: blur(8px);
+    color: var(--text-primary);
+    text-decoration: none;
+    cursor: pointer;
+    transition: border-color 0.2s ease, color 0.2s ease;
+  }
+
+  .sky-hud-btn:hover,
+  .sky-scroll-cue:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+</style>
+
+<script>
+  const GREEK_BAYER = ['α', 'β', 'γ', 'δ', 'ε', 'ζ', 'η', 'θ', 'ι', 'κ'];
+
+  // Harvard spectral classes: O, B, A, F, G, K, M
+  const SPECTRAL_DARK = [
+    [165, 195, 255], // O: Blue-White
+    [185, 210, 255], // B: Rigel Blue
+    [228, 238, 255], // A: Sirius Frost White
+    [248, 246, 238], // F: Procyon Cream
+    [255, 243, 218], // G: Solar Ivory
+    [255, 214, 165], // K: Arcturus Gold
+    [255, 178, 132], // M: Betelgeuse Amber
+  ];
+
+  const SPECTRAL_LIGHT = [
+    [35, 58, 98],
+    [42, 62, 92],
+    [45, 42, 38],
+    [58, 48, 36],
+    [72, 54, 34],
+    [112, 58, 28],
+    [138, 46, 24],
+  ];
+
+  // Fast 2D value noise + fBm for Domain-Warped Milky Way & Interstellar Dust Rifts
+  function hash2D(ix: number, iy: number, seed: number): number {
+    let n = (ix * 374761393 + iy * 668265263 + seed * 1442695041) | 0;
+    n = (n ^ (n >> 13)) * 1274126177;
+    return ((n ^ (n >> 16)) >>> 0) / 4294967296;
+  }
+
+  function valueNoise(x: number, y: number, seed: number): number {
+    const ix = Math.floor(x);
+    const iy = Math.floor(y);
+    const fx = x - ix;
+    const fy = y - iy;
+    const ux = fx * fx * (3 - 2 * fx);
+    const uy = fy * fy * (3 - 2 * fy);
+    const a = hash2D(ix, iy, seed);
+    const b = hash2D(ix + 1, iy, seed);
+    const c = hash2D(ix, iy + 1, seed);
+    const d = hash2D(ix + 1, iy + 1, seed);
+    return a + (b - a) * ux + (c - a) * uy + (a - b - c + d) * ux * uy;
+  }
+
+  function fbm(x: number, y: number, seed: number): number {
+    let v = 0;
+    let amp = 0.5;
+    let freq = 1;
+    for (let i = 0; i < 3; i++) {
+      v += amp * valueNoise(x * freq, y * freq, seed + i * 31);
+      freq *= 2.03;
+      amp *= 0.5;
+    }
+    return v;
+  }
+
+  class DrcConstellationCanvas extends HTMLElement {
+    private nebulaCanvas!: HTMLCanvasElement;
+    private artefactCanvas!: HTMLCanvasElement;
+    private currentConstellation: any = null;
+    private animFrameId: number | null = null;
+    private startTime = 0;
+    private isLightMode = false;
+
+    connectedCallback() {
+      this.nebulaCanvas = this.querySelector('#sky-nebula-layer') as HTMLCanvasElement;
+      this.artefactCanvas = this.querySelector('#sky-artefact-layer') as HTMLCanvasElement;
+      if (!this.nebulaCanvas || !this.artefactCanvas) return;
+
+      this.detectTheme();
+      this.loadAndRenderSky();
+
+      window.addEventListener('resize', () => this.onResize(), { passive: true });
+      window.addEventListener('drc-theme-changed', () => {
+        this.detectTheme();
+        this.renderStaticNebulaAndStars();
+        this.drawArtefactFrame(1);
+      });
+
+      // Subtle 2-layer stereographic parallax on mouse move
+      window.addEventListener(
+        'pointermove',
+        (e) => {
+          if (document.body.dataset.stage === 'stage-3') return;
+          const nx = (e.clientX / window.innerWidth - 0.5) * 2;
+          const ny = (e.clientY / window.innerHeight - 0.5) * 2;
+          this.artefactCanvas.style.transform = `translate3d(${(nx * -5.5).toFixed(2)}px, ${(ny * -5.5).toFixed(2)}px, 0)`;
+        },
+        { passive: true }
+      );
+
+      document.getElementById('btn-new-constellation')?.addEventListener('click', () => {
+        this.loadAndRenderSky(true);
+      });
+
+      document.getElementById('btn-copy-sky-link')?.addEventListener('click', (e) => {
+        if (!this.currentConstellation) return;
+        const url = new URL(window.location.href);
+        url.searchParams.set('sky', this.currentConstellation.id);
+        navigator.clipboard?.writeText(url.toString());
+        const btn = e.currentTarget as HTMLButtonElement;
+        const orig = btn.textContent;
+        btn.textContent = `✓ Copied ${this.currentConstellation.id}`;
+        setTimeout(() => (btn.textContent = orig), 1800);
+      });
+
+      document.getElementById('btn-export-chart')?.addEventListener('click', () => {
+        this.exportStarChartPng();
+      });
+    }
+
+    private detectTheme() {
+      const meta = document.querySelector('meta[name="color-scheme"]')?.getAttribute('content') || 'light dark';
+      if (meta === 'light') {
+        this.isLightMode = true;
+      } else if (meta === 'dark') {
+        this.isLightMode = false;
+      } else {
+        this.isLightMode = window.matchMedia('(prefers-color-scheme: light)').matches;
+      }
+    }
+
+    private async loadAndRenderSky(forceRandom = false) {
+      try {
+        const params = new URLSearchParams(window.location.search);
+        const requestedId = !forceRandom ? (params.get('sky') || this.dataset.featuredId) : '';
+
+        let shardNum = Math.floor(Math.random() * 10);
+        let itemIdx = Math.floor(Math.random() * 100);
+
+        if (requestedId && /^DRC-\d{4}$/.test(requestedId)) {
+          const num = parseInt(requestedId.slice(4), 10) - 1;
+          if (num >= 0 && num < 1000) {
+            shardNum = Math.floor(num / 100);
+            itemIdx = num % 100;
+          }
+        }
+
+        const shardFile = `/data/sky/shards/shard-${String(shardNum).padStart(2, '0')}.json`;
+        const res = await fetch(shardFile);
+        const list = await res.json();
+        this.currentConstellation = list[itemIdx] || list[0];
+
+        this.updateHudText();
+        this.onResize(true);
+      } catch (err) {
+        console.error('Failed to load constellation shard:', err);
+      }
+    }
+
+    private updateHudText() {
+      const c = this.currentConstellation;
+      if (!c) return;
+      const idEl = document.getElementById('hud-constellation-id');
+      const nameEl = document.getElementById('hud-constellation-name');
+      const meaningEl = document.getElementById('hud-constellation-meaning');
+      const coordsEl = document.getElementById('hud-constellation-coords');
+
+      if (idEl) idEl.textContent = `EPOCH ${c.epoch} // ${c.id}`;
+      if (nameEl) nameEl.textContent = c.name;
+      if (meaningEl) meaningEl.textContent = c.meaning || 'Archival Celestial Figure';
+      if (coordsEl) coordsEl.textContent = `RA ${c.ra} · DEC ${c.dec}`;
+    }
+
+    private onResize(restartAnim = false) {
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const w = window.innerWidth;
+      const h = window.innerHeight;
+
+      this.nebulaCanvas.width = Math.round(w * dpr);
+      this.nebulaCanvas.height = Math.round(h * dpr);
+      this.artefactCanvas.width = Math.round(w * dpr);
+      this.artefactCanvas.height = Math.round(h * dpr);
+
+      this.renderStaticNebulaAndStars();
+
+      if (restartAnim) {
+        this.startAstrolabeAwakening();
+      } else {
+        this.drawArtefactFrame(1);
+      }
+    }
+
+    // Layer 1 & 2: 1/4-Res Domain-Warped Nebula + High-DPR Planckian Starfield
+    private renderStaticNebulaAndStars() {
+      const ctx = this.nebulaCanvas.getContext('2d');
+      if (!ctx) return;
+      const W = this.nebulaCanvas.width;
+      const H = this.nebulaCanvas.height;
+
+      // 1. Low-Res Offscreen Domain-Warped Milky Way Buffer (<= 320px wide for instant execution)
+      const bufW = 240;
+      const bufH = Math.max(135, Math.round((H / W) * bufW));
+      const off = document.createElement('canvas');
+      off.width = bufW;
+      off.height = bufH;
+      const octx = off.getContext('2d')!;
+      const img = octx.createImageData(bufW, bufH);
+      const data = img.data;
+
+      const light = this.isLightMode;
+      const angle = 0.56; // ~32 deg Milky Way galactic plane tilt
+      const cosA = Math.cos(angle);
+      const sinA = Math.sin(angle);
+
+      for (let py = 0; py < bufH; py++) {
+        const ny = py / bufH - 0.5;
+        for (let px = 0; px < bufW; px++) {
+          const nx = px / bufW - 0.5;
+          // Rotate into galactic coordinates (gx along band, gy perpendicular to band)
+          const gx = nx * cosA + ny * sinA;
+          const gy = -nx * sinA + ny * cosA;
+
+          // Galactic spine profile
+          const bandMask = Math.exp(-(gy * gy) / 0.048);
+
+          // Domain warping q = (fbm(p), fbm(p + offset))
+          const sx = gx * 3.4 + 2.1;
+          const sy = gy * 5.2 + 1.7;
+          const qx = fbm(sx, sy, 11);
+          const qy = fbm(sx + 5.2, sy + 1.3, 29);
+          const warped = fbm(sx + 2.4 * qx, sy + 2.4 * qy, 47);
+
+          // Dark interstellar dust rift cutting down the spine
+          const riftNoise = fbm(gx * 6.5 + 1.8 * qy, gy * 9.0 - 1.8 * qx, 83);
+          const dustRift = Math.max(0, 1 - Math.abs(gy) * 8.5) * Math.pow(riftNoise, 1.6) * 0.78;
+
+          const nebulaIntensity = Math.max(0, bandMask * (0.35 + 0.85 * warped) - dustRift);
+          const idx = (py * bufW + px) * 4;
+
+          if (!light) {
+            // Night Observatory Mode: Obsidian sky + warm core + cobalt wings + H-alpha knots
+            const baseR = 11 + nebulaIntensity * 46 + Math.pow(warped, 3) * bandMask * 22;
+            const baseG = 14 + nebulaIntensity * 44 + bandMask * 10;
+            const baseB = 22 + nebulaIntensity * 68 + (1 - Math.abs(gx)) * bandMask * 18;
+            data[idx] = Math.min(255, baseR);
+            data[idx + 1] = Math.min(255, baseG);
+            data[idx + 2] = Math.min(255, baseB);
+            data[idx + 3] = 255;
+          } else {
+            // 17th-Century Vellum Atlas Mode: Warm parchment + sepia ink wash along galactic band
+            const vellumR = 244 - nebulaIntensity * 28;
+            const vellumG = 238 - nebulaIntensity * 32;
+            const vellumB = 224 - nebulaIntensity * 36;
+            data[idx] = Math.max(0, vellumR);
+            data[idx + 1] = Math.max(0, vellumG);
+            data[idx + 2] = Math.max(0, vellumB);
+            data[idx + 3] = 255;
+          }
+        }
+      }
+
+      octx.putImageData(img, 0, 0);
+
+      // Upscale low-res buffer onto full canvas with hardware bilinear/bicubic smoothing
+      ctx.save();
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
+      ctx.drawImage(off, 0, 0, W, H);
+      ctx.restore();
+
+      // 2. Render 650 Background Field Stars with Planckian Blackbody Color & Galactic Concentration
+      let seed = 928371;
+      const rand = () => {
+        seed = (seed * 1664525 + 1013904223) >>> 0;
+        return seed / 4294967296;
+      };
+
+      const palette = light ? SPECTRAL_LIGHT : SPECTRAL_DARK;
+      const starTotal = 650;
+
+      for (let i = 0; i < starTotal; i++) {
+        // Concentrate 55% of stars toward the Milky Way galactic band
+        let sx = rand() * W;
+        let sy = rand() * H;
+        if (i < starTotal * 0.55) {
+          const u = (rand() - 0.5) * 1.35;
+          const v = (rand() + rand() + rand() - 1.5) * 0.16;
+          const nx = u * cosA - v * sinA + 0.5;
+          const ny = u * sinA + v * cosA + 0.5;
+          sx = nx * W;
+          sy = ny * H;
+        }
+        if (sx < 0 || sx > W || sy < 0 || sy > H) continue;
+
+        const spec = palette[Math.floor(rand() * palette.length)];
+        const p = Math.pow(rand(), 3.2); // Power-law luminosity distribution
+        const radius = (0.45 + p * 1.9) * (W > 1200 ? 1.15 : 0.95);
+        const alpha = light ? 0.25 + p * 0.55 : 0.22 + p * 0.72;
+
+        ctx.beginPath();
+        ctx.fillStyle = `rgba(${spec[0]}, ${spec[1]}, ${spec[2]}, ${alpha.toFixed(3)})`;
+        ctx.arc(sx, sy, radius, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Add subtle atmospheric halation to top 6% brightest field stars
+        if (p > 0.72) {
+          const halo = ctx.createRadialGradient(sx, sy, 0, sx, sy, radius * 5.5);
+          halo.addColorStop(0, `rgba(${spec[0]}, ${spec[1]}, ${spec[2]}, ${(alpha * 0.35).toFixed(3)})`);
+          halo.addColorStop(1, `rgba(${spec[0]}, ${spec[1]}, ${spec[2]}, 0)`);
+          ctx.fillStyle = halo;
+          ctx.beginPath();
+          ctx.arc(sx, sy, radius * 5.5, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+    }
+
+    private startAstrolabeAwakening() {
+      if (this.animFrameId) cancelAnimationFrame(this.animFrameId);
+      const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      if (prefersReduced) {
+        this.drawArtefactFrame(1);
+        return;
+      }
+
+      this.startTime = performance.now();
+      const duration = 3100; // 3.1-second 4-movement Astrolabe Awakening
+
+      const tick = (now: number) => {
+        const progress = Math.min(1, (now - this.startTime) / duration);
+        this.drawArtefactFrame(progress);
+        if (progress < 1) {
+          this.animFrameId = requestAnimationFrame(tick);
+        } else {
+          this.animFrameId = null; // 0% GPU idle once complete
+        }
+      };
+
+      this.animFrameId = requestAnimationFrame(tick);
+    }
+
+    // Layer 3 & 4: Mythological Artefact Cartography & 4-Movement Choreography
+    private drawArtefactFrame(progress: number) {
+      const ctx = this.artefactCanvas.getContext('2d');
+      if (!ctx || !this.currentConstellation) return;
+
+      const W = this.artefactCanvas.width;
+      const H = this.artefactCanvas.height;
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      ctx.clearRect(0, 0, W, H);
+
+      const c = this.currentConstellation;
+      const light = this.isLightMode;
+      const palette = light ? SPECTRAL_LIGHT : SPECTRAL_DARK;
+
+      // Movement timings (0..1)
+      const easeOutQuart = (t: number) => 1 - Math.pow(1 - Math.max(0, Math.min(1, t)), 4);
+      const m1Stars = easeOutQuart(progress / 0.35);
+      const m2Survey = easeOutQuart((progress - 0.14) / 0.45);
+      const m3Edges = easeOutQuart((progress - 0.32) / 0.52);
+      const m4Labels = easeOutQuart((progress - 0.58) / 0.42);
+
+      // Project constellation [0..10000] into viewport safe zone (auto-rotate 90deg on portrait mobile)
+      const isPortrait = H > W * 1.1;
+      const padX = W * (isPortrait ? 0.12 : 0.2);
+      const padY = H * (isPortrait ? 0.18 : 0.16);
+      const availW = W - padX * 2;
+      const availH = H - padY * 2;
+
+      const pts = c.stars.map((s: number[]) => {
+        const nx = s[0] / 10000;
+        const ny = s[1] / 10000;
+        const px = isPortrait ? padX + ny * availW : padX + nx * availW;
+        const py = isPortrait ? padY + (1 - nx) * availH : padY + ny * availH;
+        return { x: px, y: py, mag: s[2], specIdx: s[3] ?? 2 };
+      });
+
+      if (pts.length === 0) return;
+
+      // Geometric barycenter
+      const cx = pts.reduce((acc: number, p: any) => acc + p.x, 0) / pts.length;
+      const cy = pts.reduce((acc: number, p: any) => acc + p.y, 0) / pts.length;
+
+      // Ink colors: Champagne Silverpoint (Dark) vs Oxidized Copperplate & Vermilion (Light)
+      const inkRgb = light ? '72, 52, 34' : '226, 214, 188';
+      const accentRgb = light ? '168, 52, 32' : '212, 188, 136';
+
+      // 1. Movement II: Sweeping Great-Circle Declination Arc & Vernier Ticks
+      if (m2Survey > 0.01) {
+        ctx.save();
+        const arcRadius = Math.max(W, H) * 1.15;
+        const arcCenterX = cx - arcRadius * 0.28;
+        const arcCenterY = cy + arcRadius * 0.94;
+        const baseAngle = -Math.PI * 0.41;
+        const sweep = 0.34 * m2Survey;
+
+        ctx.strokeStyle = `rgba(${inkRgb}, ${(0.18 * m2Survey).toFixed(3)})`;
+        ctx.lineWidth = 0.85 * dpr;
+        ctx.beginPath();
+        ctx.arc(arcCenterX, arcCenterY, arcRadius, baseAngle - sweep, baseAngle + sweep);
+        ctx.stroke();
+
+        // Graduated 1° vernier ticks along the Great Circle
+        const tickCount = 24;
+        for (let t = -tickCount; t <= tickCount; t++) {
+          const a = baseAngle + (t / tickCount) * sweep;
+          const isMajor = t % 5 === 0;
+          const len = (isMajor ? 7 : 3.5) * dpr;
+          const x1 = arcCenterX + Math.cos(a) * (arcRadius - len);
+          const y1 = arcCenterY + Math.sin(a) * (arcRadius - len);
+          const x2 = arcCenterX + Math.cos(a) * (arcRadius + len);
+          const y2 = arcCenterY + Math.sin(a) * (arcRadius + len);
+
+          ctx.strokeStyle = `rgba(${accentRgb}, ${((isMajor ? 0.32 : 0.16) * m2Survey).toFixed(3)})`;
+          ctx.beginPath();
+          ctx.moveTo(x1, y1);
+          ctx.lineTo(x2, y2);
+          ctx.stroke();
+        }
+        ctx.restore();
+      }
+
+      // 2. Ghost Mythos Construction Chords (Dotted geometric proof lines)
+      if (m3Edges > 0.1 && Array.isArray(c.ghostChords)) {
+        ctx.save();
+        ctx.setLineDash([1.5 * dpr, 5.5 * dpr]);
+        ctx.lineWidth = 0.8 * dpr;
+        ctx.strokeStyle = `rgba(${accentRgb}, ${(0.2 * m3Edges).toFixed(3)})`;
+        for (const [u, v] of c.ghostChords) {
+          if (!pts[u] || !pts[v]) continue;
+          ctx.beginPath();
+          ctx.moveTo(pts[u].x, pts[u].y);
+          ctx.lineTo(pts[v].x, pts[v].y);
+          ctx.stroke();
+        }
+        ctx.restore();
+      }
+
+      // 3. Movement III: Primary Intaglio Silverpoint Edges with 9px "Breathing Halo" Gap
+      if (m3Edges > 0.01) {
+        const gap = 10 * dpr;
+        ctx.save();
+        for (let eIdx = 0; eIdx < c.edges.length; eIdx++) {
+          const [u, v] = c.edges[eIdx];
+          const pA = pts[u];
+          const pB = pts[v];
+          if (!pA || !pB) continue;
+
+          const stagger = Math.max(0, Math.min(1, (m3Edges * c.edges.length - eIdx * 0.55)));
+          if (stagger <= 0) continue;
+
+          const dx = pB.x - pA.x;
+          const dy = pB.y - pA.y;
+          const dist = Math.hypot(dx, dy);
+          if (dist <= gap * 2.2) continue;
+
+          const ux = dx / dist;
+          const uy = dy / dist;
+          const startX = pA.x + ux * gap;
+          const startY = pA.y + uy * gap;
+          const drawLen = (dist - gap * 2) * stagger;
+          const endX = startX + ux * drawLen;
+          const endY = startY + uy * drawLen;
+
+          // Primary silverpoint stroke
+          ctx.strokeStyle = `rgba(${inkRgb}, ${(0.62 * stagger).toFixed(3)})`;
+          ctx.lineWidth = 1.15 * dpr;
+          ctx.beginPath();
+          ctx.moveTo(startX, startY);
+          ctx.lineTo(endX, endY);
+          ctx.stroke();
+
+          // Parallel intaglio copperplate shadow hairline offset by 1.8px
+          const nx = -uy * 1.8 * dpr;
+          const ny = ux * 1.8 * dpr;
+          ctx.strokeStyle = `rgba(${accentRgb}, ${(0.18 * stagger).toFixed(3)})`;
+          ctx.lineWidth = 0.65 * dpr;
+          ctx.beginPath();
+          ctx.moveTo(startX + nx, startY + ny);
+          ctx.lineTo(endX + nx, endY + ny);
+          ctx.stroke();
+        }
+        ctx.restore();
+      }
+
+      // 4. Movement I & II & IV: Constellation Stars (3-Zone Airy Disk + Astrolabe Reticles + Bayer Symbols)
+      pts.forEach((pt: any, idx: number) => {
+        const spec = palette[pt.specIdx % palette.length];
+        const lum = Math.max(0.35, 1.55 - pt.mag * 0.35) * m1Stars;
+        const coreR = (1.6 + lum * 1.5) * dpr;
+        const haloR = (12 + lum * 15) * dpr;
+
+        // Zone 3: Exponential Atmospheric Halation
+        const halo = ctx.createRadialGradient(pt.x, pt.y, 0, pt.x, pt.y, haloR);
+        halo.addColorStop(0, `rgba(${spec[0]}, ${spec[1]}, ${spec[2]}, ${(0.48 * m1Stars).toFixed(3)})`);
+        halo.addColorStop(0.3, `rgba(${spec[0]}, ${spec[1]}, ${spec[2]}, ${(0.16 * m1Stars).toFixed(3)})`);
+        halo.addColorStop(1, `rgba(${spec[0]}, ${spec[1]}, ${spec[2]}, 0)`);
+        ctx.fillStyle = halo;
+        ctx.beginPath();
+        ctx.arc(pt.x, pt.y, haloR, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Zone 1: Saturated Airy Core
+        ctx.fillStyle = light
+          ? `rgba(${spec[0]}, ${spec[1]}, ${spec[2]}, ${m1Stars.toFixed(3)})`
+          : `rgba(255, 252, 245, ${m1Stars.toFixed(3)})`;
+        ctx.beginPath();
+        ctx.arc(pt.x, pt.y, coreR, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Fraunhofer Diffraction Spikes on Alpha (0) and Beta (1) stars
+        if (idx <= 1 && m1Stars > 0.2) {
+          const spikeLen = (idx === 0 ? 22 : 14) * dpr * m1Stars;
+          const spikeAngle = 0.26; // 15 deg spider-vane angle
+          ctx.save();
+          ctx.translate(pt.x, pt.y);
+          ctx.rotate(spikeAngle);
+          ctx.strokeStyle = `rgba(${inkRgb}, ${(0.45 * m1Stars).toFixed(3)})`;
+          ctx.lineWidth = 0.65 * dpr;
+          ctx.beginPath();
+          ctx.moveTo(-spikeLen, 0);
+          ctx.lineTo(spikeLen, 0);
+          ctx.moveTo(0, -spikeLen);
+          ctx.lineTo(0, spikeLen);
+          ctx.stroke();
+          ctx.restore();
+        }
+
+        // Concentric Astrolabe Reticles around Alpha and Beta stars
+        if (idx <= 1 && m2Survey > 0.05) {
+          ctx.save();
+          ctx.translate(pt.x, pt.y);
+          ctx.rotate((1 - m2Survey) * 0.78);
+          ctx.strokeStyle = `rgba(${accentRgb}, ${(0.45 * m2Survey).toFixed(3)})`;
+          ctx.lineWidth = 0.8 * dpr;
+          ctx.beginPath();
+          ctx.arc(0, 0, 7.5 * dpr, 0, Math.PI * 2);
+          ctx.stroke();
+
+          if (idx === 0) {
+            ctx.setLineDash([2 * dpr, 3.5 * dpr]);
+            ctx.beginPath();
+            ctx.arc(0, 0, 15.5 * dpr, 0, Math.PI * 2);
+            ctx.stroke();
+          }
+          ctx.restore();
+        }
+
+        // Bayer Greek Letter Designation (α, β, γ, δ...)
+        if (m4Labels > 0.05 && idx < GREEK_BAYER.length) {
+          ctx.save();
+          ctx.font = `italic ${Math.round(12 * dpr)}px Georgia, "Instrument Serif", serif`;
+          ctx.fillStyle = `rgba(${inkRgb}, ${(0.78 * m4Labels).toFixed(3)})`;
+          ctx.fillText(GREEK_BAYER[idx], pt.x + 10 * dpr, pt.y - 8 * dpr);
+          ctx.restore();
+        }
+      });
+    }
+
+    // Export high-resolution souvenir Star Chart PNG with title & coordinates stamp
+    private exportStarChartPng() {
+      if (!this.currentConstellation) return;
+      const W = this.nebulaCanvas.width;
+      const H = this.nebulaCanvas.height;
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+
+      const out = document.createElement('canvas');
+      out.width = W;
+      out.height = H;
+      const ctx = out.getContext('2d')!;
+
+      ctx.drawImage(this.nebulaCanvas, 0, 0);
+      ctx.drawImage(this.artefactCanvas, 0, 0);
+
+      // Stamp archival border and typography
+      const c = this.currentConstellation;
+      const ink = this.isLightMode ? '#241c14' : '#efe6d5';
+      ctx.strokeStyle = ink;
+      ctx.globalAlpha = 0.35;
+      ctx.lineWidth = 1 * dpr;
+      ctx.strokeRect(20 * dpr, 20 * dpr, W - 40 * dpr, H - 40 * dpr);
+
+      ctx.globalAlpha = 0.9;
+      ctx.fillStyle = ink;
+      ctx.font = `500 ${Math.round(22 * dpr)}px sans-serif`;
+      ctx.fillText(c.name.toUpperCase(), 42 * dpr, H - 64 * dpr);
+
+      ctx.font = `${Math.round(11 * dpr)}px monospace`;
+      ctx.globalAlpha = 0.7;
+      ctx.fillText(
+        `${c.id} · RA ${c.ra} · DEC ${c.dec} · DUNCAN R. CORDRY OBSERVATORY ARCHIVE`,
+        42 * dpr,
+        H - 42 * dpr
+      );
+
+      const url = out.toDataURL('image/png');
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${c.id.toLowerCase()}-${c.name.toLowerCase().replace(/\s+/g, '-')}.png`;
+      a.click();
+    }
+  }
+
+  if (!customElements.get('drc-constellation-canvas')) {
+    customElements.define('drc-constellation-canvas', DrcConstellationCanvas);
+  }
+</script>

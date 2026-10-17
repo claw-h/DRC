@@ -1,0 +1,21 @@
+{
+  "name": "drc-observatory-portfolio",
+  "type": "module",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Duncan R. Cordry (DRC) — Generative Astronomical Portfolio, Academic Reader & Sovereign Observatory Control Panel",
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "scripts": {
+    "generate:sky": "node scripts/generate-constellations.mjs",
+    "dev": "ASTRO_TELEMETRY_DISABLED=1 astro dev",
+    "build": "node scripts/generate-constellations.mjs && ASTRO_TELEMETRY_DISABLED=1 astro build",
+    "preview": "ASTRO_TELEMETRY_DISABLED=1 astro preview",
+    "start": "node ./dist/server/entry.mjs"
+  },
+  "dependencies": {
+    "@astrojs/node": "^9.0.0",
+    "astro": "^5.1.0"
+  }
+}

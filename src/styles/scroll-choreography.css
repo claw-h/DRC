@@ -1,0 +1,220 @@
+@layer layout {
+  html.portfolio-scroller {
+    scroll-snap-type: y mandatory;
+    scrollbar-width: none;
+    timeline-scope: --stage-sky, --stage-header, --stage-workspace;
+  }
+
+  html.portfolio-scroller::-webkit-scrollbar {
+    display: none;
+  }
+
+  .snap-stage {
+    position: relative;
+    block-size: 100dvh;
+    inline-size: 100%;
+    scroll-snap-align: start;
+    scroll-snap-stop: always;
+  }
+
+  #stage-1 { view-timeline: --stage-sky block; }
+  #stage-2 { view-timeline: --stage-header block; }
+  #stage-3 { view-timeline: --stage-workspace block; }
+
+  /* Fixed Constellation Sky Backdrop */
+  .sky-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    isolation: isolate;
+    pointer-events: none;
+    transition: opacity 0.4s ease;
+  }
+
+  body[data-stage="stage-2"] .sky-backdrop {
+    opacity: 0.25;
+  }
+  body[data-stage="stage-3"] .sky-backdrop {
+    opacity: 0.05;
+  }
+
+  /* Persistent Chrome Header + Nav Strip */
+  .persistent-chrome {
+    position: fixed;
+    inset-block-start: 0;
+    inset-inline: 0;
+    z-index: 30;
+    pointer-events: none;
+  }
+
+  .persistent-header {
+    pointer-events: auto;
+    display: flex;
+    align-items: safe center;
+    justify-content: space-between;
+    block-size: var(--header-height);
+    padding-inline: clamp(1rem, 3vw, 2.25rem);
+    background: color-mix(in oklab, var(--bg-surface) 84%, transparent);
+    backdrop-filter: blur(12px);
+    border-block-end: 1px solid var(--border-subtle);
+    opacity: 0;
+    transform: translate3d(0, -100%, 0);
+    transition: opacity 0.35s ease, transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  body[data-stage="stage-2"] .persistent-header,
+  body[data-stage="stage-3"] .persistent-header {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+
+  .brand-lockup {
+    position: relative;
+    display: flex;
+    align-items: center;
+    min-inline-size: 16rem;
+    block-size: 100%;
+    text-decoration: none;
+    color: var(--text-primary);
+  }
+
+  .header-title-full {
+    font-size: clamp(1.1rem, 2vw, 1.35rem);
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    transform-origin: left center;
+    transition: opacity 0.3s ease, transform 0.3s ease;
+  }
+
+  .header-title-drc {
+    position: absolute;
+    inset-inline-start: 0;
+    font-family: var(--font-mono);
+    font-size: 1.15rem;
+    font-weight: 600;
+    letter-spacing: 0.16em;
+    color: var(--accent);
+    opacity: 0;
+    transform: translate3d(0.75rem, 0, 0);
+    transition: opacity 0.3s ease, transform 0.3s ease;
+  }
+
+  body[data-stage="stage-3"] .header-title-full {
+    opacity: 0;
+    transform: translate3d(-1rem, 0, 0) scale(0.82);
+    pointer-events: none;
+  }
+
+  body[data-stage="stage-3"] .header-title-drc {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+
+  /* Scroll-Linked Horizontal Navigation Strip */
+  .nav-strip-wrapper {
+    pointer-events: auto;
+    block-size: var(--nav-strip-height);
+    background: color-mix(in oklab, var(--bg-canvas) 90%, transparent);
+    backdrop-filter: blur(10px);
+    border-block-end: 1px solid var(--border-subtle);
+    overflow: clip;
+    display: flex;
+    align-items: center;
+    padding-inline: clamp(1rem, 3vw, 2.25rem);
+    opacity: 0;
+    transform: translate3d(0, -0.5rem, 0);
+    transition: opacity 0.35s ease, transform 0.35s ease;
+  }
+
+  body[data-stage="stage-2"] .nav-strip-wrapper,
+  body[data-stage="stage-3"] .nav-strip-wrapper {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+
+  .nav-strip-track {
+    display: flex;
+    align-items: center;
+    gap: clamp(1.5rem, 4vw, 3.5rem);
+    list-style: none;
+  }
+
+  /* Native CSS Scroll-Driven Animations where supported */
+  @keyframes fade-sky {
+    0%   { opacity: 1; }
+    50%  { opacity: 0.25; }
+    100% { opacity: 0.05; }
+  }
+
+  @keyframes reveal-header {
+    from { opacity: 0; transform: translate3d(0, -100%, 0); }
+    to   { opacity: 1; transform: translate3d(0, 0, 0); }
+  }
+
+  @keyframes dock-header-full {
+    from { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+    to   { opacity: 0; transform: translate3d(-1.25rem, 0, 0) scale(0.8); }
+  }
+
+  @keyframes dock-header-monogram {
+    from { opacity: 0; transform: translate3d(0.85rem, 0, 0); }
+    to   { opacity: 1; transform: translate3d(0, 0, 0); }
+  }
+
+  @keyframes scrub-nav-strip {
+    from { transform: translate3d(14vw, 0, 0); }
+    to   { transform: translate3d(0, 0, 0); }
+  }
+
+  @supports ((animation-timeline: scroll()) and (animation-range: 0% 100%)) {
+    .sky-backdrop {
+      animation: fade-sky auto linear both;
+      animation-timeline: scroll(block root);
+      animation-range: 0dvh 200dvh;
+    }
+
+    .persistent-header {
+      animation: reveal-header auto linear both;
+      animation-timeline: scroll(block root);
+      animation-range: 25dvh 95dvh;
+    }
+
+    .nav-strip-wrapper {
+      animation: reveal-header auto linear both;
+      animation-timeline: scroll(block root);
+      animation-range: 45dvh 105dvh;
+    }
+
+    .header-title-full {
+      animation: dock-header-full auto linear both;
+      animation-timeline: scroll(block root);
+      animation-range: 105dvh 175dvh;
+    }
+
+    .header-title-drc {
+      animation: dock-header-monogram auto linear both;
+      animation-timeline: scroll(block root);
+      animation-range: 120dvh 190dvh;
+    }
+
+    .nav-strip-track {
+      animation: scrub-nav-strip auto linear both;
+      animation-timeline: scroll(block root);
+      animation-range: 70dvh 195dvh;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .sky-backdrop,
+    .persistent-header,
+    .nav-strip-wrapper,
+    .header-title-full,
+    .header-title-drc,
+    .nav-strip-track {
+      animation: none !important;
+      transition: none !important;
+    }
+  }
+}

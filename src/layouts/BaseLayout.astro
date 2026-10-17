@@ -1,0 +1,63 @@
+---
+import '../styles/tokens.css';
+import '../styles/scroll-choreography.css';
+import '../styles/workspace-responsive.css';
+import '../styles/contact-id-card.css';
+
+interface Props {
+  title?: string;
+  description?: string;
+  isPortfolioRoot?: boolean;
+  citationMeta?: {
+    title: string;
+    authors: string[];
+    year: number;
+    venue: string;
+    doi?: string;
+    pdfUrl?: string;
+  };
+}
+
+const {
+  title = 'Duncan R. Cordry · Astrophysics & Formal Epistemology',
+  description = 'Academic archive, monographs, course syllabi, and generative celestial cartography of Professor Duncan R. Cordry.',
+  isPortfolioRoot = false,
+  citationMeta,
+} = Astro.props;
+---
+
+<!DOCTYPE html>
+<html lang="en" class={isPortfolioRoot ? 'portfolio-scroller' : ''}>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+
+    <!-- MANDATORY: Declare support for both light and dark themes & prevent FOUC -->
+    <meta name="color-scheme" content="light dark" />
+    <script is:inline>
+      try {
+        document.querySelector('meta[name="color-scheme"]').content =
+          localStorage.getItem('color-scheme') ?? 'light dark';
+      } catch {}
+    </script>
+
+    {citationMeta && (
+      <>
+        <meta name="citation_title" content={citationMeta.title} />
+        <meta name="citation_author" content="Cordry, Duncan R." />
+        {citationMeta.authors.map((a) => (
+          <meta name="citation_author" content={a} />
+        ))}
+        <meta name="citation_publication_date" content={String(citationMeta.year)} />
+        <meta name="citation_journal_title" content={citationMeta.venue} />
+        {citationMeta.doi && <meta name="citation_doi" content={citationMeta.doi} />}
+        {citationMeta.pdfUrl && <meta name="citation_pdf_url" content={citationMeta.pdfUrl} />}
+      </>
+    )}
+  </head>
+  <body data-stage="stage-1">
+    <slot />
+  </body>
+</html>
