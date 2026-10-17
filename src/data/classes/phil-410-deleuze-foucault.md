@@ -24,4 +24,17 @@ weeks:
     readings:
       - "Michel Foucault (1982), The Hermeneutics of the Subject: Lectures at the Collège de France"
       - "Duncan R. Cordry (2023), Spirituality at the End of the World, Ch. 1"
+reviews:
+  - author: "Nikhil P."
+    role: "Ashoka Scholars Programme (ASP) · Advanced Seminar"
+    term: "Spring 2026"
+    rating: "5.0 / 5.0"
+    highlight: "Foucault's 1982 Collège de France lectures on spirituality changed how I read all of poststructuralism."
+    quote: "Most courses stop at 'Discipline and Punish', but tracing Foucault's late turn to 'political spirituality' alongside Deleuze's micropolitics of desire showed us how subjective transformation and political liberation belong together."
+  - author: "Tara B."
+    role: "MA / ASP Philosophy Research Cohort"
+    term: "Spring 2026"
+    rating: "5.0 / 5.0"
+    highlight: "A masterclass in continental political philosophy."
+    quote: "Prof. Cordry's command of Deleuze's three syntheses of time and Foucault's technologies of the self made this the most intellectually rewarding seminar in the department."
 ---

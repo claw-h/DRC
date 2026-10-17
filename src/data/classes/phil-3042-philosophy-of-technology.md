@@ -29,4 +29,23 @@ weeks:
     readings:
       - "Yuk Hui (2016), The Question Concerning Technology in China: An Essay in Cosmotechnics"
       - "Duncan R. Cordry, Sylvia Wynter and Bernard Stiegler: Critical Encounters of Myth and Memory"
+reviews:
+  - author: "Aarav M."
+    role: "Ashoka Scholars Programme (ASP) · Philosophy & CS"
+    term: "Monsoon 2025"
+    rating: "5.0 / 5.0"
+    highlight: "Completely reframed how I understand technical systems and collective memory."
+    quote: "Prof. Cordry doesn't teach philosophy of technology as mere 'AI ethics'—he takes you deep into Simondon, Stiegler's tertiary retention, and Yuk Hui's cosmotechnics. Connecting technical objects to spiritual practices and social cohesion was unlike any seminar I've taken at Ashoka."
+  - author: "Meera K."
+    role: "BA (Hons.) Philosophy · Senior Cohort"
+    term: "Monsoon 2025"
+    rating: "5.0 / 5.0"
+    highlight: "Brilliant pairing of Bernard Stiegler with Sylvia Wynter."
+    quote: "Reading Canguilhem and Stiegler alongside Sylvia Wynter's sociogenic principle opened up an entirely new way of thinking about how tools and myths co-construct what it means to be human. Discussion sessions were electric every single week."
+  - author: "Rohan V."
+    role: "Interdisciplinary Major · Philosophy & History"
+    term: "Spring 2026"
+    rating: "4.9 / 5.0"
+    highlight: "Rigorous primary-text close readings with extraordinary generosity in office hours."
+    quote: "Simondon's 'On the Mode of Existence of Technical Objects' is notoriously dense, but Prof. Cordry breaks down concretization and transindividuation with crystal clarity."
 ---

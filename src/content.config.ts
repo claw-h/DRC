@@ -75,6 +75,14 @@ const classes = defineCollection({
       topic: z.string(),
       readings: z.array(z.string()),
     })).default([]),
+    reviews: z.array(z.object({
+      author: z.string(),
+      role: z.string(),
+      term: z.string(),
+      rating: z.string().default('5.0 / 5.0'),
+      highlight: z.string().optional(),
+      quote: z.string(),
+    })).default([]),
   }),
 });
 

@@ -29,4 +29,17 @@ weeks:
     readings:
       - "Sara Ahmed (2006), Queer Phenomenology: Orientations, Objects, Others"
       - "Duncan R. Cordry (2023), Spirituality at the End of the World (Selections on Orientation)"
+reviews:
+  - author: "Sanya T."
+    role: "BA (Hons.) Philosophy · Sophomore Cohort"
+    term: "Monsoon 2025"
+    rating: "5.0 / 5.0"
+    highlight: "Made Husserl's time-consciousness and Merleau-Ponty's lived body come alive."
+    quote: "Moving from Husserl's primary and secondary retention to Stiegler's tertiary retention and Sara Ahmed's phenomenology of orientation gave the entire course a clear, unforgettable arc."
+  - author: "Ishaan D."
+    role: "BA (Hons.) Psychology & Philosophy"
+    term: "Monsoon 2025"
+    rating: "4.9 / 5.0"
+    highlight: "Essential for anyone interested in embodiment, perception, and lived time."
+    quote: "Prof. Cordry's lectures on Merleau-Ponty and Fanon's corporeal schema were the highlight of my semester. He encourages slow, careful philosophical attention."
 ---

@@ -99,7 +99,6 @@ const sortedBooks = [...books].sort((a, b) => b.data.year - a.data.year);
           <article
             class:list={['book-dossier-entry', { 'entry-hidden': idx !== 0 }]}
             data-book-entry={b.id}
-            style="padding: clamp(1.25rem, 3vw, 2.75rem); max-inline-size: 86ch;"
           >
             <header class="dossier-hero">
               <div class="dossier-cover-showcase">

@@ -29,4 +29,17 @@ weeks:
     readings:
       - "Jacoby Adeshei Carter & Daryl Scriven (Eds.), Insurrectionist Ethics: Radical Perspectives on Social Justice"
       - "Duncan R. Cordry (2022), Review of Insurrectionist Ethics, Transactions of the Charles S. Peirce Society"
+reviews:
+  - author: "Devika R."
+    role: "BA (Hons.) Philosophy & Political Science"
+    term: "Spring 2026"
+    rating: "5.0 / 5.0"
+    highlight: "An urgent, transformative approach to moral and political philosophy."
+    quote: "Studying Leonard Harris's 'philosophy born of struggle' and Alain Locke's critical pragmatism directly from someone trained in that tradition at Purdue was a privilege. It shattered the polite abstractions of standard normative ethics."
+  - author: "Kabir N."
+    role: "BA (Hons.) Philosophy · Junior Cohort"
+    term: "Spring 2026"
+    rating: "5.0 / 5.0"
+    highlight: "Bridges American pragmatism, Fanon, and continental ethics seamlessly."
+    quote: "The dialogue between insurrectionist ethics, Simone de Beauvoir, and Frantz Fanon made every seminar feel deeply relevant to real-world struggles for liberation."
 ---
