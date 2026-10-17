@@ -314,6 +314,56 @@ function generateConstellation(index) {
     if (n >= 7) ghostChords.push([1, n - 2]);
   }
 
+  // Deep-Field Galaxies & Globular Clusters (2-3 tilted background smudges per chart)
+  const deepFieldObjects = [];
+  const dsoCount = 2 + (index % 2);
+  const dsoPrefixes = ['PGC', 'UGC', 'Palomar', 'Arp'];
+  for (let i = 0; i < dsoCount; i++) {
+    const gx = Math.round(1800 + rng() * 6400);
+    const gy = Math.round(1800 + rng() * 6400);
+    const grx = Math.round(140 + rng() * 160);
+    const gry = Math.round(45 + rng() * 65);
+    const gAngle = Number(((rng() - 0.5) * Math.PI).toFixed(3));
+    const gType = i === 0 ? 'GALAXY' : rng() > 0.4 ? 'GALAXY' : 'GLOBULAR';
+    const gNum = 1020 + ((index * 53 + i * 199) % 88000);
+    const gDesig = `${dsoPrefixes[(index + i) % dsoPrefixes.length]} ${gNum}`;
+    deepFieldObjects.push([gx, gy, grx, gry, gAngle, gType, gDesig]);
+  }
+
+  // Uncharted Background Sub-Asterisms (2 faint 3-star micro-patterns in deep space)
+  const unchartedAsterisms = [];
+  for (let a = 0; a < 2; a++) {
+    const ax = 2200 + rng() * 5600;
+    const ay = 2200 + rng() * 5600;
+    const aStars = [];
+    for (let k = 0; k < 3; k++) {
+      const sx = Math.round(Math.max(1200, Math.min(8800, ax + (rng() - 0.5) * 1300)));
+      const sy = Math.round(Math.max(1200, Math.min(8800, ay + (rng() - 0.5) * 1300)));
+      const smag = Number((3.1 + rng() * 1.4).toFixed(2));
+      const sspec = 2 + Math.floor(rng() * 4);
+      aStars.push([sx, sy, smag, sspec]);
+    }
+    unchartedAsterisms.push({
+      code: `ANON-${index + 1}${a === 0 ? 'A' : 'B'}`,
+      stars: aStars,
+      edges: [
+        [0, 1],
+        [1, 2],
+      ],
+    });
+  }
+
+  // Redacted Palomar Plate Defect / Bok Globule Occlusion Sector
+  const redactX = Math.round(2400 + rng() * 5200);
+  const redactY = Math.round(2400 + rng() * 5200);
+  const redactedSector = {
+    x: redactX,
+    y: redactY,
+    r: Math.round(420 + rng() * 240),
+    code: `POSS-1954-${String.fromCharCode(65 + (index % 26))} // BOK GLOBULE`,
+    extinction: `+${(3.6 + rng() * 2.1).toFixed(1)}m`,
+  };
+
   const nebula = generateNebulaForConstellation(index, rng, rawStars, spineAngle);
 
   return {
@@ -326,6 +376,9 @@ function generateConstellation(index) {
     stars: rawStars,
     edges,
     ghostChords,
+    deepFieldObjects,
+    unchartedAsterisms,
+    redactedSector,
     nebula,
   };
 }
