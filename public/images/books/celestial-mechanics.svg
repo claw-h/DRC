@@ -1,17 +1,16 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 600" width="400" height="600">
-  <rect width="400" height="600" fill="#151922"/>
-  <rect x="20" y="20" width="360" height="560" fill="none" stroke="#9db4d4" stroke-width="0.75" stroke-opacity="0.45"/>
-  <g stroke="#b8cbe6" fill="none" stroke-opacity="0.6">
-    <circle cx="200" cy="250" r="120" stroke-width="0.6" stroke-dasharray="2 5"/>
-    <circle cx="175" cy="250" r="78" stroke-width="0.9"/>
-    <circle cx="225" cy="250" r="52" stroke-width="0.9"/>
-    <path d="M80 250 Q200 130 320 250 Q200 370 80 250 Z" stroke-width="0.7"/>
+  <rect width="400" height="600" fill="#12141b"/>
+  <rect x="20" y="20" width="360" height="560" fill="none" stroke="#c8b898" stroke-width="0.75" stroke-opacity="0.45"/>
+  <g stroke="#c8b898" fill="none" stroke-opacity="0.6">
+    <polygon points="200,130 310,310 90,310" stroke-width="0.9"/>
+    <polygon points="200,350 310,170 90,170" stroke-width="0.6" stroke-dasharray="4 4"/>
+    <circle cx="200" cy="240" r="64" stroke-width="0.8"/>
+    <circle cx="200" cy="240" r="24" stroke-width="0.6"/>
   </g>
-  <circle cx="175" cy="250" r="3.5" fill="#e8f0fa"/>
-  <circle cx="277" cy="250" r="2.5" fill="#e8f0fa"/>
-  <text x="44" y="68" fill="#9db4d4" font-family="monospace" font-size="11" letter-spacing="3">DUNCAN R. CORDRY</text>
-  <text x="44" y="458" fill="#edf2f8" font-family="sans-serif" font-weight="600" font-size="22" letter-spacing="0.8">CELESTIAL MECHANICS</text>
-  <text x="44" y="488" fill="#edf2f8" font-family="sans-serif" font-weight="600" font-size="22" letter-spacing="0.8">&amp; FORMAL SYNTAX</text>
-  <text x="44" y="518" fill="#93a5bf" font-family="serif" font-style="italic" font-size="13">Perturbation Theory &amp; Ephemerides</text>
-  <text x="44" y="556" fill="#9db4d4" font-family="monospace" font-size="10" letter-spacing="2.5">OXFORD UNIVERSITY PRESS</text>
+  <circle cx="200" cy="240" r="3.5" fill="#f5efe2"/>
+  <text x="44" y="68" fill="#c8b898" font-family="monospace" font-size="11" letter-spacing="3">DUNCAN R. CORDRY</text>
+  <text x="44" y="446" fill="#f5efe2" font-family="serif" font-weight="600" font-size="21" letter-spacing="0.6">TECHNICAL OBJECTS &amp;</text>
+  <text x="44" y="476" fill="#f5efe2" font-family="serif" font-weight="600" font-size="21" letter-spacing="0.6">SPIRITUAL PRACTICES</text>
+  <text x="44" y="508" fill="#a89f8d" font-family="serif" font-style="italic" font-size="12.5">Organology &amp; Social Cohesion</text>
+  <text x="44" y="554" fill="#c8b898" font-family="monospace" font-size="9.5" letter-spacing="2">ASHOKA UNIVERSITY · ARCHIVE</text>
 </svg>

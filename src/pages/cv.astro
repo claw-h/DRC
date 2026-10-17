@@ -15,7 +15,7 @@ const profile = await getFacultyProfile();
 
 <BaseLayout
   title={`Curriculum Vitae — ${profile.name}`}
-  description={`Academic Curriculum Vitae of ${profile.name}, ${profile.title}.`}
+  description={`Academic Curriculum Vitae of ${profile.name}, ${profile.title} at ${profile.institution}.`}
 >
   <main class="cv-document">
     <div class="cv-toolbar no-print">
@@ -30,43 +30,93 @@ const profile = await getFacultyProfile();
         <h1>{profile.name}</h1>
         <p class="cv-subtitle">{profile.title}</p>
         <p class="cv-affiliation">{profile.department} · {profile.institution}</p>
+        {profile.education && <p class="cv-affiliation">{profile.education}</p>}
       </div>
       <dl class="cv-contact-list">
         <div>
-          <dt>Office</dt>
+          <dt>Campus</dt>
           <dd>{profile.office}</dd>
         </div>
         <div>
-          <dt>Direct Line</dt>
-          <dd>{profile.phone}</dd>
-        </div>
-        <div>
           <dt>Electronic Mail</dt>
-          <dd>{profile.email}</dd>
+          <dd><a href={`mailto:${profile.email}`} class="cv-pub-title">{profile.email}</a></dd>
         </div>
-        <div>
-          <dt>Credential ID</dt>
-          <dd>{profile.credentialId}</dd>
-        </div>
+        {profile.ashokaProfileUrl && (
+          <div>
+            <dt>Ashoka Profile</dt>
+            <dd><a href={profile.ashokaProfileUrl} target="_blank" rel="noopener noreferrer" class="cv-pub-title">ashoka.edu.in/profile/duncan-cordry ↗</a></dd>
+          </div>
+        )}
+        {profile.philPeopleUrl && (
+          <div>
+            <dt>PhilPeople</dt>
+            <dd><a href={profile.philPeopleUrl} target="_blank" rel="noopener noreferrer" class="cv-pub-title">philpeople.org/profiles/duncan-r-cordry ↗</a></dd>
+          </div>
+        )}
       </dl>
     </header>
 
     <section class="cv-section">
-      <h2>I. Monographs & Treatises</h2>
+      <h2>I. Academic Appointments &amp; Education</h2>
+      <ul class="cv-list">
+        <li>
+          <strong>Visiting Faculty of Philosophy</strong>, Department of Philosophy,{' '}
+          <em>Ashoka University</em> (Sonipat, India).
+        </li>
+        <li>
+          <strong>Ph.D. in Philosophy</strong>, Department of Philosophy,{' '}
+          <em>Purdue University</em> (West Lafayette, Indiana, USA).{' '}
+          <span class="cv-muted">
+            Dissertation: “Spirituality at the End of the World: An Essay on Technology, Transindividuation and Orientation in the Light of Pharmacology and Insurrection.”
+          </span>
+        </li>
+      </ul>
+    </section>
+
+    <section class="cv-section">
+      <h2>II. Research Profile &amp; Specializations</h2>
+      <p class="cv-bio-paragraph">
+        {profile.bio}
+      </p>
+      <ul class="cv-list">
+        <li>
+          <strong>Areas of Specialization (AOS):</strong>{' '}
+          {(profile.aos || ['Continental Philosophy', 'Social & Political Philosophy', 'Philosophy of Technology']).join(' · ')}
+        </li>
+        <li>
+          <strong>Areas of Competence (AOC):</strong>{' '}
+          {(profile.aoc || ['Phenomenology', 'Insurrectionist Ethics', 'American Pragmatism', 'Philosophies of Liberation']).join(' · ')}
+        </li>
+      </ul>
+    </section>
+
+    {profile.awards && profile.awards.length > 0 && (
+      <section class="cv-section">
+        <h2>III. Honors, Fellowships &amp; Distinctions</h2>
+        <ul class="cv-list">
+          {profile.awards.map((award) => (
+            <li>{award}</li>
+          ))}
+        </ul>
+      </section>
+    )}
+
+    <section class="cv-section">
+      <h2>IV. Doctoral Monograph &amp; Book Projects</h2>
       <ol class="cv-list">
         {books.map((book) => (
           <li>
             <strong>{book.data.title}</strong>
             {book.data.subtitle ? `: ${book.data.subtitle}` : ''}.{' '}
             <span>{book.data.publisher}, {book.data.year}.</span>{' '}
-            <span class="cv-mono">ISBN: {book.data.isbn} ({book.data.pages} pp.)</span>
+            <span class="cv-mono">Ref: {book.data.isbn} ({book.data.pages} pp.)</span>
           </li>
         ))}
       </ol>
     </section>
 
     <section class="cv-section">
-      <h2>II. Peer-Reviewed Publications & Archival Preprints</h2>
+      <h2>V. Publications, Critical Essays &amp; Award Papers</h2>
       <ol class="cv-list">
         {publications.map((pub) => (
           <li>
@@ -75,7 +125,7 @@ const profile = await getFacultyProfile();
             </span>{' '}
             ({pub.data.year}).{' '}
             <a href={`/publications/${pub.data.id}`} class="cv-pub-title">
-              “{pub.data.title}.”
+              “{pub.data.title}{pub.data.subtitle ? `: ${pub.data.subtitle}` : ''}.”
             </a>{' '}
             <em>{pub.data.venue}</em>
             {pub.data.volumeIssue ? `, ${pub.data.volumeIssue}` : ''}.{' '}
@@ -86,7 +136,7 @@ const profile = await getFacultyProfile();
     </section>
 
     <section class="cv-section">
-      <h2>III. University Seminars & Instruction</h2>
+      <h2>VI. University Seminars &amp; Instruction (Ashoka University)</h2>
       <ul class="cv-list">
         {classes.map((cls) => (
           <li>
@@ -160,15 +210,17 @@ const profile = await getFacultyProfile();
 
   .cv-header h1 {
     margin: 0;
-    font-family: var(--font-sans);
-    font-size: 2rem;
-    letter-spacing: -0.02em;
+    font-family: var(--font-serif);
+    font-size: 2.1rem;
+    font-weight: 400;
+    letter-spacing: -0.01em;
   }
 
   .cv-subtitle {
     margin: 0.25rem 0 0;
     font-size: 1.1rem;
     font-style: italic;
+    color: var(--accent);
   }
 
   .cv-affiliation {
@@ -184,7 +236,7 @@ const profile = await getFacultyProfile();
     grid-template-columns: auto auto;
     gap: 0.25rem 0.85rem;
     font-family: var(--font-mono);
-    font-size: 0.78rem;
+    font-size: 0.75rem;
   }
 
   .cv-contact-list dt {
@@ -202,12 +254,18 @@ const profile = await getFacultyProfile();
 
   .cv-section h2 {
     font-family: var(--font-mono);
-    font-size: 0.85rem;
+    font-size: 0.82rem;
     text-transform: uppercase;
     letter-spacing: 0.12em;
     border-bottom: 1px solid var(--border-subtle);
     padding-bottom: 0.35rem;
     margin: 0 0 1rem;
+  }
+
+  .cv-bio-paragraph {
+    margin: 0 0 0.85rem;
+    line-height: 1.68;
+    color: var(--text-secondary);
   }
 
   .cv-list {
@@ -222,6 +280,10 @@ const profile = await getFacultyProfile();
   .cv-pub-title {
     color: var(--text-primary);
     text-decoration: none;
+  }
+
+  .cv-pub-title:hover {
+    color: var(--accent);
   }
 
   .cv-mono {

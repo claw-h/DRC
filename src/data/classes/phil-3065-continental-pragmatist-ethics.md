@@ -1,0 +1,32 @@
+---
+id: "phil-3065-continental-pragmatist-ethics"
+courseCode: "PHIL 3065"
+title: "Continental & Pragmatist Ethics: Insurrection, Struggle, and Liberation"
+academicYear: "2025 – 2026"
+term: "Spring"
+level: "Undergraduate"
+schedule: "Ashoka University · Department of Philosophy"
+syllabusPdf: "/cv"
+summary: "Bridges European continental ethical thought with American pragmatism and insurrectionist ethics. Focusing on 'philosophy born of struggle', this course examines how moral agency, collective solidarity, and spiritual practices operate under conditions of structural domination, engaging Alain Locke, Leonard Harris, Frantz Fanon, Simone de Beauvoir, and Michel Foucault."
+weeks:
+  - weekNumber: "WK 01"
+    topic: "Critical Pragmatism & Value Pluralism"
+    readings:
+      - "Alain Locke (1935), Values and Imperatives"
+      - "John Dewey (1922), Human Nature and Conduct (Selections on Habit and Impulse)"
+  - weekNumber: "WK 02"
+    topic: "Philosophy Born of Struggle & Insurrectionist Ethics"
+    readings:
+      - "Leonard Harris (2020), A Philosophy of Struggle: The Leonard Harris Reader (ed. Lee A. McBride III)"
+      - "Duncan R. Cordry (2021), Review of A Philosophy of Struggle, Journal of French and Francophone Philosophy"
+  - weekNumber: "WK 03"
+    topic: "Existential Ambiguity, Sociogeny & Decolonial Praxis"
+    readings:
+      - "Simone de Beauvoir (1947), The Ethics of Ambiguity"
+      - "Frantz Fanon (1952), Black Skin, White Masks & Sylvia Wynter (2001), Towards the Sociogenic Principle"
+  - weekNumber: "WK 04"
+    topic: "Radical Advocacy & Moral Resistance"
+    readings:
+      - "Jacoby Adeshei Carter & Daryl Scriven (Eds.), Insurrectionist Ethics: Radical Perspectives on Social Justice"
+      - "Duncan R. Cordry (2022), Review of Insurrectionist Ethics, Transactions of the Charles S. Peirce Society"
+---

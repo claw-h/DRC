@@ -19,8 +19,8 @@ const systemState = await getSystemState();
 ---
 
 <BaseLayout
-  title={`${profile.name} — Astrophysics & Formal Epistemology`}
-  description={`Academic portfolio, celestial cartography observatory, publications, monographs, and teaching archive of ${profile.name} (${profile.monogram}).`}
+  title={`${profile.name} — Continental Philosophy & Philosophy of Technology`}
+  description={`Academic portfolio, philosophical archive, publications, monographs, and university seminars of ${profile.name} (${profile.monogram}), ${profile.title} at ${profile.institution}.`}
   isPortfolioRoot={true}
 >
   <PersistentHeader
@@ -47,15 +47,29 @@ const systemState = await getSystemState();
 
       <div class="pullup-header-strip">
         <span class="pullup-eyebrow">{profile.institution} · {profile.department}</span>
-        <span class="pullup-model-badge tabular">ASTROMETRIC // MK-IV</span>
+        <span class="pullup-model-badge tabular">ORGANOLOGY // TECHNICS &amp; TIME</span>
       </div>
 
       <h2 class="pullup-headline">{profile.name}</h2>
-      <p class="pullup-subheadline">{profile.title}</p>
+      <p class="pullup-subheadline">
+        {profile.title} · {profile.education || 'Ph.D. in Philosophy, Purdue University'}
+      </p>
 
       <p class="pullup-bio">
-        Investigating the metric geometry of observational cosmology, celestial mechanics, and the formal epistemology of astronomical instruments from the Renaissance astrolabe to long-baseline interferometric arrays.
+        {profile.bio ||
+          'Duncan Cordry specializes in continental philosophy and the philosophy of technology, and his primary area of research lies in understanding how technical objects and systems support specific spiritual practices, traditions, and types of social cohesion. He has abiding interests in the relation between the organic and inorganic, philosophies of time, and how such topics play a role in practices of liberation.'}
       </p>
+
+      {profile.aos && profile.aos.length > 0 && (
+        <div class="pullup-specialization-tags">
+          {profile.aos.map((area) => (
+            <span class="spec-chip">{area}</span>
+          ))}
+          {(profile.aoc || []).map((area) => (
+            <span class="spec-chip spec-chip--aoc">{area}</span>
+          ))}
+        </div>
+      )}
 
       <!-- Galvanic Telemetry Readout Strip (portyxb homage) -->
       <div class="pullup-telemetry-row tabular">
@@ -64,24 +78,36 @@ const systemState = await getSystemState();
           <span class="cell-val">{String(books.length).padStart(2, '0')} VOLS</span>
         </div>
         <div class="pullup-cell">
-          <span class="cell-label">PAPERS</span>
+          <span class="cell-label">PAPERS &amp; ESSAYS</span>
           <span class="cell-val">{String(publications.length).padStart(2, '0')} ARCHIVED</span>
         </div>
         <div class="pullup-cell">
           <span class="cell-label">SEMINARS</span>
-          <span class="cell-val">{String(classes.length).padStart(2, '0')} ACTIVE</span>
+          <span class="cell-val">{String(classes.length).padStart(2, '0')} ASHOKA</span>
         </div>
         <div class="pullup-cell">
-          <span class="cell-label">SKY SHARDS</span>
-          <span class="cell-val">1,000 EPOCHS</span>
+          <span class="cell-label">FELLOWSHIP</span>
+          <span class="cell-val">CLAUDIA JONES</span>
         </div>
       </div>
 
       <div class="pullup-coords">
-        <span>Epoch J2000.0</span>
-        <span aria-hidden="true">·</span>
-        <span>Credential {profile.credentialId}</span>
-        <span aria-hidden="true">·</span>
+        {profile.ashokaProfileUrl && (
+          <>
+            <a href={profile.ashokaProfileUrl} target="_blank" rel="noopener noreferrer" class="pullup-cv-link">
+              Ashoka Faculty Profile ↗
+            </a>
+            <span aria-hidden="true">·</span>
+          </>
+        )}
+        {profile.philPeopleUrl && (
+          <>
+            <a href={profile.philPeopleUrl} target="_blank" rel="noopener noreferrer" class="pullup-cv-link">
+              PhilPeople Archive ↗
+            </a>
+            <span aria-hidden="true">·</span>
+          </>
+        )}
         <a href="/cv" class="pullup-cv-link">Curriculum Vitae (Print / LaTeX) ↗</a>
         <span aria-hidden="true">·</span>
         <a href="#stage-3" class="pullup-cv-link">Enter Bipartite Archive ↓</a>
@@ -128,7 +154,7 @@ const systemState = await getSystemState();
 
   .pullup-card {
     position: relative;
-    max-width: 680px;
+    max-width: 720px;
     padding: 2.25rem 2.5rem;
     border-radius: 0.65rem;
     border: 1px solid var(--border-subtle);
@@ -196,23 +222,48 @@ const systemState = await getSystemState();
     margin: -0.35rem 0 0.2rem;
     font-family: var(--font-serif);
     font-style: italic;
-    font-size: 1.1rem;
+    font-size: 1.06rem;
     color: var(--accent);
   }
 
   .pullup-bio {
     margin: 0;
     font-family: var(--font-serif);
-    font-size: 1.04rem;
+    font-size: 1.02rem;
     line-height: 1.68;
     color: var(--text-secondary);
+  }
+
+  .pullup-specialization-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin-top: 0.1rem;
+  }
+
+  .spec-chip {
+    font-family: var(--font-mono);
+    font-size: 0.62rem;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    padding: 0.22rem 0.55rem;
+    border-radius: 3px;
+    border: 1px solid rgba(232, 222, 181, 0.32);
+    background: rgba(232, 222, 181, 0.08);
+    color: var(--accent);
+  }
+
+  .spec-chip--aoc {
+    border-color: var(--border-subtle);
+    background: rgba(255, 255, 255, 0.03);
+    color: var(--text-muted);
   }
 
   .pullup-telemetry-row {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
     gap: 0.6rem;
-    margin-top: 0.35rem;
+    margin-top: 0.25rem;
     padding: 0.75rem;
     border-radius: 4px;
     background: #030706;

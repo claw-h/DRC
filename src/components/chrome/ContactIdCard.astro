@@ -31,6 +31,7 @@ const { profile } = Astro.props;
           width="96"
           height="120"
           class="id-card-photo"
+          onerror="this.onerror=null;this.src='/images/duncan-cordry-portrait.svg';"
         />
         <span class="photo-reticle photo-reticle--tl" aria-hidden="true"></span>
         <span class="photo-reticle photo-reticle--tr" aria-hidden="true"></span>
@@ -38,27 +39,29 @@ const { profile } = Astro.props;
         <span class="photo-reticle photo-reticle--br" aria-hidden="true"></span>
       </div>
       <div class="id-card-identity">
-        <span class="id-card-clearance tabular">CLEARANCE // SOVEREIGN FACULTY</span>
+        <span class="id-card-clearance tabular">VISITING FACULTY // PHILOSOPHY</span>
         <h2 id="id-card-name" class="id-card-name" style="font-family: var(--font-serif);">{profile.name}</h2>
         <p class="id-card-title">{profile.title}</p>
-        <p class="id-card-dept">{profile.department} · {profile.office}</p>
+        <p class="id-card-dept">
+          {profile.department} · {profile.education || 'Ph.D., Purdue University'}
+        </p>
       </div>
     </div>
 
     <dl class="id-card-telemetry">
       <div>
-        <dt>OFFICE HOURS</dt>
-        <dd>{profile.officeHours}</dd>
+        <dt>ELECTRONIC MAIL</dt>
+        <dd><a href={`mailto:${profile.email}`} style="color: inherit;">{profile.email}</a></dd>
       </div>
       <div>
-        <dt>DIRECT LINE</dt>
-        <dd><a href={`tel:${profile.phone.replace(/[^+\d]/g, '')}`} style="color: inherit;">{profile.phone}</a></dd>
+        <dt>OFFICE HOURS</dt>
+        <dd>{profile.officeHours}</dd>
       </div>
     </dl>
 
     <footer class="id-card-actions">
       <a
-        href={`mailto:${profile.email}?subject=Academic%20Inquiry%20for%20Prof.%20Cordry`}
+        href={`mailto:${profile.email}?subject=Academic%20Inquiry%20for%20Prof.%20Duncan%20Cordry`}
         class="id-card-email-btn"
       >
         ✉ Email {profile.name} ↗
@@ -67,8 +70,18 @@ const { profile } = Astro.props;
         <button type="button" class="id-card-sub-btn" id="btn-copy-faculty-email" data-email={profile.email}>
           ⎘ Copy Email
         </button>
+        {profile.philPeopleUrl && (
+          <a href={profile.philPeopleUrl} target="_blank" rel="noopener noreferrer" class="id-card-sub-btn">
+            PhilPeople ↗
+          </a>
+        )}
+        {profile.ashokaProfileUrl && (
+          <a href={profile.ashokaProfileUrl} target="_blank" rel="noopener noreferrer" class="id-card-sub-btn">
+            Ashoka ↗
+          </a>
+        )}
         <a href="/cv" class="id-card-sub-btn">
-          ↓ Printable CV
+          ↓ CV
         </a>
       </div>
     </footer>
@@ -81,6 +94,11 @@ const { profile } = Astro.props;
     display: inline-block;
     border-radius: 6px;
     overflow: hidden;
+  }
+
+  .id-card-photo {
+    object-fit: cover;
+    object-position: center top;
   }
 
   .photo-reticle {

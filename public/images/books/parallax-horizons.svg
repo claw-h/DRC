@@ -1,19 +1,17 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 600" width="400" height="600">
-  <rect width="400" height="600" fill="#1a1614"/>
-  <rect x="20" y="20" width="360" height="560" fill="none" stroke="#d4a88c" stroke-width="0.75" stroke-opacity="0.45"/>
-  <g stroke="#e0bba3" fill="none" stroke-opacity="0.65">
-    <path d="M90 340 A140 140 0 0 1 310 340" stroke-width="1.2"/>
-    <path d="M120 340 A100 100 0 0 1 280 340" stroke-width="0.6" stroke-dasharray="3 3"/>
-    <line x1="200" y1="340" x2="135" y2="175" stroke-width="0.8"/>
-    <line x1="200" y1="340" x2="265" y2="175" stroke-width="0.8"/>
-    <line x1="90" y1="340" x2="310" y2="340" stroke-width="0.8"/>
+  <rect width="400" height="600" fill="#0f1519"/>
+  <rect x="20" y="20" width="360" height="560" fill="none" stroke="#d8c9aa" stroke-width="0.75" stroke-opacity="0.45"/>
+  <g stroke="#d8c9aa" fill="none" stroke-opacity="0.62">
+    <circle cx="170" cy="245" r="78" stroke-width="0.85"/>
+    <circle cx="230" cy="245" r="78" stroke-width="0.85"/>
+    <circle cx="200" cy="245" r="112" stroke-width="0.5" stroke-dasharray="2 5"/>
+    <line x1="60" y1="245" x2="340" y2="245" stroke-width="0.5"/>
   </g>
-  <circle cx="200" cy="340" r="4" fill="#f5e1d3"/>
-  <circle cx="135" cy="175" r="3" fill="#f5e1d3"/>
-  <circle cx="265" cy="175" r="3" fill="#f5e1d3"/>
-  <text x="44" y="68" fill="#d4a88c" font-family="monospace" font-size="11" letter-spacing="3">DUNCAN R. CORDRY</text>
-  <text x="44" y="458" fill="#f7ebe4" font-family="sans-serif" font-weight="600" font-size="24" letter-spacing="0.8">PARALLAX</text>
-  <text x="44" y="488" fill="#f7ebe4" font-family="sans-serif" font-weight="600" font-size="24" letter-spacing="0.8">HORIZONS</text>
-  <text x="44" y="518" fill="#bda08e" font-family="serif" font-style="italic" font-size="13">Atlas of the Brass &amp; Glass Era</text>
-  <text x="44" y="556" fill="#d4a88c" font-family="monospace" font-size="10" letter-spacing="2.5">CAMBRIDGE UNIVERSITY PRESS</text>
+  <circle cx="170" cy="245" r="3" fill="#f5efe2"/>
+  <circle cx="230" cy="245" r="3" fill="#f5efe2"/>
+  <text x="44" y="68" fill="#d8c9aa" font-family="monospace" font-size="11" letter-spacing="3">DUNCAN R. CORDRY</text>
+  <text x="44" y="446" fill="#f5efe2" font-family="serif" font-weight="600" font-size="21.5" letter-spacing="0.6">MYTH, MEMORY &amp;</text>
+  <text x="44" y="476" fill="#f5efe2" font-family="serif" font-weight="600" font-size="21.5" letter-spacing="0.6">LIBERATION</text>
+  <text x="44" y="508" fill="#a89f8d" font-family="serif" font-style="italic" font-size="12.5">Sylvia Wynter, Bernard Stiegler &amp; Struggle</text>
+  <text x="44" y="554" fill="#d8c9aa" font-family="monospace" font-size="9.5" letter-spacing="2">CLAUDIA JONES AWARD SERIES</text>
 </svg>

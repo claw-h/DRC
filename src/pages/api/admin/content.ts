@@ -40,7 +40,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
 
     try {
       const res = await fetch(`https://api.crossref.org/works/${encodeURIComponent(rawDoi)}`, {
-        headers: { 'User-Agent': 'DRC-Observatory/1.0 (mailto:cordry@observatory.edu)' },
+        headers: { 'User-Agent': 'DRC-Observatory/1.0 (mailto:duncan.cordry@ashoka.edu.in)' },
       });
       if (!res.ok) throw new Error(`Crossref status ${res.status}`);
       const payload = await res.json();
@@ -76,7 +76,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
           ok: true,
           metadata: {
             title: `Resolved Monograph (${rawDoi})`,
-            venue: 'Astrophysical Epistemology Review',
+            venue: 'Journal of French and Francophone Philosophy',
             year: new Date().getFullYear(),
             doi: rawDoi,
             coAuthors: ['Cordry, D. R.'],
@@ -89,15 +89,15 @@ export const POST: APIRoute = async ({ request, cookies }) => {
 
   // 2. Create a new Class Markdown entry matching content.config.ts
   if (action === 'create-class') {
-    const courseCode = String(body.code || 'ASTR 501').trim();
-    const title = String(body.title || 'New Seminar').trim();
-    const term = String(body.term || 'Fall').trim();
-    const academicYear = String(body.academicYear || '2026–2027').trim();
+    const courseCode = String(body.code || 'PHIL 3050').trim();
+    const title = String(body.title || 'New Philosophy Seminar').trim();
+    const term = String(body.term || 'Monsoon').trim();
+    const academicYear = String(body.academicYear || '2025–2026').trim();
     const level =
       body.level === 'Undergraduate' || body.level === 'Seminar'
         ? body.level
         : 'Graduate';
-    const schedule = String(body.location || 'Tue / Thu · 14:00–15:20 · Kepler Hall 204').trim();
+    const schedule = String(body.location || 'Ashoka University · Department of Philosophy').trim();
     const summary = String(body.description || 'Seminar overview.').trim();
     const slug = slugify(`${courseCode}-${title}`);
 
@@ -112,7 +112,7 @@ schedule: "${schedule.replace(/"/g, '\\"')}"
 summary: "${summary.replace(/"/g, '\\"')}"
 weeks:
   - weekNumber: "Week 01"
-    topic: "Foundational Axioms & Prolegomena"
+    topic: "Foundational Texts & Prolegomena"
     readings: ["Selected Primary Texts"]
 ---
 
@@ -132,7 +132,7 @@ ${summary}
   if (action === 'create-publication') {
     const title = String(body.title || 'Untitled Manuscript').trim();
     const year = Number(body.year) || new Date().getFullYear();
-    const venue = String(body.venue || 'Journal of Epistemic Astrophysics').trim();
+    const venue = String(body.venue || 'Continental Philosophy & Philosophy of Technology').trim();
     const doi = String(body.doi || '').trim();
     const abstract = String(body.abstract || 'Abstract forthcoming.').trim();
     const slug = slugify(`cordry-${year}-${title}`);

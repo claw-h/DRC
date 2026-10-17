@@ -13,12 +13,19 @@ export interface FacultyProfile {
   credentialId: string;
   title: string;
   department: string;
+  education?: string;
   office: string;
   officeHours: string;
   phone: string;
   email: string;
   portraitUrl: string;
   institution: string;
+  bio?: string;
+  aos?: string[];
+  aoc?: string[];
+  awards?: string[];
+  ashokaProfileUrl?: string;
+  philPeopleUrl?: string;
 }
 
 const STATE_PATH = path.resolve(process.cwd(), 'src/data/system-state.json');
@@ -61,15 +68,25 @@ export async function getFacultyProfile(): Promise<FacultyProfile> {
     return {
       name: 'Duncan R. Cordry',
       monogram: 'DRC',
-      credentialId: 'DRC-001',
-      title: 'Professor of Astrophysics & Formal Epistemology',
-      department: 'Department of Astronomy & History of Science',
-      office: 'Kepler Hall, Room 412',
-      officeHours: 'Tue / Thu · 16:00–17:30',
-      phone: '+1 (617) 555-0194',
-      email: 'cordry@observatory.edu',
-      portraitUrl: '/images/duncan-cordry-portrait.svg',
-      institution: 'University Observatory Archive',
+      credentialId: 'ASHOKA-PHIL-DRC',
+      title: 'Visiting Faculty of Philosophy',
+      department: 'Department of Philosophy',
+      education: 'Ph.D. in Philosophy, Purdue University',
+      office: 'Faculty Block · Rajiv Gandhi Education City, Sonipat',
+      officeHours: 'By Appointment · Semesters I & II',
+      phone: '+91 (0130) 230-0000',
+      email: 'duncan.cordry@ashoka.edu.in',
+      portraitUrl: 'https://www.ashoka.edu.in/wp-content/uploads/2025/09/Profile-400-%C3%97-411-px-15-1.jpg',
+      institution: 'Ashoka University',
+      bio: 'Duncan Cordry specializes in continental philosophy and the philosophy of technology, and his primary area of research lies in understanding how technical objects and systems support specific spiritual practices, traditions, and types of social cohesion. He has abiding interests in the relation between the organic and inorganic, philosophies of time, and how such topics play a role in practices of liberation.',
+      aos: ['Continental Philosophy', 'Social & Political Philosophy', 'Philosophy of Technology'],
+      aoc: ['Phenomenology', 'Insurrectionist Ethics', 'American Pragmatism', 'Philosophies of Liberation'],
+      awards: [
+        'Claudia Jones Award for Best Graduate Paper, Caribbean Philosophical Association',
+        'Ross-Lynn Research Fellowship, Purdue University',
+      ],
+      ashokaProfileUrl: 'https://www.ashoka.edu.in/profile/duncan-cordry/',
+      philPeopleUrl: 'https://philpeople.org/profiles/duncan-r-cordry',
     };
   }
 }
