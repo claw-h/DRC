@@ -1,8 +1,8 @@
 @layer layout {
   html.portfolio-scroller {
-    scroll-snap-type: y mandatory;
     scroll-behavior: auto;
     scrollbar-width: none;
+    overflow-x: hidden;
     timeline-scope: --stage-sky, --stage-header, --stage-workspace;
   }
 
@@ -15,8 +15,6 @@
     block-size: 100vh;
     block-size: 100dvh;
     inline-size: 100%;
-    scroll-snap-align: start;
-    scroll-snap-stop: always;
   }
 
   #stage-1 { view-timeline: --stage-sky block; }
@@ -34,11 +32,9 @@
 
   body[data-stage="stage-2"] .sky-backdrop {
     opacity: 0.28;
-    pointer-events: none;
   }
   body[data-stage="stage-3"] .sky-backdrop {
     opacity: 0.08;
-    pointer-events: none;
   }
 
   /* Persistent Chrome Header + Nav Strip */

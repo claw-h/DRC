@@ -27,8 +27,11 @@
     );
   }
 
-  /* View Caching via content-visibility: hidden + Crisp Channel Snap Animation */
+  /* View Layering + Crisp Channel Snap Animation (preserves hit-test target under stationary cursor) */
   .spa-view {
+    position: relative;
+    z-index: 2;
+    opacity: 1;
     flex: 1 1 0%;
     min-block-size: 0;
     block-size: calc(100dvh - var(--chrome-height));
@@ -64,18 +67,12 @@
   }
 
   .spa-view.inactive {
-    content-visibility: hidden;
     position: absolute;
     inset-inline: 0;
     inset-block-start: var(--chrome-height);
-    pointer-events: none;
+    z-index: 0;
+    opacity: 0;
     animation: none;
-  }
-
-  @supports not (content-visibility: hidden) {
-    .spa-view.inactive {
-      display: none;
-    }
   }
 
   /* Desktop Bipartite Split Interface (>= 768px) */

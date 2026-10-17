@@ -141,7 +141,6 @@ const { publications, books, classes } = Astro.props;
       });
 
       window.addEventListener('drc:stage-snap', () => {
-        this.lastContentScrollTime = performance.now();
         this.scrollCharge = 0;
         this.updateChargeMeters(0);
       });
@@ -154,15 +153,20 @@ const { publications, books, classes } = Astro.props;
       });
     }
 
-    // 2. Seamless Scroll Progression (scrolls publication/book content first; snaps cleanly between sections at boundary)
+    // 2. Seamless Scroll Progression (bound to window + live elementFromPoint so stationary cursor never stalls)
     private initSeamlessSectionScroll() {
-      const THRESHOLD = 140;
-      const REST_GATE_MS = 280;
+      const THRESHOLD = 120;
+      const REST_GATE_MS = 180;
 
-      this.addEventListener(
+      window.addEventListener(
         'wheel',
         (e: WheelEvent) => {
           if (document.body.dataset.stage !== 'stage-3') {
+            return;
+          }
+
+          // Ignore if modal dialog is open
+          if (document.querySelector('dialog[open]')) {
             return;
           }
 
@@ -177,18 +181,26 @@ const { publications, books, classes } = Astro.props;
           const primaryReader = activeView.querySelector<HTMLElement>('[data-primary-reader]');
           if (!primaryReader) return;
 
-          // Check if the cursor is over the Left Index Pane
-          const targetEl = e.target as HTMLElement | null;
-          const leftPane = targetEl?.closest<HTMLElement>('.workspace-pane-left');
-          const leftScroll = leftPane?.querySelector<HTMLElement>('[data-scrollable-pane]');
+          // Resolve live element under cursor (even if cursor is stationary and e.target is cached from an earlier stage/view)
+          const hitEl =
+            (typeof e.clientX === 'number' && (e.clientX !== 0 || e.clientY !== 0)
+              ? (document.elementFromPoint(e.clientX, e.clientY) as HTMLElement | null)
+              : null) || (e.target as HTMLElement | null);
+
+          const leftPane = hitEl?.closest<HTMLElement>('.workspace-pane-left');
+          const leftScroll =
+            leftPane && activeView.contains(leftPane)
+              ? leftPane.querySelector<HTMLElement>('[data-scrollable-pane]')
+              : null;
 
           if (leftScroll) {
             const leftCanScrollDown =
-              e.deltaY > 0 && leftScroll.scrollTop + leftScroll.clientHeight < leftScroll.scrollHeight - 4;
-            const leftCanScrollUp = e.deltaY < 0 && leftScroll.scrollTop > 4;
+              e.deltaY > 0 && leftScroll.scrollTop + leftScroll.clientHeight < leftScroll.scrollHeight - 2;
+            const leftCanScrollUp = e.deltaY < 0 && leftScroll.scrollTop > 2;
 
             if (leftCanScrollDown || leftCanScrollUp) {
-              // Let the left index list scroll natively without triggering section transitions
+              e.preventDefault();
+              leftScroll.scrollTop += e.deltaY;
               return;
             }
           }
@@ -198,21 +210,17 @@ const { publications, books, classes } = Astro.props;
           const atBottom = scrollTop >= maxScroll - 4;
           const atTop = scrollTop <= 4;
 
-          // If the cursor is over the left pane (e.g. right after clicking a publication/book) and primaryReader can scroll,
-          // forward the wheel delta directly to primaryReader so the article/book content scrolls seamlessly!
           const canScrollReaderDown = e.deltaY > 0 && !atBottom;
           const canScrollReaderUp = e.deltaY < 0 && !atTop;
 
           if (canScrollReaderDown || canScrollReaderUp) {
+            e.preventDefault();
+            primaryReader.scrollTop += e.deltaY;
+
             this.lastContentScrollTime = performance.now();
             if (this.scrollCharge !== 0) {
               this.scrollCharge = 0;
               this.updateChargeMeters(0);
-            }
-
-            if (leftScroll || !targetEl?.closest('[data-primary-reader]')) {
-              e.preventDefault();
-              primaryReader.scrollTop += e.deltaY;
             }
 
             // Update continuous progress bar inside NavStrip based on current scroll + view index
@@ -226,21 +234,16 @@ const { publications, books, classes } = Astro.props;
             return;
           }
 
-          // We are at the top or bottom boundary of the publication/book/class reader.
-          // Enforce a rest gate so trackpad momentum from scrolling the content never hijacks the view!
+          // Bounded 180ms grace window right after touching top/bottom boundary (never extended at boundary!)
           const now = performance.now();
-          const timeSinceContentScroll = now - this.lastContentScrollTime;
-          if (timeSinceContentScroll < REST_GATE_MS) {
+          if (now - this.lastContentScrollTime < REST_GATE_MS) {
             e.preventDefault();
-            if (Math.abs(e.deltaY) > 6) {
-              this.lastContentScrollTime = now;
-            }
             this.scrollCharge = 0;
             this.updateChargeMeters(0);
             return;
           }
 
-          // Case A: Scrolling down AFTER resting at bottom boundary -> Snap into next section (Publications -> Books -> Classes)
+          // Case A: Scrolling down at bottom boundary -> Snap into next section (Publications -> Books -> Classes)
           if (e.deltaY > 0 && atBottom && this.activeViewIndex < VIEW_ORDER.length - 1) {
             e.preventDefault();
             this.scrollCharge = Math.max(0, this.scrollCharge) + e.deltaY;
@@ -257,12 +260,12 @@ const { publications, books, classes } = Astro.props;
               this.switchToViewIndex(this.activeViewIndex + 1, 'down');
               setTimeout(() => {
                 this.isTransitionLocked = false;
-              }, 460);
+              }, 380);
             }
             return;
           }
 
-          // Case B: Scrolling up AFTER resting at top boundary of Books or Classes -> Snap back to previous section
+          // Case B: Scrolling up at top boundary of Books or Classes -> Snap back to previous section
           if (e.deltaY < 0 && atTop && this.activeViewIndex > 0) {
             e.preventDefault();
             this.scrollCharge = Math.min(0, this.scrollCharge) + e.deltaY;
@@ -279,7 +282,7 @@ const { publications, books, classes } = Astro.props;
               this.switchToViewIndex(this.activeViewIndex - 1, 'up');
               setTimeout(() => {
                 this.isTransitionLocked = false;
-              }, 460);
+              }, 380);
             }
             return;
           }
