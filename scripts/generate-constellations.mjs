@@ -64,6 +64,152 @@ function mulberry32(seed) {
   };
 }
 
+const NEBULA_ARCHETYPES = [
+  {
+    id: 'HII_EMISSION',
+    label: 'H II Balmer Emission Nursery',
+    catalogPrefix: 'NGC',
+    // Primary Ha Rose, Secondary OIII Teal, Core Champagne
+    palette: [
+      [198, 74, 106],
+      [74, 184, 212],
+      [236, 212, 162],
+    ],
+    anisotropy: 2.2,
+  },
+  {
+    id: 'PLEIADES_REFLECTION',
+    label: 'Rayleigh Silicate Reflection Nebula',
+    catalogPrefix: 'vdB',
+    // Primary Sapphire, Secondary Ice Cyan, Core Silver-Gold
+    palette: [
+      [68, 126, 224],
+      [138, 198, 255],
+      [228, 220, 198],
+    ],
+    anisotropy: 2.8,
+  },
+  {
+    id: 'SUPERNOVA_REMNANT',
+    label: 'Filamentary Veil Shock Remnant',
+    catalogPrefix: 'Sh2',
+    // Primary Indigo-Violet, Secondary Electric Cyan, Core Antique Amber
+    palette: [
+      [124, 86, 208],
+      [88, 206, 232],
+      [222, 176, 114],
+    ],
+    anisotropy: 3.6,
+  },
+  {
+    id: 'MOLECULAR_GOLD',
+    label: 'Alchemical Molecular Cloud & Bok Rift',
+    catalogPrefix: 'Barnard',
+    // Primary Ochre Gold, Secondary Warm Sienna, Core Pale Brass
+    palette: [
+      [214, 168, 96],
+      [164, 102, 64],
+      [242, 222, 178],
+    ],
+    anisotropy: 2.4,
+  },
+  {
+    id: 'PLANETARY_HALO',
+    label: 'Ionized Bipolar Nebular Shell',
+    catalogPrefix: 'PK',
+    // Primary Emerald-Teal, Secondary Rose-Crimson, Core Luminous Gold
+    palette: [
+      [72, 192, 174],
+      [188, 82, 114],
+      [234, 204, 148],
+    ],
+    anisotropy: 1.85,
+  },
+];
+
+function generateNebulaForConstellation(index, rng, rawStars, spineAngle) {
+  const archIdx = (index + Math.floor(rng() * 3)) % NEBULA_ARCHETYPES.length;
+  const arch = NEBULA_ARCHETYPES[archIdx];
+  const catNum = 104 + ((index * 37 + Math.floor(rng() * 89)) % 7800);
+  const designation = `${arch.catalogPrefix} ${catNum} · ${arch.label}`;
+
+  // Compute constellation barycenter in 0..10000 space
+  let sumX = 0;
+  let sumY = 0;
+  for (const s of rawStars) {
+    sumX += s[0];
+    sumY += s[1];
+  }
+  const centerX = Math.round(sumX / Math.max(1, rawStars.length));
+  const centerY = Math.round(sumY / Math.max(1, rawStars.length));
+
+  // 1. Volumetric Filaments (15 multi-depth cloud structures aligned with spine + star nodes)
+  // Tuple: [x(0..10000), y(0..10000), rx(0..10000), ry(0..10000), angleRad, depthLayer(0|1|2), colorSlot(0|1|2), alpha(0..1)]
+  const filaments = [];
+  const filamentCount = 15;
+  for (let i = 0; i < filamentCount; i++) {
+    const anchorStar = rawStars[i % rawStars.length];
+    const blendToCenter = i < 5 ? 0.65 : 0.28;
+    const baseX = anchorStar[0] * (1 - blendToCenter) + centerX * blendToCenter;
+    const baseY = anchorStar[1] * (1 - blendToCenter) + centerY * blendToCenter;
+
+    const jitterX = (rng() - 0.5) * 1900;
+    const jitterY = (rng() - 0.5) * 1600;
+    const fx = Math.max(800, Math.min(9200, Math.round(baseX + jitterX)));
+    const fy = Math.max(800, Math.min(9200, Math.round(baseY + jitterY)));
+
+    const depthLayer = i < 5 ? 0 : i < 11 ? 1 : 2;
+    const scaleMult = depthLayer === 0 ? 1.45 : depthLayer === 1 ? 1.0 : 0.68;
+    const rx = Math.round((950 + rng() * 1450) * scaleMult);
+    const ry = Math.round(rx / (arch.anisotropy * (0.75 + rng() * 0.55)));
+    const angle = Number((spineAngle + (rng() - 0.5) * 0.95).toFixed(3));
+    const colorSlot = i % 3;
+    const alpha = Number((0.12 + rng() * 0.16).toFixed(3));
+
+    filaments.push([fx, fy, rx, ry, angle, depthLayer, colorSlot, alpha]);
+  }
+
+  // 2. Barnard Dark Dust Lanes / Bok Globules (carving 3D foreground occlusion crevices)
+  // Tuple: [x, y, rx, ry, angleRad, opacity]
+  const darkRifts = [];
+  const riftCount = 5;
+  for (let i = 0; i < riftCount; i++) {
+    const refStar = rawStars[(i * 2) % rawStars.length];
+    const rxPos = Math.round(centerX * 0.5 + refStar[0] * 0.5 + (rng() - 0.5) * 1400);
+    const ryPos = Math.round(centerY * 0.5 + refStar[1] * 0.5 + (rng() - 0.5) * 1200);
+    const rx = Math.round(700 + rng() * 1100);
+    const ry = Math.round(180 + rng() * 340);
+    const angle = Number((spineAngle + (rng() - 0.5) * 0.65).toFixed(3));
+    const op = Number((0.42 + rng() * 0.32).toFixed(2));
+    darkRifts.push([rxPos, ryPos, rx, ry, angle, op]);
+  }
+
+  // 3. Ionized Proto-Stellar Brightness Knots near Alpha/Beta/Gamma stars
+  // Tuple: [x, y, radius, colorSlot, intensity]
+  const knots = [];
+  const knotCount = Math.min(rawStars.length, 6);
+  for (let i = 0; i < knotCount; i++) {
+    const st = rawStars[i];
+    const kx = Math.round(st[0] + (rng() - 0.5) * 320);
+    const ky = Math.round(st[1] + (rng() - 0.5) * 320);
+    const kr = Math.round(280 + rng() * 420);
+    const colorSlot = i === 0 ? 2 : i % 2;
+    const intensity = Number((0.22 + rng() * 0.18).toFixed(2));
+    knots.push([kx, ky, kr, colorSlot, intensity]);
+  }
+
+  return {
+    archetype: arch.id,
+    designation,
+    spineAngle: Number(spineAngle.toFixed(3)),
+    barycenter: [centerX, centerY],
+    palette: arch.palette,
+    filaments,
+    darkRifts,
+    knots,
+  };
+}
+
 function generateConstellation(index) {
   const rng = mulberry32(104729 * (index + 1) + 7919);
   const id = `DRC-${String(index + 1).padStart(4, '0')}`;
@@ -168,6 +314,8 @@ function generateConstellation(index) {
     if (n >= 7) ghostChords.push([1, n - 2]);
   }
 
+  const nebula = generateNebulaForConstellation(index, rng, rawStars, spineAngle);
+
   return {
     id,
     name,
@@ -178,6 +326,7 @@ function generateConstellation(index) {
     stars: rawStars,
     edges,
     ghostChords,
+    nebula,
   };
 }
 

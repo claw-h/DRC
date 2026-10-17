@@ -84,19 +84,19 @@ const { featuredConstellationId = null } = Astro.props;
           <span class="telemetry-val" id="hud-node-count">6 NODES</span>
         </div>
         <div class="telemetry-line">
-          <span class="telemetry-key">MODE:</span>
-          <span class="telemetry-val" id="hud-orbital-mode">ORBITAL_AUTOPILOT</span>
+          <span class="telemetry-key">NEBULA_FIELD:</span>
+          <span class="telemetry-val" id="hud-nebula-designation">NGC 2244 · H II Balmer Emission Nursery</span>
         </div>
         <div class="telemetry-line">
+          <span class="telemetry-key">MODE:</span>
+          <span class="telemetry-val" id="hud-orbital-mode">ORBITAL_AUTOPILOT</span>
+          <span class="telemetry-sep">|</span>
           <span class="telemetry-key">SPIN:</span>
           <span class="telemetry-val" id="hud-spin-speed">0.008°/f</span>
-          <span class="telemetry-sep">|</span>
-          <span class="telemetry-key">EPOCH:</span>
-          <span class="telemetry-val" id="hud-zoom-val">J2000.0</span>
         </div>
       </div>
 
-      <div class="sky-title-cluster">
+      <div class="sky-title-cluster" id="sky-title-cluster">
         <h1 class="sky-hud-name" id="hud-constellation-name">Vela Minor</h1>
         <p class="sky-hud-meaning" id="hud-constellation-meaning">The Celestial Sail of the Lesser Arc</p>
         <p class="sky-hud-coords tabular" id="hud-constellation-coords">
@@ -227,6 +227,16 @@ const { featuredConstellationId = null } = Astro.props;
     display: flex;
     flex-direction: column;
     gap: 0.15rem;
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+    transition:
+      opacity 0.65s cubic-bezier(0.16, 1, 0.3, 1),
+      transform 0.65s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .sky-title-cluster.is-slew-fading {
+    opacity: 0;
+    transform: translate3d(0, 6px, 0);
   }
 
   .sky-hud-name {
@@ -237,7 +247,6 @@ const { featuredConstellationId = null } = Astro.props;
     margin: 0;
     color: var(--text-primary);
     text-shadow: 0 2px 24px rgba(0, 0, 0, 0.85);
-    transition: opacity 0.6s ease;
   }
 
   .sky-hud-meaning {
@@ -561,7 +570,7 @@ const { featuredConstellationId = null } = Astro.props;
     'Iota', 'Kappa', 'Lambda', 'Mu', 'Nu', 'Xi', 'Omicron', 'Pi'
   ];
 
-  // Maps spectral index (0..6 from generate-constellations.mjs) or B-V float to Planckian RGB
+  // Maps spectral index (0..6 from generate-constellations.mjs) to Planckian RGB
   function specToPlanckianRgb(spec: number): [number, number, number] {
     if (spec <= 1) return [185, 212, 255]; // O/B Blue-White
     if (spec === 2) return [236, 243, 255]; // A White-Blue
@@ -580,14 +589,41 @@ const { featuredConstellationId = null } = Astro.props;
     return 'CLASS M2Iab · 3,450 K';
   }
 
+  // Quintic smoothstep for zero-jerk transitions
+  function quinticSmoothstep(t: number): number {
+    const x = Math.max(0, Math.min(1, t));
+    return x * x * x * (x * (x * 6 - 15) + 10);
+  }
+
+  type ProjectedStar = {
+    idx: number;
+    x: number;
+    y: number;
+    mag: number;
+    spec: number;
+    rgb: [number, number, number];
+  };
+
   class DrcConstellationCanvas extends HTMLElement {
     private nebulaCanvas!: HTMLCanvasElement;
     private artefactCanvas!: HTMLCanvasElement;
-    private nCtx!: CanvasRenderingContext2D;
     private aCtx!: CanvasRenderingContext2D;
     private rafId = 0;
     private catalogIndex: any[] = [];
+
+    // Active & Outgoing Constellation States for Seamless Redraw Cross-Dissolve
     private currentConstellation: any = null;
+    private outgoingConstellation: any = null;
+    private currentNebulaPlanes: HTMLCanvasElement[] = [];
+    private outgoingNebulaPlanes: HTMLCanvasElement[] = [];
+
+    private drawProgress = 0;
+    private outgoingDrawProgress = 1;
+    private transitionBlend = 1; // 1 = stable; 0..1 = cross-dissolving from outgoing -> current
+    private slewVX = 0;
+    private slewVY = 0;
+    private frameCount = 0;
+
     private backgroundStars: Array<{
       x: number;
       y: number;
@@ -613,9 +649,6 @@ const { featuredConstellationId = null } = Astro.props;
       born: number;
     }> = [];
 
-    private drawProgress = 0;
-    private frameCount = 0;
-
     // Slow, serene celestial rotation & inertia
     private rotX = 0;
     private rotY = 0;
@@ -629,26 +662,20 @@ const { featuredConstellationId = null } = Astro.props;
 
     private hoveredStarIdx: number = -1;
     private selectedStarIdx: number = -1;
-    private projectedPrincipalStars: Array<{
-      idx: number;
-      x: number;
-      y: number;
-      mag: number;
-      spec: number;
-      rgb: [number, number, number];
-    }> = [];
+    private projectedPrincipalStars: ProjectedStar[] = [];
 
     async connectedCallback() {
       this.nebulaCanvas = this.querySelector('#sky-nebula-layer') as HTMLCanvasElement;
       this.artefactCanvas = this.querySelector('#sky-artefact-layer') as HTMLCanvasElement;
-      this.nCtx = this.nebulaCanvas.getContext('2d')!;
+      // Hide the legacy single-plane canvas since we composite 3 volumetric offscreen planes directly
+      if (this.nebulaCanvas) this.nebulaCanvas.style.display = 'none';
       this.aCtx = this.artefactCanvas.getContext('2d')!;
 
       this.initBackgroundField();
       this.resizeCanvases();
       window.addEventListener('resize', () => this.resizeCanvases(), { passive: true });
 
-      await this.loadCatalogAndSelect();
+      await this.loadCatalogAndSelect(false);
       this.bindControls();
       this.bindInteractivePointer();
       this.startLoop();
@@ -693,54 +720,232 @@ const { featuredConstellationId = null } = Astro.props;
       const w = window.innerWidth;
       const h = window.innerHeight;
 
-      this.nebulaCanvas.width = Math.max(1, Math.floor(w * 0.25));
-      this.nebulaCanvas.height = Math.max(1, Math.floor(h * 0.25));
-
       this.artefactCanvas.width = Math.floor(w * dpr);
       this.artefactCanvas.height = Math.floor(h * dpr);
       this.aCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-      this.renderNebulaBuffer();
+      if (this.currentConstellation) {
+        this.currentNebulaPlanes = this.buildNebulaPlanes(this.currentConstellation);
+      }
+      if (this.outgoingConstellation) {
+        this.outgoingNebulaPlanes = this.buildNebulaPlanes(this.outgoingConstellation);
+      }
     }
 
-    private renderNebulaBuffer() {
-      const w = this.nebulaCanvas.width;
-      const h = this.nebulaCanvas.height;
-      const ctx = this.nCtx;
-      ctx.clearRect(0, 0, w, h);
+    /**
+     * Synthesizes 3 volumetric parallax depth planes from the statically generated
+     * `c.nebula` genome (Plane 0 = Deep Galactic Continuum, Plane 1 = Mid-Field Anisotropic
+     * Ionization Filaments & Proto-Stellar Knots, Plane 2 = Foreground Barnard Dark Dust Lanes & Shock Rims).
+     */
+    private buildNebulaPlanes(c: any): HTMLCanvasElement[] {
+      const w = Math.max(320, Math.floor(window.innerWidth * 0.36));
+      const h = Math.max(240, Math.floor(window.innerHeight * 0.36));
 
-      ctx.save();
-      ctx.translate(w * 0.5, h * 0.5);
-      ctx.rotate(-0.56);
+      const planes = [0, 1, 2].map(() => {
+        const cvs = document.createElement('canvas');
+        cvs.width = w;
+        cvs.height = h;
+        return cvs;
+      });
 
-      const bandGrad = ctx.createLinearGradient(0, -h * 0.45, 0, h * 0.45);
-      bandGrad.addColorStop(0, 'rgba(14, 20, 38, 0)');
-      bandGrad.addColorStop(0.3, 'rgba(52, 68, 112, 0.22)');
-      bandGrad.addColorStop(0.5, 'rgba(214, 185, 132, 0.26)');
-      bandGrad.addColorStop(0.7, 'rgba(65, 52, 108, 0.22)');
-      bandGrad.addColorStop(1, 'rgba(14, 20, 38, 0)');
+      const neb = c?.nebula;
+      const palette: number[][] = neb?.palette || [
+        [198, 74, 106],
+        [74, 184, 212],
+        [236, 212, 162],
+      ];
+      const spineAngle = typeof neb?.spineAngle === 'number' ? neb.spineAngle : -0.48;
+      const baryX = ((neb?.barycenter?.[0] ?? 5000) / 10000) * w;
+      const baryY = ((neb?.barycenter?.[1] ?? 5000) / 10000) * h;
 
-      ctx.fillStyle = bandGrad;
-      ctx.fillRect(-w, -h * 0.45, w * 2, h * 0.9);
+      // --- PLANE 0: Deep Galactic Continuum & Broad Outer Emission Envelope ---
+      {
+        const ctx = planes[0].getContext('2d')!;
+        const [r0, g0, b0] = palette[0];
+        const [r1, g1, b1] = palette[1];
+        const [r2, g2, b2] = palette[2];
 
-      for (let i = 0; i < 18; i++) {
-        const cx = (Math.sin(i * 17.3) * 0.5) * w * 1.2;
-        const cy = (Math.cos(i * 9.7) * 0.5) * h * 0.36;
-        const radius = (0.12 + (i % 5) * 0.05) * Math.max(w, h);
-        const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, radius);
-        if (i % 3 === 0) {
-          g.addColorStop(0, 'rgba(6, 8, 13, 0.52)');
-          g.addColorStop(1, 'rgba(6, 8, 13, 0)');
-        } else {
-          g.addColorStop(0, 'rgba(205, 178, 128, 0.13)');
-          g.addColorStop(1, 'rgba(205, 178, 128, 0)');
+        ctx.save();
+        ctx.translate(baryX, baryY);
+        ctx.rotate(spineAngle);
+
+        const span = Math.max(w, h) * 1.35;
+        const band = ctx.createLinearGradient(0, -h * 0.55, 0, h * 0.55);
+        band.addColorStop(0, `rgba(${r0}, ${g0}, ${b0}, 0)`);
+        band.addColorStop(0.28, `rgba(${r0}, ${g0}, ${b0}, 0.14)`);
+        band.addColorStop(0.5, `rgba(${r2}, ${g2}, ${b2}, 0.20)`);
+        band.addColorStop(0.72, `rgba(${r1}, ${g1}, ${b1}, 0.15)`);
+        band.addColorStop(1, `rgba(${r1}, ${g1}, ${b1}, 0)`);
+
+        ctx.fillStyle = band;
+        ctx.fillRect(-span, -h * 0.55, span * 2, h * 1.1);
+        ctx.restore();
+
+        // Deep layer-0 filaments
+        const filaments: any[] = neb?.filaments || [];
+        for (const f of filaments) {
+          if (f[5] !== 0) continue;
+          this.stampTurbulentFilament(ctx, f, palette, w, h, 4);
         }
-        ctx.fillStyle = g;
-        ctx.beginPath();
-        ctx.arc(cx, cy, radius, 0, Math.PI * 2);
-        ctx.fill();
       }
-      ctx.restore();
+
+      // --- PLANE 1: Mid-Field Anisotropic Ionization Filaments, Shells & Proto-Stellar Knots ---
+      {
+        const ctx = planes[1].getContext('2d')!;
+        ctx.globalCompositeOperation = 'screen';
+
+        const filaments: any[] = neb?.filaments || [];
+        for (const f of filaments) {
+          if (f[5] !== 1) continue;
+          this.stampTurbulentFilament(ctx, f, palette, w, h, 6);
+        }
+
+        // If Planetary Halo archetype, add delicate concentric ionized shells around barycenter
+        if (neb?.archetype === 'PLANETARY_HALO') {
+          const [r0, g0, b0] = palette[0];
+          const [r1, g1, b1] = palette[1];
+          const shellR = Math.min(w, h) * 0.34;
+          ctx.save();
+          ctx.translate(baryX, baryY);
+          ctx.rotate(spineAngle);
+          ctx.scale(1.25, 0.82);
+          const ringGrad = ctx.createRadialGradient(0, 0, shellR * 0.25, 0, 0, shellR);
+          ringGrad.addColorStop(0, `rgba(${r0}, ${g0}, ${b0}, 0.04)`);
+          ringGrad.addColorStop(0.62, `rgba(${r0}, ${g0}, ${b0}, 0.22)`);
+          ringGrad.addColorStop(0.84, `rgba(${r1}, ${g1}, ${b1}, 0.18)`);
+          ringGrad.addColorStop(1, `rgba(${r1}, ${g1}, ${b1}, 0)`);
+          ctx.fillStyle = ringGrad;
+          ctx.beginPath();
+          ctx.arc(0, 0, shellR, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+        }
+
+        // Render compact Herbig-Haro / proto-stellar ionized brightness knots near principal stars
+        const knots: any[] = neb?.knots || [];
+        for (const k of knots) {
+          const kx = (k[0] / 10000) * w;
+          const ky = (k[1] / 10000) * h;
+          const kr = (k[2] / 10000) * Math.max(w, h);
+          const [cr, cg, cb] = palette[k[3] % palette.length];
+          const intensity = k[4] || 0.24;
+
+          const kg = ctx.createRadialGradient(kx, ky, 0, kx, ky, kr);
+          kg.addColorStop(0, `rgba(255, 250, 240, ${(intensity * 1.15).toFixed(3)})`);
+          kg.addColorStop(0.35, `rgba(${cr}, ${cg}, ${cb}, ${(intensity * 0.85).toFixed(3)})`);
+          kg.addColorStop(1, `rgba(${cr}, ${cg}, ${cb}, 0)`);
+          ctx.fillStyle = kg;
+          ctx.beginPath();
+          ctx.arc(kx, ky, kr, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+
+      // --- PLANE 2: Foreground Wisps + Barnard Dark Absorption Dust Lanes & Photo-Dissociation Rims ---
+      {
+        const ctx = planes[2].getContext('2d')!;
+        const filaments: any[] = neb?.filaments || [];
+        for (const f of filaments) {
+          if (f[5] !== 2) continue;
+          this.stampTurbulentFilament(ctx, f, palette, w, h, 5);
+        }
+
+        // Barnard Dark Dust Rifts: carve deep velvet molecular absorption lanes with warm silver-gold rims
+        const darkRifts: any[] = neb?.darkRifts || [];
+        const [rimR, rimG, rimB] = palette[2];
+        for (const rift of darkRifts) {
+          const rxPos = (rift[0] / 10000) * w;
+          const ryPos = (rift[1] / 10000) * h;
+          const rx = Math.max(12, (rift[2] / 10000) * w);
+          const ry = Math.max(6, (rift[3] / 10000) * h);
+          const angle = rift[4];
+          const op = rift[5] || 0.55;
+
+          ctx.save();
+          ctx.translate(rxPos, ryPos);
+          ctx.rotate(angle);
+
+          // Subtle photo-dissociation rim along the upper edge of the dark dust lane
+          ctx.scale(1, ry / rx);
+          const rimGrad = ctx.createRadialGradient(0, -rx * 0.18, rx * 0.1, 0, 0, rx * 1.15);
+          rimGrad.addColorStop(0, 'rgba(0,0,0,0)');
+          rimGrad.addColorStop(0.68, `rgba(${rimR}, ${rimG}, ${rimB}, ${(op * 0.16).toFixed(3)})`);
+          rimGrad.addColorStop(1, 'rgba(0,0,0,0)');
+          ctx.fillStyle = rimGrad;
+          ctx.beginPath();
+          ctx.arc(0, 0, rx * 1.15, 0, Math.PI * 2);
+          ctx.fill();
+
+          // Multi-lobe dark Bok globule core occlusion
+          for (let lobe = -1; lobe <= 1; lobe++) {
+            const lx = lobe * rx * 0.34;
+            const ly = Math.sin(lobe * 2.1) * rx * 0.12;
+            const lr = rx * (0.78 - Math.abs(lobe) * 0.12);
+            const dg = ctx.createRadialGradient(lx, ly, 0, lx, ly, lr);
+            dg.addColorStop(0, `rgba(5, 7, 12, ${(op * 0.88).toFixed(3)})`);
+            dg.addColorStop(0.55, `rgba(5, 7, 12, ${(op * 0.48).toFixed(3)})`);
+            dg.addColorStop(1, 'rgba(5, 7, 12, 0)');
+            ctx.fillStyle = dg;
+            ctx.beginPath();
+            ctx.arc(lx, ly, lr, 0, Math.PI * 2);
+            ctx.fill();
+          }
+          ctx.restore();
+        }
+      }
+
+      return planes;
+    }
+
+    /**
+     * Stamps a multi-lobe turbulent anisotropic nebula filament onto a plane canvas.
+     */
+    private stampTurbulentFilament(
+      ctx: CanvasRenderingContext2D,
+      f: [number, number, number, number, number, number, number, number],
+      palette: number[][],
+      w: number,
+      h: number,
+      subLobes: number
+    ) {
+      const fx = (f[0] / 10000) * w;
+      const fy = (f[1] / 10000) * h;
+      const rx = Math.max(16, (f[2] / 10000) * w);
+      const ry = Math.max(8, (f[3] / 10000) * h);
+      const angle = f[4];
+      const colorSlot = f[6] % palette.length;
+      const baseAlpha = f[7];
+
+      const [r, g, b] = palette[colorSlot];
+      const [coreR, coreG, coreB] = palette[2];
+
+      for (let m = 0; m < subLobes; m++) {
+        const t = subLobes > 1 ? m / (subLobes - 1) - 0.5 : 0;
+        const curveWarp = Math.sin(t * Math.PI + f[0] * 0.001) * ry * 0.55;
+        const lobeX = fx + Math.cos(angle) * (t * rx * 0.95) - Math.sin(angle) * curveWarp;
+        const lobeY = fy + Math.sin(angle) * (t * rx * 0.95) + Math.cos(angle) * curveWarp;
+        const lobeRx = rx * (0.62 + Math.cos(t * 2.2) * 0.28);
+        const lobeRy = ry * (0.68 + Math.sin(m * 1.9) * 0.25);
+        const lobeAngle = angle + Math.sin(m * 2.7) * 0.28;
+        const lobeAlpha = baseAlpha * (0.72 + (1 - Math.abs(t)) * 0.45);
+
+        ctx.save();
+        ctx.translate(lobeX, lobeY);
+        ctx.rotate(lobeAngle);
+        ctx.scale(1, Math.max(0.22, lobeRy / lobeRx));
+
+        const grad = ctx.createRadialGradient(0, 0, 0, 0, 0, lobeRx);
+        grad.addColorStop(0, `rgba(${coreR}, ${coreG}, ${coreB}, ${(lobeAlpha * 0.95).toFixed(3)})`);
+        grad.addColorStop(0.38, `rgba(${r}, ${g}, ${b}, ${(lobeAlpha * 0.75).toFixed(3)})`);
+        grad.addColorStop(0.75, `rgba(${r}, ${g}, ${b}, ${(lobeAlpha * 0.25).toFixed(3)})`);
+        grad.addColorStop(1, `rgba(${r}, ${g}, ${b}, 0)`);
+
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.arc(0, 0, lobeRx, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
     }
 
     private async loadCatalogAndSelect(forceRandom = false) {
@@ -763,11 +968,15 @@ const { featuredConstellationId = null } = Astro.props;
           chosenMeta = this.catalogIndex.find((c) => c.id === featuredId);
         }
         if (!chosenMeta) {
-          const idx = Math.floor(Math.random() * this.catalogIndex.length);
-          chosenMeta = this.catalogIndex[idx];
+          // Avoid picking the exact same constellation on redraw
+          const pool =
+            this.currentConstellation && this.catalogIndex.length > 1
+              ? this.catalogIndex.filter((c) => c.id !== this.currentConstellation.id)
+              : this.catalogIndex;
+          const idx = Math.floor(Math.random() * pool.length);
+          chosenMeta = pool[idx];
         }
 
-        // Handle both "shard-00.json" string and numeric shard index
         const rawShard = String(chosenMeta.shard);
         const shardName = rawShard.endsWith('.json')
           ? rawShard
@@ -775,16 +984,57 @@ const { featuredConstellationId = null } = Astro.props;
 
         const shardRes = await fetch(`/data/sky/shards/${shardName}`);
         const shardList = await shardRes.json();
-        this.currentConstellation =
+        const nextConstellation =
           shardList.find((c: any) => c.id === chosenMeta.id) || shardList[0];
+        const nextPlanes = this.buildNebulaPlanes(nextConstellation);
 
-        this.drawProgress = 0;
         this.selectedStarIdx = -1;
         document.getElementById('star-inset-popup')?.setAttribute('hidden', '');
-        this.updateHud();
+
+        if (this.currentConstellation && forceRandom) {
+          // Seamless Dual-Constellation Cross-Dissolve + Equatorial Telescope Slew
+          this.outgoingConstellation = this.currentConstellation;
+          this.outgoingNebulaPlanes = this.currentNebulaPlanes;
+          this.outgoingDrawProgress = this.drawProgress;
+
+          this.currentConstellation = nextConstellation;
+          this.currentNebulaPlanes = nextPlanes;
+          this.drawProgress = 0;
+          this.transitionBlend = 0;
+
+          // Gentle telescope slew impulse toward the new sector
+          const dirX = Math.random() > 0.5 ? 1 : -1;
+          const dirY = (Math.random() - 0.5) * 0.8;
+          this.slewVX = dirX * 0.0042;
+          this.slewVY = dirY * 0.0022;
+
+          this.crossDissolveHud();
+        } else {
+          this.currentConstellation = nextConstellation;
+          this.currentNebulaPlanes = nextPlanes;
+          this.drawProgress = 0;
+          this.transitionBlend = 1;
+          this.updateHud();
+        }
       } catch (err) {
         console.error('[DRC Sky Engine] Failed to load constellation shard:', err);
       }
+    }
+
+    private crossDissolveHud() {
+      const cluster = document.getElementById('sky-title-cluster');
+      const statusEl = document.getElementById('hud-telemetry-status');
+      if (statusEl) statusEl.textContent = 'SLEWING // EQUATORIAL';
+      cluster?.classList.add('is-slew-fading');
+
+      window.setTimeout(() => {
+        this.updateHud();
+        cluster?.classList.remove('is-slew-fading');
+      }, 420);
+
+      window.setTimeout(() => {
+        if (statusEl) statusEl.textContent = 'ACTIVE // J2000.0';
+      }, 1450);
     }
 
     private spawnShootingStar() {
@@ -800,12 +1050,16 @@ const { featuredConstellationId = null } = Astro.props;
       const c = this.currentConstellation;
       const idEl = document.getElementById('hud-constellation-id');
       const nodeCountEl = document.getElementById('hud-node-count');
+      const nebEl = document.getElementById('hud-nebula-designation');
       const nameEl = document.getElementById('hud-constellation-name');
       const meaningEl = document.getElementById('hud-constellation-meaning');
       const coordsEl = document.getElementById('hud-constellation-coords');
 
       if (idEl) idEl.textContent = c.id;
       if (nodeCountEl) nodeCountEl.textContent = `${c.stars?.length || 0} NODES`;
+      if (nebEl) {
+        nebEl.textContent = c.nebula?.designation || 'NGC 2244 · H II Emission Field';
+      }
       if (nameEl) nameEl.textContent = c.name;
       if (meaningEl) meaningEl.textContent = c.meaning || c.english || '';
       if (coordsEl) coordsEl.textContent = `RA ${c.ra} · DEC ${c.dec}`;
@@ -937,8 +1191,22 @@ const { featuredConstellationId = null } = Astro.props;
     private startLoop() {
       const step = (time: number) => {
         this.frameCount++;
+
+        // Advance seamless cross-dissolve blend (0 -> 1 over ~2.2 seconds)
+        if (this.transitionBlend < 1) {
+          this.transitionBlend = Math.min(1, this.transitionBlend + 0.0072);
+          if (this.transitionBlend >= 1) {
+            this.outgoingConstellation = null;
+            this.outgoingNebulaPlanes = [];
+          }
+        }
+
         // Slow, dreamlike constellation line tracing (~4.2 seconds across all edges)
         this.drawProgress = Math.min(1, this.drawProgress + 0.0042);
+
+        // Dampen equatorial telescope slew impulse smoothly
+        this.slewVX *= 0.955;
+        this.slewVY *= 0.955;
 
         if (!this.isDragging) {
           if (this.autoRotate) {
@@ -950,8 +1218,8 @@ const { featuredConstellationId = null } = Astro.props;
             this.vX *= 0.92;
             this.vY *= 0.92;
           }
-          this.rotX += this.vX;
-          this.rotY = Math.max(-0.4, Math.min(0.4, this.rotY + this.vY));
+          this.rotX += this.vX + this.slewVX;
+          this.rotY = Math.max(-0.42, Math.min(0.42, this.rotY + this.vY + this.slewVY));
         }
 
         if (this.frameCount % 680 === 0 && Math.random() > 0.4) {
@@ -961,7 +1229,8 @@ const { featuredConstellationId = null } = Astro.props;
         if (this.frameCount % 30 === 0) {
           const spinEl = document.getElementById('hud-spin-speed');
           if (spinEl) {
-            const degPerFrame = (Math.hypot(this.vX, this.vY) * (180 / Math.PI)).toFixed(3);
+            const totalV = Math.hypot(this.vX + this.slewVX, this.vY + this.slewVY);
+            const degPerFrame = (totalV * (180 / Math.PI)).toFixed(3);
             spinEl.textContent = `${degPerFrame}°/f`;
           }
         }
@@ -972,6 +1241,265 @@ const { featuredConstellationId = null } = Astro.props;
       this.rafId = requestAnimationFrame(step);
     }
 
+    /**
+     * Composites the 3 volumetric nebula depth planes with differential 3D parallax
+     * and slow organic breathing.
+     */
+    private drawVolumetricNebulaPlanes(
+      ctx: CanvasRenderingContext2D,
+      planes: HTMLCanvasElement[],
+      w: number,
+      h: number,
+      rotOffsetX: number,
+      rotOffsetY: number,
+      masterAlpha: number
+    ) {
+      if (!planes || planes.length === 0 || masterAlpha <= 0.004) return;
+      const parallaxFactors = [0.25, 0.68, 1.18];
+      const pad = 48;
+
+      for (let i = 0; i < planes.length; i++) {
+        const plane = planes[i];
+        if (!plane) continue;
+        const pFactor = parallaxFactors[i] ?? 0.65;
+        const ox = rotOffsetX * pFactor;
+        const oy = rotOffsetY * pFactor;
+        const breath = 1 + Math.sin(this.frameCount * 0.0055 + i * 1.7) * 0.014;
+
+        ctx.save();
+        ctx.globalAlpha = masterAlpha * (i === 1 ? 0.96 : 0.88);
+        if (i === 1) {
+          ctx.globalCompositeOperation = 'screen';
+        }
+        const dw = (w + pad * 2) * breath;
+        const dh = (h + pad * 2) * breath;
+        const dx = (w - dw) * 0.5 + ox;
+        const dy = (h - dh) * 0.5 + oy;
+        ctx.drawImage(plane, dx, dy, dw, dh);
+        ctx.restore();
+      }
+    }
+
+    /**
+     * Renders a single constellation's stars, ghost chords, silverpoint edges,
+     * Airy disks, and Bayer designations at a given `opacityScale` and `progress`.
+     * This allows both the outgoing constellation and incoming constellation to
+     * cross-dissolve seamlessly during a sky redraw.
+     */
+    private renderConstellationFigure(
+      ctx: CanvasRenderingContext2D,
+      c: any,
+      w: number,
+      h: number,
+      vaultRad: number,
+      rotOffsetX: number,
+      rotOffsetY: number,
+      progress: number,
+      opacityScale: number,
+      isInteractivePrimary: boolean
+    ) {
+      if (!c || opacityScale <= 0.005) return;
+
+      const padX = Math.max(w * 0.18, (w - vaultRad * 1.9) * 0.5);
+      const padY = Math.max(h * 0.14, (h * 0.92 - vaultRad * 1.7) * 0.5);
+      const drawW = w - padX * 2;
+      const drawH = h * 0.84 - padY * 1.4;
+
+      // Slight radial drift during outgoing dissolve for an ethereal celestial handoff
+      const driftScale = isInteractivePrimary ? 1 : 1 - (1 - opacityScale) * 0.035;
+      const centerX = w * 0.5;
+      const centerY = h * 0.48;
+
+      let nextHovered = -1;
+      const projected: ProjectedStar[] = c.stars.map(
+        (s: [number, number, number, number], idx: number) => {
+          const normX = s[0] > 1.5 ? s[0] / 10000 : s[0];
+          const normY = s[1] > 1.5 ? s[1] / 10000 : s[1];
+
+          const parallaxFactor = 0.7 + (idx % 3) * 0.15;
+          const rawX = padX + normX * drawW + rotOffsetX * parallaxFactor;
+          const rawY = padY + normY * drawH + rotOffsetY * parallaxFactor;
+          const px = centerX + (rawX - centerX) * driftScale;
+          const py = centerY + (rawY - centerY) * driftScale;
+          const rgb = specToPlanckianRgb(s[3]);
+
+          if (
+            isInteractivePrimary &&
+            !this.isDragging &&
+            Math.hypot(px - this.lastPointer.x, py - this.lastPointer.y) < 24
+          ) {
+            nextHovered = idx;
+          }
+
+          return {
+            idx,
+            x: px,
+            y: py,
+            mag: s[2],
+            spec: s[3],
+            rgb,
+          };
+        }
+      );
+
+      if (isInteractivePrimary) {
+        this.projectedPrincipalStars = projected;
+        this.hoveredStarIdx = nextHovered;
+      }
+
+      // 4A. Secondary Ghost Construction Chords (dashed classical geometry lines)
+      if (Array.isArray(c.ghostChords) && progress > 0.65) {
+        const chordAlpha = Math.min(1, (progress - 0.65) / 0.35) * 0.22 * opacityScale;
+        ctx.save();
+        ctx.setLineDash([3, 7]);
+        ctx.strokeStyle = `rgba(218, 195, 142, ${chordAlpha.toFixed(3)})`;
+        ctx.lineWidth = 0.75;
+        for (const [u, v] of c.ghostChords) {
+          const p1 = projected[u];
+          const p2 = projected[v];
+          if (!p1 || !p2) continue;
+          ctx.beginPath();
+          ctx.moveTo(p1.x, p1.y);
+          ctx.lineTo(p2.x, p2.y);
+          ctx.stroke();
+        }
+        ctx.restore();
+      }
+
+      // 4B. Primary Intaglio Silverpoint Constellation Edges with 9px Breathing Halo Gap
+      const totalEdges = c.edges.length;
+      const easedProgress = 1 - Math.pow(1 - progress, 2.4);
+      const activeEdges = easedProgress * totalEdges;
+
+      c.edges.forEach((edge: [number, number], idx: number) => {
+        if (idx > activeEdges) return;
+        const p1 = projected[edge[0]];
+        const p2 = projected[edge[1]];
+        if (!p1 || !p2) return;
+
+        const segProgress = Math.min(1, activeEdges - idx);
+        const dx = p2.x - p1.x;
+        const dy = p2.y - p1.y;
+        const dist = Math.hypot(dx, dy);
+        const gap = 9;
+        if (dist <= gap * 2.2) return;
+
+        const ux = dx / dist;
+        const uy = dy / dist;
+
+        // If outgoing constellation is dissolving out, retract from start vertex toward end vertex!
+        const retractStart = isInteractivePrimary ? 0 : Math.pow(1 - opacityScale, 1.3);
+        const sx0 = p1.x + ux * gap + (dist - gap * 2) * ux * retractStart;
+        const sy0 = p1.y + uy * gap + (dist - gap * 2) * uy * retractStart;
+        const fullEx = p2.x - ux * gap;
+        const fullEy = p2.y - uy * gap;
+
+        const ex = sx0 + (fullEx - sx0) * segProgress;
+        const ey = sy0 + (fullEy - sy0) * segProgress;
+
+        const linePhase = (edge[0] * 2.4 + edge[1] * 1.7) % (Math.PI * 2);
+        const glimmer = Math.pow((Math.sin(this.frameCount * 0.012 + linePhase) + 1) * 0.5, 2);
+
+        const grad = ctx.createLinearGradient(sx0, sy0, ex, ey);
+        const baseA = ((0.42 + glimmer * 0.14) * opacityScale).toFixed(3);
+        const midA = ((0.72 + glimmer * 0.22) * opacityScale).toFixed(3);
+        grad.addColorStop(0, `rgba(218, 195, 142, ${baseA})`);
+        grad.addColorStop(0.5, `rgba(255, 242, 205, ${midA})`);
+        grad.addColorStop(1, `rgba(218, 195, 142, ${baseA})`);
+
+        ctx.save();
+        ctx.strokeStyle = `rgba(218, 195, 142, ${(0.14 * opacityScale).toFixed(3)})`;
+        ctx.lineWidth = 3.2;
+        ctx.beginPath();
+        ctx.moveTo(sx0, sy0);
+        ctx.lineTo(ex, ey);
+        ctx.stroke();
+
+        ctx.strokeStyle = grad;
+        ctx.lineWidth = 1.15 + glimmer * 0.35;
+        ctx.beginPath();
+        ctx.moveTo(sx0, sy0);
+        ctx.lineTo(ex, ey);
+        ctx.stroke();
+        ctx.restore();
+      });
+
+      // 5. Render Principal Constellation Stars with 3-Zone Airy Disk + Astrolabe Reticles
+      projected.forEach((p, idx) => {
+        const [r, g, b] = p.rgb;
+        const baseRadius = Math.max(2.1, 4.6 - p.mag * 0.72);
+        const isHov = isInteractivePrimary && idx === this.hoveredStarIdx;
+        const isSel = isInteractivePrimary && idx === this.selectedStarIdx;
+        const radius = baseRadius * (isSel ? 1.5 : isHov ? 1.28 : 1);
+
+        // Zone C: Wide atmospheric halation
+        const haloRadius = radius * 8.5;
+        const halo = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, haloRadius);
+        const coreHaloA = (isSel || isHov ? 0.62 : 0.42) * opacityScale;
+        halo.addColorStop(0, `rgba(${r}, ${g}, ${b}, ${coreHaloA.toFixed(3)})`);
+        halo.addColorStop(0.38, `rgba(${r}, ${g}, ${b}, ${(0.14 * opacityScale).toFixed(3)})`);
+        halo.addColorStop(1, `rgba(${r}, ${g}, ${b}, 0)`);
+        ctx.fillStyle = halo;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, haloRadius, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Zone B: Fraunhofer diffraction spikes for bright alpha/beta/gamma stars
+        if (p.mag < 2.2 || isHov || isSel) {
+          const spikeLen = radius * (isSel ? 9.5 : 7.2);
+          const spikeA = (isSel || isHov ? 0.72 : 0.48) * opacityScale;
+          ctx.strokeStyle = `rgba(${r}, ${g}, ${b}, ${spikeA.toFixed(3)})`;
+          ctx.lineWidth = 0.7;
+          ctx.beginPath();
+          ctx.moveTo(p.x - spikeLen, p.y);
+          ctx.lineTo(p.x + spikeLen, p.y);
+          ctx.moveTo(p.x, p.y - spikeLen);
+          ctx.lineTo(p.x, p.y + spikeLen);
+          ctx.stroke();
+        }
+
+        // Zone A: Pinpoint incandescent core
+        ctx.fillStyle = `rgba(255, 255, 255, ${opacityScale.toFixed(3)})`;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, radius * 0.78, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Rotating 4-Corner Target Reticle on Hovered or Selected Star
+        if (isHov || isSel) {
+          const tSize = 14;
+          const rot = this.frameCount * 0.018;
+          ctx.save();
+          ctx.translate(p.x, p.y);
+          ctx.rotate(rot);
+          ctx.strokeStyle = `rgba(232, 222, 181, ${(0.92 * opacityScale).toFixed(3)})`;
+          ctx.lineWidth = 1.1;
+          for (let corner = 0; corner < 4; corner++) {
+            ctx.beginPath();
+            ctx.moveTo(-tSize, -tSize + tSize * 0.48);
+            ctx.lineTo(-tSize, -tSize);
+            ctx.lineTo(-tSize + tSize * 0.48, -tSize);
+            ctx.stroke();
+            ctx.rotate(Math.PI * 0.5);
+          }
+          ctx.restore();
+        } else if (idx === 0 || idx === 1) {
+          ctx.strokeStyle = `rgba(218, 195, 142, ${(0.42 * opacityScale).toFixed(3)})`;
+          ctx.lineWidth = 0.75;
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, 7.2, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+
+        // Bayer Greek letter designation
+        if (idx < BAYER_GREEK.length && progress > 0.25) {
+          const labelA = (isHov || isSel ? 1 : 0.82) * opacityScale;
+          ctx.fillStyle = `rgba(218, 195, 142, ${labelA.toFixed(3)})`;
+          ctx.font = '12px Georgia, serif';
+          ctx.fillText(BAYER_GREEK[idx], p.x + 11, p.y - 8);
+        }
+      });
+    }
+
     private renderFrame(
       time: number,
       ctx: CanvasRenderingContext2D,
@@ -979,12 +1507,6 @@ const { featuredConstellationId = null } = Astro.props;
       h: number
     ) {
       ctx.clearRect(0, 0, w, h);
-
-      // 0. Draw blurred low-res nebula layer
-      ctx.save();
-      ctx.globalAlpha = 0.88;
-      ctx.drawImage(this.nebulaCanvas, 0, 0, w, h);
-      ctx.restore();
 
       const cx = Math.cos(this.rotX);
       const sx = Math.sin(this.rotX);
@@ -996,6 +1518,32 @@ const { featuredConstellationId = null } = Astro.props;
       const uniRad = maxEdge * 0.72;
       const uniFov = maxEdge * 1.35;
       const vaultRad = minEdge * 0.37 * this.zoom;
+
+      const rotOffsetX = Math.sin(this.rotX * 1.2) * (vaultRad * 0.22);
+      const rotOffsetY = Math.sin(this.rotY * 1.2) * (vaultRad * 0.22);
+
+      // 0. Draw 3-Layer Volumetric Parallax Nebulae (Seamless cross-dissolve during redraw)
+      const smoothBlend = quinticSmoothstep(this.transitionBlend);
+      if (this.outgoingNebulaPlanes.length > 0 && smoothBlend < 1) {
+        this.drawVolumetricNebulaPlanes(
+          ctx,
+          this.outgoingNebulaPlanes,
+          w,
+          h,
+          rotOffsetX,
+          rotOffsetY,
+          1 - smoothBlend
+        );
+      }
+      this.drawVolumetricNebulaPlanes(
+        ctx,
+        this.currentNebulaPlanes,
+        w,
+        h,
+        rotOffsetX,
+        rotOffsetY,
+        smoothBlend
+      );
 
       // 1. Background 3D spherical starfield + Supernova cross-flares
       for (const s of this.backgroundStars) {
@@ -1075,192 +1623,36 @@ const { featuredConstellationId = null } = Astro.props;
       ctx.setLineDash([]);
       ctx.restore();
 
-      if (!this.currentConstellation) return;
-      const c = this.currentConstellation;
-
-      // Normalize star coordinates from 0..10000 integer catalog space into screen space
-      const padX = Math.max(w * 0.18, (w - vaultRad * 1.9) * 0.5);
-      const padY = Math.max(h * 0.14, (h * 0.92 - vaultRad * 1.7) * 0.5);
-      const drawW = w - padX * 2;
-      const drawH = h * 0.84 - padY * 1.4;
-
-      const rotOffsetX = Math.sin(this.rotX * 1.2) * (vaultRad * 0.22);
-      const rotOffsetY = Math.sin(this.rotY * 1.2) * (vaultRad * 0.22);
-
-      let nextHovered = -1;
-      this.projectedPrincipalStars = c.stars.map((s: [number, number, number, number], idx: number) => {
-        // Normalize 0..10000 coordinates to 0..1
-        const normX = s[0] > 1.5 ? s[0] / 10000 : s[0];
-        const normY = s[1] > 1.5 ? s[1] / 10000 : s[1];
-
-        const parallaxFactor = 0.7 + (idx % 3) * 0.15;
-        const px = padX + normX * drawW + rotOffsetX * parallaxFactor;
-        const py = padY + normY * drawH + rotOffsetY * parallaxFactor;
-        const rgb = specToPlanckianRgb(s[3]);
-
-        if (!this.isDragging && Math.hypot(px - this.lastPointer.x, py - this.lastPointer.y) < 24) {
-          nextHovered = idx;
-        }
-
-        return {
-          idx,
-          x: px,
-          y: py,
-          mag: s[2],
-          spec: s[3],
-          rgb,
-        };
-      });
-      this.hoveredStarIdx = nextHovered;
-
-      // 4A. Secondary Ghost Construction Chords (dashed classical geometry lines)
-      if (Array.isArray(c.ghostChords) && this.drawProgress > 0.65) {
-        const chordAlpha = Math.min(1, (this.drawProgress - 0.65) / 0.35) * 0.22;
-        ctx.save();
-        ctx.setLineDash([3, 7]);
-        ctx.strokeStyle = `rgba(218, 195, 142, ${chordAlpha.toFixed(3)})`;
-        ctx.lineWidth = 0.75;
-        for (const [u, v] of c.ghostChords) {
-          const p1 = this.projectedPrincipalStars[u];
-          const p2 = this.projectedPrincipalStars[v];
-          if (!p1 || !p2) continue;
-          ctx.beginPath();
-          ctx.moveTo(p1.x, p1.y);
-          ctx.lineTo(p2.x, p2.y);
-          ctx.stroke();
-        }
-        ctx.restore();
+      // 4 & 5. Outgoing Constellation (if mid-transition) + Active Constellation
+      if (this.outgoingConstellation && smoothBlend < 1) {
+        this.renderConstellationFigure(
+          ctx,
+          this.outgoingConstellation,
+          w,
+          h,
+          vaultRad,
+          rotOffsetX,
+          rotOffsetY,
+          this.outgoingDrawProgress,
+          1 - smoothBlend,
+          false
+        );
       }
 
-      // 4B. Primary Intaglio Silverpoint Constellation Edges with 9px Breathing Halo Gap
-      const totalEdges = c.edges.length;
-      // Smooth cubic ease-out on overall drawProgress
-      const easedProgress = 1 - Math.pow(1 - this.drawProgress, 2.4);
-      const activeEdges = easedProgress * totalEdges;
-
-      c.edges.forEach((edge: [number, number], idx: number) => {
-        if (idx > activeEdges) return;
-        const p1 = this.projectedPrincipalStars[edge[0]];
-        const p2 = this.projectedPrincipalStars[edge[1]];
-        if (!p1 || !p2) return;
-
-        const segProgress = Math.min(1, activeEdges - idx);
-        const dx = p2.x - p1.x;
-        const dy = p2.y - p1.y;
-        const dist = Math.hypot(dx, dy);
-        const gap = 9;
-        if (dist <= gap * 2.2) return;
-
-        const ux = dx / dist;
-        const uy = dy / dist;
-        const sx0 = p1.x + ux * gap;
-        const sy0 = p1.y + uy * gap;
-        const fullEx = p2.x - ux * gap;
-        const fullEy = p2.y - uy * gap;
-
-        const ex = sx0 + (fullEx - sx0) * segProgress;
-        const ey = sy0 + (fullEy - sy0) * segProgress;
-
-        const linePhase = (edge[0] * 2.4 + edge[1] * 1.7) % (Math.PI * 2);
-        const glimmer = Math.pow((Math.sin(this.frameCount * 0.012 + linePhase) + 1) * 0.5, 2);
-
-        const grad = ctx.createLinearGradient(sx0, sy0, ex, ey);
-        const baseA = (0.42 + glimmer * 0.14).toFixed(3);
-        const midA = (0.72 + glimmer * 0.22).toFixed(3);
-        grad.addColorStop(0, `rgba(218, 195, 142, ${baseA})`);
-        grad.addColorStop(0.5, `rgba(255, 242, 205, ${midA})`);
-        grad.addColorStop(1, `rgba(218, 195, 142, ${baseA})`);
-
-        ctx.save();
-        // Outer warm silverpoint bloom
-        ctx.strokeStyle = 'rgba(218, 195, 142, 0.14)';
-        ctx.lineWidth = 3.2;
-        ctx.beginPath();
-        ctx.moveTo(sx0, sy0);
-        ctx.lineTo(ex, ey);
-        ctx.stroke();
-
-        // Crisp core intaglio stroke
-        ctx.strokeStyle = grad;
-        ctx.lineWidth = 1.15 + glimmer * 0.35;
-        ctx.beginPath();
-        ctx.moveTo(sx0, sy0);
-        ctx.lineTo(ex, ey);
-        ctx.stroke();
-        ctx.restore();
-      });
-
-      // 5. Render Principal Constellation Stars with 3-Zone Airy Disk + Astrolabe Reticles
-      this.projectedPrincipalStars.forEach((p, idx) => {
-        const [r, g, b] = p.rgb;
-        const baseRadius = Math.max(2.1, 4.6 - p.mag * 0.72);
-        const isHov = idx === this.hoveredStarIdx;
-        const isSel = idx === this.selectedStarIdx;
-        const radius = baseRadius * (isSel ? 1.5 : isHov ? 1.28 : 1);
-
-        // Zone C: Wide atmospheric halation
-        const haloRadius = radius * 8.5;
-        const halo = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, haloRadius);
-        halo.addColorStop(0, `rgba(${r}, ${g}, ${b}, ${isSel || isHov ? 0.62 : 0.42})`);
-        halo.addColorStop(0.38, `rgba(${r}, ${g}, ${b}, 0.14)`);
-        halo.addColorStop(1, `rgba(${r}, ${g}, ${b}, 0)`);
-        ctx.fillStyle = halo;
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, haloRadius, 0, Math.PI * 2);
-        ctx.fill();
-
-        // Zone B: Fraunhofer diffraction spikes for bright alpha/beta/gamma stars
-        if (p.mag < 2.2 || isHov || isSel) {
-          const spikeLen = radius * (isSel ? 9.5 : 7.2);
-          ctx.strokeStyle = `rgba(${r}, ${g}, ${b}, ${isSel || isHov ? 0.72 : 0.48})`;
-          ctx.lineWidth = 0.7;
-          ctx.beginPath();
-          ctx.moveTo(p.x - spikeLen, p.y);
-          ctx.lineTo(p.x + spikeLen, p.y);
-          ctx.moveTo(p.x, p.y - spikeLen);
-          ctx.lineTo(p.x, p.y + spikeLen);
-          ctx.stroke();
-        }
-
-        // Zone A: Pinpoint incandescent core
-        ctx.fillStyle = '#ffffff';
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, radius * 0.78, 0, Math.PI * 2);
-        ctx.fill();
-
-        // Rotating 4-Corner Target Reticle on Hovered or Selected Star
-        if (isHov || isSel) {
-          const tSize = 14;
-          const rot = this.frameCount * 0.018;
-          ctx.save();
-          ctx.translate(p.x, p.y);
-          ctx.rotate(rot);
-          ctx.strokeStyle = 'rgba(232, 222, 181, 0.92)';
-          ctx.lineWidth = 1.1;
-          for (let corner = 0; corner < 4; corner++) {
-            ctx.beginPath();
-            ctx.moveTo(-tSize, -tSize + tSize * 0.48);
-            ctx.lineTo(-tSize, -tSize);
-            ctx.lineTo(-tSize + tSize * 0.48, -tSize);
-            ctx.stroke();
-            ctx.rotate(Math.PI * 0.5);
-          }
-          ctx.restore();
-        } else if (idx === 0 || idx === 1) {
-          ctx.strokeStyle = 'rgba(218, 195, 142, 0.42)';
-          ctx.lineWidth = 0.75;
-          ctx.beginPath();
-          ctx.arc(p.x, p.y, 7.2, 0, Math.PI * 2);
-          ctx.stroke();
-        }
-
-        // Bayer Greek letter designation
-        if (idx < BAYER_GREEK.length && this.drawProgress > 0.25) {
-          ctx.fillStyle = isHov || isSel ? 'rgba(232, 222, 181, 1)' : 'rgba(218, 195, 142, 0.82)';
-          ctx.font = '12px Georgia, serif';
-          ctx.fillText(BAYER_GREEK[idx], p.x + 11, p.y - 8);
-        }
-      });
+      if (this.currentConstellation) {
+        this.renderConstellationFigure(
+          ctx,
+          this.currentConstellation,
+          w,
+          h,
+          vaultRad,
+          rotOffsetX,
+          rotOffsetY,
+          this.drawProgress,
+          smoothBlend,
+          true
+        );
+      }
 
       // 6. Shooting Stars / Bolide Transits
       this.shootingStars = this.shootingStars.filter((star) => {
@@ -1314,9 +1706,12 @@ const { featuredConstellationId = null } = Astro.props;
       ctx.fillRect(0, 0, off.width, off.height);
 
       const savedProgress = this.drawProgress;
+      const savedBlend = this.transitionBlend;
       this.drawProgress = 1;
+      this.transitionBlend = 1;
       this.renderFrame(performance.now(), ctx, off.width, off.height);
       this.drawProgress = savedProgress;
+      this.transitionBlend = savedBlend;
 
       ctx.strokeStyle = 'rgba(218, 195, 142, 0.4)';
       ctx.lineWidth = 2;
@@ -1329,7 +1724,7 @@ const { featuredConstellationId = null } = Astro.props;
       ctx.fillStyle = '#d4af37';
       ctx.font = '22px ui-monospace, monospace';
       ctx.fillText(
-        `DUNCAN R. CORDRY OBSERVATORY ARCHIVE · ${c.id} · RA ${c.ra} · DEC ${c.dec} (EPOCH J2000.0)`,
+        `DUNCAN R. CORDRY OBSERVATORY ARCHIVE · ${c.id} · ${c.nebula?.designation || ''} · RA ${c.ra} · DEC ${c.dec}`,
         96,
         off.height - 88
       );
