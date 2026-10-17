@@ -595,6 +595,80 @@ const { featuredConstellationId = null } = Astro.props;
     return x * x * x * (x * (x * 6 - 15) + 10);
   }
 
+  // Fast deterministic 2D Value-Simplex Noise & Fractional Brownian Motion (fBm) for organic nebula synthesis
+  class FractalNebulaNoise {
+    private perm = new Uint8Array(512);
+
+    constructor(seed: number) {
+      const p = new Uint8Array(256);
+      for (let i = 0; i < 256; i++) p[i] = i;
+      let s = (seed >>> 0) || 1337;
+      for (let i = 255; i > 0; i--) {
+        s = (Math.imul(s, 1664525) + 1013904223) >>> 0;
+        const j = s % (i + 1);
+        const tmp = p[i];
+        p[i] = p[j];
+        p[j] = tmp;
+      }
+      for (let i = 0; i < 512; i++) this.perm[i] = p[i & 255];
+    }
+
+    public noise2D(x: number, y: number): number {
+      const xi = Math.floor(x) & 255;
+      const yi = Math.floor(y) & 255;
+      const xf = x - Math.floor(x);
+      const yf = y - Math.floor(y);
+
+      const u = xf * xf * xf * (xf * (xf * 6 - 15) + 10);
+      const v = yf * yf * yf * (yf * (yf * 6 - 15) + 10);
+
+      const aa = this.perm[this.perm[xi] + yi];
+      const ab = this.perm[this.perm[xi] + yi + 1];
+      const ba = this.perm[this.perm[xi + 1] + yi];
+      const bb = this.perm[this.perm[xi + 1] + yi + 1];
+
+      const l1 = aa + u * (ba - aa);
+      const l2 = ab + u * (bb - ab);
+      return (l1 + v * (l2 - l1)) / 255;
+    }
+
+    // 4-octave Fractional Brownian Motion
+    public fbm(x: number, y: number): number {
+      let value = 0;
+      let amp = 0.52;
+      let freq = 1;
+      for (let i = 0; i < 4; i++) {
+        // Rotate octave slightly to eliminate grid alignment artifacts
+        const rx = x * freq * 0.866 - y * freq * 0.5;
+        const ry = x * freq * 0.5 + y * freq * 0.866;
+        value += amp * this.noise2D(rx, ry);
+        x += 17.3;
+        y += 9.1;
+        freq *= 2.07;
+        amp *= 0.48;
+      }
+      return value;
+    }
+
+    // Ridged Multifractal for sharp, gossamer cosmic ionization filaments
+    public ridged(x: number, y: number): number {
+      let value = 0;
+      let amp = 0.55;
+      let freq = 1;
+      let weight = 1;
+      for (let i = 0; i < 3; i++) {
+        const n = this.noise2D(x * freq, y * freq);
+        let signal = 1 - Math.abs(n * 2 - 1);
+        signal = signal * signal * weight;
+        weight = Math.max(0, Math.min(1, signal * 1.8));
+        value += signal * amp;
+        freq *= 2.15;
+        amp *= 0.45;
+      }
+      return value;
+    }
+  }
+
   type ProjectedStar = {
     idx: number;
     x: number;
@@ -630,8 +704,12 @@ const { featuredConstellationId = null } = Astro.props;
       z: number;
       r: number;
       rgb: [number, number, number];
-      phase: number;
-      speed: number;
+      phase1: number;
+      speed1: number;
+      phase2: number;
+      speed2: number;
+      threshold: number; // Controls fading completely in and out of the dark background
+      maxAlpha: number;
       isSupernova: boolean;
     }> = [];
     private dustMotes: Array<{
@@ -667,7 +745,6 @@ const { featuredConstellationId = null } = Astro.props;
     async connectedCallback() {
       this.nebulaCanvas = this.querySelector('#sky-nebula-layer') as HTMLCanvasElement;
       this.artefactCanvas = this.querySelector('#sky-artefact-layer') as HTMLCanvasElement;
-      // Hide the legacy single-plane canvas since we composite 3 volumetric offscreen planes directly
       if (this.nebulaCanvas) this.nebulaCanvas.style.display = 'none';
       this.aCtx = this.artefactCanvas.getContext('2d')!;
 
@@ -686,31 +763,50 @@ const { featuredConstellationId = null } = Astro.props;
     }
 
     private initBackgroundField() {
-      this.backgroundStars = Array.from({ length: 380 }, () => {
+      // 1,700 multi-tier stars that continuously twinkle in and out of the dark sky
+      this.backgroundStars = Array.from({ length: 1700 }, (_, i) => {
         const u = Math.random();
         const v = Math.random();
         const theta = 2 * Math.PI * u;
-        const phi = Math.acos(2 * v - 1);
-        const isSupernova = Math.random() > 0.97;
+        // Bias 60% of stars toward the forward hemisphere and galactic band so the screen is lush
+        const phi = i < 1050
+          ? Math.acos((Math.random() - 0.5) * 1.35)
+          : Math.acos(2 * v - 1);
+
+        let x = Math.sin(phi) * Math.cos(theta);
+        let y = Math.sin(phi) * Math.sin(theta);
+        let z = Math.cos(phi);
+        if (i < 1050 && z < -0.15) z = -z;
+
+        const isSupernova = Math.random() > 0.945;
+        const isTransientTwinkler = Math.random() < 0.76;
+
         return {
-          x: Math.sin(phi) * Math.cos(theta),
-          y: Math.sin(phi) * Math.sin(theta),
-          z: Math.cos(phi),
-          r: isSupernova ? 1.65 : Math.pow(Math.random(), 2.2) * 1.4 + 0.35,
+          x,
+          y,
+          z,
+          r: isSupernova
+            ? 1.35 + Math.random() * 0.75
+            : Math.pow(Math.random(), 2.4) * 1.35 + 0.32,
           rgb: specToPlanckianRgb(Math.floor(Math.random() * 6) + 1),
-          phase: Math.random() * Math.PI * 2,
-          speed: 0.004 + Math.random() * 0.008,
+          phase1: Math.random() * Math.PI * 2,
+          speed1: 0.012 + Math.random() * 0.028,
+          phase2: Math.random() * Math.PI * 2,
+          speed2: 0.005 + Math.random() * 0.014,
+          // Transient twinklers dip below threshold to 0 opacity, fading completely in & out!
+          threshold: isTransientTwinkler ? 0.34 + Math.random() * 0.28 : 0.05,
+          maxAlpha: isSupernova ? 0.95 : 0.45 + Math.random() * 0.5,
           isSupernova,
         };
       });
 
-      this.dustMotes = Array.from({ length: 30 }, () => ({
+      this.dustMotes = Array.from({ length: 45 }, () => ({
         x: Math.random(),
         y: Math.random(),
         vx: (Math.random() - 0.5) * 0.00006,
         vy: (Math.random() - 0.5) * 0.00006,
-        size: Math.random() * 1.1 + 0.35,
-        op: Math.random() * 0.22 + 0.06,
+        size: Math.random() * 1.05 + 0.3,
+        op: Math.random() * 0.22 + 0.05,
         opDir: Math.random() > 0.5 ? 1 : -1,
       }));
     }
@@ -733,13 +829,13 @@ const { featuredConstellationId = null } = Astro.props;
     }
 
     /**
-     * Synthesizes 3 volumetric parallax depth planes from the statically generated
-     * `c.nebula` genome (Plane 0 = Deep Galactic Continuum, Plane 1 = Mid-Field Anisotropic
-     * Ionization Filaments & Proto-Stellar Knots, Plane 2 = Foreground Barnard Dark Dust Lanes & Shock Rims).
+     * Synthesizes 3 volumetric parallax depth planes using a true per-pixel
+     * Domain-Warped fBm + Ridged Multifractal + Beer-Lambert Dark Dust Extinction shader.
+     * Zero ellipses or geometric ovals — 100% organic fluid turbulence.
      */
     private buildNebulaPlanes(c: any): HTMLCanvasElement[] {
-      const w = Math.max(320, Math.floor(window.innerWidth * 0.36));
-      const h = Math.max(240, Math.floor(window.innerHeight * 0.36));
+      const w = 300;
+      const h = 190;
 
       const planes = [0, 1, 2].map(() => {
         const cvs = document.createElement('canvas');
@@ -755,197 +851,142 @@ const { featuredConstellationId = null } = Astro.props;
         [236, 212, 162],
       ];
       const spineAngle = typeof neb?.spineAngle === 'number' ? neb.spineAngle : -0.48;
-      const baryX = ((neb?.barycenter?.[0] ?? 5000) / 10000) * w;
-      const baryY = ((neb?.barycenter?.[1] ?? 5000) / 10000) * h;
+      const cosA = Math.cos(-spineAngle);
+      const sinA = Math.sin(-spineAngle);
 
-      // --- PLANE 0: Deep Galactic Continuum & Broad Outer Emission Envelope ---
-      {
-        const ctx = planes[0].getContext('2d')!;
-        const [r0, g0, b0] = palette[0];
-        const [r1, g1, b1] = palette[1];
-        const [r2, g2, b2] = palette[2];
+      const baryX = (neb?.barycenter?.[0] ?? 5000) / 10000;
+      const baryY = (neb?.barycenter?.[1] ?? 5000) / 10000;
 
-        ctx.save();
-        ctx.translate(baryX, baryY);
-        ctx.rotate(spineAngle);
+      // Numeric seed from constellation ID (e.g. DRC-0222 -> 222)
+      const idNum = parseInt(String(c?.id || '1').replace(/\D/g, ''), 10) || 1;
+      const noiseGen = new FractalNebulaNoise(idNum * 7919 + 104729);
 
-        const span = Math.max(w, h) * 1.35;
-        const band = ctx.createLinearGradient(0, -h * 0.55, 0, h * 0.55);
-        band.addColorStop(0, `rgba(${r0}, ${g0}, ${b0}, 0)`);
-        band.addColorStop(0.28, `rgba(${r0}, ${g0}, ${b0}, 0.14)`);
-        band.addColorStop(0.5, `rgba(${r2}, ${g2}, ${b2}, 0.20)`);
-        band.addColorStop(0.72, `rgba(${r1}, ${g1}, ${b1}, 0.15)`);
-        band.addColorStop(1, `rgba(${r1}, ${g1}, ${b1}, 0)`);
+      // Normalized star positions for local H-II stellar illumination pockets
+      const starsNorm: Array<[number, number]> = (c?.stars || []).slice(0, 6).map((s: any) => [
+        s[0] > 1.5 ? s[0] / 10000 : s[0],
+        s[1] > 1.5 ? s[1] / 10000 : s[1],
+      ]);
 
-        ctx.fillStyle = band;
-        ctx.fillRect(-span, -h * 0.55, span * 2, h * 1.1);
-        ctx.restore();
+      const ctx0 = planes[0].getContext('2d')!;
+      const ctx1 = planes[1].getContext('2d')!;
+      const ctx2 = planes[2].getContext('2d')!;
 
-        // Deep layer-0 filaments
-        const filaments: any[] = neb?.filaments || [];
-        for (const f of filaments) {
-          if (f[5] !== 0) continue;
-          this.stampTurbulentFilament(ctx, f, palette, w, h, 4);
-        }
-      }
+      const img0 = ctx0.createImageData(w, h);
+      const img1 = ctx1.createImageData(w, h);
+      const img2 = ctx2.createImageData(w, h);
 
-      // --- PLANE 1: Mid-Field Anisotropic Ionization Filaments, Shells & Proto-Stellar Knots ---
-      {
-        const ctx = planes[1].getContext('2d')!;
-        ctx.globalCompositeOperation = 'screen';
+      const d0 = img0.data;
+      const d1 = img1.data;
+      const d2 = img2.data;
 
-        const filaments: any[] = neb?.filaments || [];
-        for (const f of filaments) {
-          if (f[5] !== 1) continue;
-          this.stampTurbulentFilament(ctx, f, palette, w, h, 6);
-        }
+      const [r0, g0, b0] = palette[0];
+      const [r1, g1, b1] = palette[1];
+      const [r2, g2, b2] = palette[2];
 
-        // If Planetary Halo archetype, add delicate concentric ionized shells around barycenter
-        if (neb?.archetype === 'PLANETARY_HALO') {
-          const [r0, g0, b0] = palette[0];
-          const [r1, g1, b1] = palette[1];
-          const shellR = Math.min(w, h) * 0.34;
-          ctx.save();
-          ctx.translate(baryX, baryY);
-          ctx.rotate(spineAngle);
-          ctx.scale(1.25, 0.82);
-          const ringGrad = ctx.createRadialGradient(0, 0, shellR * 0.25, 0, 0, shellR);
-          ringGrad.addColorStop(0, `rgba(${r0}, ${g0}, ${b0}, 0.04)`);
-          ringGrad.addColorStop(0.62, `rgba(${r0}, ${g0}, ${b0}, 0.22)`);
-          ringGrad.addColorStop(0.84, `rgba(${r1}, ${g1}, ${b1}, 0.18)`);
-          ringGrad.addColorStop(1, `rgba(${r1}, ${g1}, ${b1}, 0)`);
-          ctx.fillStyle = ringGrad;
-          ctx.beginPath();
-          ctx.arc(0, 0, shellR, 0, Math.PI * 2);
-          ctx.fill();
-          ctx.restore();
-        }
+      for (let py = 0; py < h; py++) {
+        const ny = py / h;
+        const dyBary = ny - baryY;
 
-        // Render compact Herbig-Haro / proto-stellar ionized brightness knots near principal stars
-        const knots: any[] = neb?.knots || [];
-        for (const k of knots) {
-          const kx = (k[0] / 10000) * w;
-          const ky = (k[1] / 10000) * h;
-          const kr = (k[2] / 10000) * Math.max(w, h);
-          const [cr, cg, cb] = palette[k[3] % palette.length];
-          const intensity = k[4] || 0.24;
+        for (let px = 0; px < w; px++) {
+          const nx = px / w;
+          const dxBary = nx - baryX;
 
-          const kg = ctx.createRadialGradient(kx, ky, 0, kx, ky, kr);
-          kg.addColorStop(0, `rgba(255, 250, 240, ${(intensity * 1.15).toFixed(3)})`);
-          kg.addColorStop(0.35, `rgba(${cr}, ${cg}, ${cb}, ${(intensity * 0.85).toFixed(3)})`);
-          kg.addColorStop(1, `rgba(${cr}, ${cg}, ${cb}, 0)`);
-          ctx.fillStyle = kg;
-          ctx.beginPath();
-          ctx.arc(kx, ky, kr, 0, Math.PI * 2);
-          ctx.fill();
-        }
-      }
+          // Rotate coordinates into the constellation's natural spine frame
+          const u = dxBary * cosA - dyBary * sinA;
+          const v = dxBary * sinA + dyBary * cosA;
 
-      // --- PLANE 2: Foreground Wisps + Barnard Dark Absorption Dust Lanes & Photo-Dissociation Rims ---
-      {
-        const ctx = planes[2].getContext('2d')!;
-        const filaments: any[] = neb?.filaments || [];
-        for (const f of filaments) {
-          if (f[5] !== 2) continue;
-          this.stampTurbulentFilament(ctx, f, palette, w, h, 5);
-        }
+          // Elliptical radial envelope + galactic spine envelope (keeps edges fading cleanly into black space)
+          const radialDistSq = u * u * 2.2 + v * v * 5.8;
+          const envelope = Math.exp(-radialDistSq * 2.1);
+          if (envelope < 0.015) continue;
 
-        // Barnard Dark Dust Rifts: carve deep velvet molecular absorption lanes with warm silver-gold rims
-        const darkRifts: any[] = neb?.darkRifts || [];
-        const [rimR, rimG, rimB] = palette[2];
-        for (const rift of darkRifts) {
-          const rxPos = (rift[0] / 10000) * w;
-          const ryPos = (rift[1] / 10000) * h;
-          const rx = Math.max(12, (rift[2] / 10000) * w);
-          const ry = Math.max(6, (rift[3] / 10000) * h);
-          const angle = rift[4];
-          const op = rift[5] || 0.55;
+          // Step 1: Domain Warping vectors q = (qx, qy)
+          const sx = (u + 0.5) * 3.4;
+          const sy = (v + 0.5) * 3.4;
+          const qx = noiseGen.fbm(sx, sy);
+          const qy = noiseGen.fbm(sx + 5.2, sy + 1.3);
 
-          ctx.save();
-          ctx.translate(rxPos, ryPos);
-          ctx.rotate(angle);
+          // Step 2: Second-order warped coordinates
+          const wx = sx + 2.6 * (qx - 0.5);
+          const wy = sy + 2.6 * (qy - 0.5);
+          const gas = noiseGen.fbm(wx, wy);
 
-          // Subtle photo-dissociation rim along the upper edge of the dark dust lane
-          ctx.scale(1, ry / rx);
-          const rimGrad = ctx.createRadialGradient(0, -rx * 0.18, rx * 0.1, 0, 0, rx * 1.15);
-          rimGrad.addColorStop(0, 'rgba(0,0,0,0)');
-          rimGrad.addColorStop(0.68, `rgba(${rimR}, ${rimG}, ${rimB}, ${(op * 0.16).toFixed(3)})`);
-          rimGrad.addColorStop(1, 'rgba(0,0,0,0)');
-          ctx.fillStyle = rimGrad;
-          ctx.beginPath();
-          ctx.arc(0, 0, rx * 1.15, 0, Math.PI * 2);
-          ctx.fill();
+          // Step 3: Ridged multifractal ionization filaments (wispy tendrils)
+          const filamentRidge = noiseGen.ridged(sx * 1.35 + (qx - 0.5) * 1.9, sy * 1.35 + (qy - 0.5) * 1.9);
 
-          // Multi-lobe dark Bok globule core occlusion
-          for (let lobe = -1; lobe <= 1; lobe++) {
-            const lx = lobe * rx * 0.34;
-            const ly = Math.sin(lobe * 2.1) * rx * 0.12;
-            const lr = rx * (0.78 - Math.abs(lobe) * 0.12);
-            const dg = ctx.createRadialGradient(lx, ly, 0, lx, ly, lr);
-            dg.addColorStop(0, `rgba(5, 7, 12, ${(op * 0.88).toFixed(3)})`);
-            dg.addColorStop(0.55, `rgba(5, 7, 12, ${(op * 0.48).toFixed(3)})`);
-            dg.addColorStop(1, 'rgba(5, 7, 12, 0)');
-            ctx.fillStyle = dg;
-            ctx.beginPath();
-            ctx.arc(lx, ly, lr, 0, Math.PI * 2);
-            ctx.fill();
+          // Step 4: Fractal Beer-Lambert Dark Dust Extinction (organic dark crevices, never ovals!)
+          const dustField = noiseGen.fbm(wx * 1.45 + 11.7, wy * 1.45 + 4.3);
+          const dustCrevice = Math.max(0, dustField - 0.46) * 2.8;
+          const extinction = Math.exp(-dustCrevice * dustCrevice * 4.2);
+
+          // Step 5: Proximity to principal constellation stars for localized ionized glow
+          let starGlow = 0;
+          for (let si = 0; si < starsNorm.length; si++) {
+            const sdx = nx - starsNorm[si][0];
+            const sdy = ny - starsNorm[si][1];
+            const dSq = sdx * sdx + sdy * sdy;
+            if (dSq < 0.035) {
+              starGlow += Math.exp(-dSq * 95) * (si === 0 ? 0.55 : 0.32);
+            }
           }
-          ctx.restore();
+
+          const idx = (py * w + px) * 4;
+
+          // --- PLANE 0: Deep Cosmic Emission Envelope (subtle, velvet background) ---
+          const density0 = Math.max(0, gas - 0.24) * 1.45 * envelope * extinction;
+          if (density0 > 0.005) {
+            const mix = Math.min(1, Math.max(0, (qx - 0.25) * 1.8));
+            d0[idx] = Math.round(r0 * (1 - mix) + r1 * mix);
+            d0[idx + 1] = Math.round(g0 * (1 - mix) + g1 * mix);
+            d0[idx + 2] = Math.round(b0 * (1 - mix) + b1 * mix);
+            // Keep max alpha tasteful (~0.24) so deep space remains dark and atmospheric
+            d0[idx + 3] = Math.min(255, Math.round(density0 * 68));
+          }
+
+          // --- PLANE 1: Mid-Field Gossamer Ionization Filaments & Star-Nursery Pockets ---
+          const wisp = Math.pow(Math.max(0, filamentRidge - 0.22), 1.8) * envelope * (0.4 + 0.6 * extinction);
+          const totalMid = Math.min(1, wisp * 1.15 + starGlow * (0.5 + 0.5 * filamentRidge));
+          if (totalMid > 0.005) {
+            const coreMix = Math.min(1, starGlow * 1.4 + Math.pow(wisp, 2));
+            d1[idx] = Math.round(r1 * (1 - coreMix) + r2 * coreMix);
+            d1[idx + 1] = Math.round(g1 * (1 - coreMix) + g2 * coreMix);
+            d1[idx + 2] = Math.round(b1 * (1 - coreMix) + b2 * coreMix);
+            d1[idx + 3] = Math.min(255, Math.round(totalMid * 78));
+          }
+
+          // --- PLANE 2: Foreground Fractal Dark Dust Rifts & Fine Golden Shock Threads ---
+          const darkShadow = Math.min(1, Math.pow(Math.max(0, dustField - 0.48) * 2.2, 1.7) * envelope);
+          const fineShock = Math.pow(Math.max(0, filamentRidge - 0.52) * 2.1, 2.6) * envelope;
+          if (fineShock > 0.01) {
+            d2[idx] = r2;
+            d2[idx + 1] = g2;
+            d2[idx + 2] = b2;
+            d2[idx + 3] = Math.min(255, Math.round(fineShock * 62));
+          } else if (darkShadow > 0.02) {
+            d2[idx] = 5;
+            d2[idx + 1] = 7;
+            d2[idx + 2] = 12;
+            d2[idx + 3] = Math.min(255, Math.round(darkShadow * 135));
+          }
         }
       }
 
-      return planes;
-    }
+      ctx0.putImageData(img0, 0, 0);
+      ctx1.putImageData(img1, 0, 0);
+      ctx2.putImageData(img2, 0, 0);
 
-    /**
-     * Stamps a multi-lobe turbulent anisotropic nebula filament onto a plane canvas.
-     */
-    private stampTurbulentFilament(
-      ctx: CanvasRenderingContext2D,
-      f: [number, number, number, number, number, number, number, number],
-      palette: number[][],
-      w: number,
-      h: number,
-      subLobes: number
-    ) {
-      const fx = (f[0] / 10000) * w;
-      const fy = (f[1] / 10000) * h;
-      const rx = Math.max(16, (f[2] / 10000) * w);
-      const ry = Math.max(8, (f[3] / 10000) * h);
-      const angle = f[4];
-      const colorSlot = f[6] % palette.length;
-      const baseAlpha = f[7];
-
-      const [r, g, b] = palette[colorSlot];
-      const [coreR, coreG, coreB] = palette[2];
-
-      for (let m = 0; m < subLobes; m++) {
-        const t = subLobes > 1 ? m / (subLobes - 1) - 0.5 : 0;
-        const curveWarp = Math.sin(t * Math.PI + f[0] * 0.001) * ry * 0.55;
-        const lobeX = fx + Math.cos(angle) * (t * rx * 0.95) - Math.sin(angle) * curveWarp;
-        const lobeY = fy + Math.sin(angle) * (t * rx * 0.95) + Math.cos(angle) * curveWarp;
-        const lobeRx = rx * (0.62 + Math.cos(t * 2.2) * 0.28);
-        const lobeRy = ry * (0.68 + Math.sin(m * 1.9) * 0.25);
-        const lobeAngle = angle + Math.sin(m * 2.7) * 0.28;
-        const lobeAlpha = baseAlpha * (0.72 + (1 - Math.abs(t)) * 0.45);
-
-        ctx.save();
-        ctx.translate(lobeX, lobeY);
-        ctx.rotate(lobeAngle);
-        ctx.scale(1, Math.max(0.22, lobeRy / lobeRx));
-
-        const grad = ctx.createRadialGradient(0, 0, 0, 0, 0, lobeRx);
-        grad.addColorStop(0, `rgba(${coreR}, ${coreG}, ${coreB}, ${(lobeAlpha * 0.95).toFixed(3)})`);
-        grad.addColorStop(0.38, `rgba(${r}, ${g}, ${b}, ${(lobeAlpha * 0.75).toFixed(3)})`);
-        grad.addColorStop(0.75, `rgba(${r}, ${g}, ${b}, ${(lobeAlpha * 0.25).toFixed(3)})`);
-        grad.addColorStop(1, `rgba(${r}, ${g}, ${b}, 0)`);
-
-        ctx.fillStyle = grad;
-        ctx.beginPath();
-        ctx.arc(0, 0, lobeRx, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.restore();
-      }
+      // Apply a single soft optical diffusion pass on each plane to eliminate any 300x190 pixel grid
+      return planes.map((rawCanvas, layerIdx) => {
+        const blurred = document.createElement('canvas');
+        blurred.width = w;
+        blurred.height = h;
+        const bCtx = blurred.getContext('2d')!;
+        const blurPx = layerIdx === 0 ? 10 : layerIdx === 1 ? 4 : 3;
+        bCtx.filter = `blur(${blurPx}px)`;
+        bCtx.drawImage(rawCanvas, 0, 0);
+        bCtx.filter = 'none';
+        return blurred;
+      });
     }
 
     private async loadCatalogAndSelect(forceRandom = false) {
@@ -1545,7 +1586,7 @@ const { featuredConstellationId = null } = Astro.props;
         smoothBlend
       );
 
-      // 1. Background 3D spherical starfield + Supernova cross-flares
+      // 1. Background 3D spherical starfield (1,700 stars twinkling in and out of the dark sky)
       for (const s of this.backgroundStars) {
         const x1 = s.x * cx - s.z * sx;
         const z1 = s.z * cx + s.x * sx;
@@ -1556,21 +1597,40 @@ const { featuredConstellationId = null } = Astro.props;
         const scale = uniFov / (uniFov + z2 * uniRad);
         const sx2D = w * 0.5 + x1 * uniRad * scale;
         const sy2D = h * 0.5 + y2 * uniRad * scale;
+        if (sx2D < -10 || sx2D > w + 10 || sy2D < -10 || sy2D > h + 10) continue;
 
-        const phase = s.phase + this.frameCount * s.speed;
-        const tw = Math.pow((Math.sin(phase) + 1) * 0.5, 5);
-        const alpha = (0.14 + tw * 0.62) * Math.min(1, scale);
+        // Dual-harmonic scintillation wave (0..1)
+        const w1 = Math.sin(s.phase1 + this.frameCount * s.speed1);
+        const w2 = Math.sin(s.phase2 + this.frameCount * s.speed2);
+        const wave = (w1 * 0.62 + w2 * 0.38 + 1) * 0.5;
+
+        // Stars dip below their threshold to 0 opacity, fading completely in & out of the night sky
+        if (wave <= s.threshold) continue;
+        const normTwinkle = (wave - s.threshold) / (1 - s.threshold);
+        const smoothTwinkle = normTwinkle * normTwinkle * (3 - 2 * normTwinkle);
+        const alpha = smoothTwinkle * s.maxAlpha * Math.min(1, scale);
+        if (alpha < 0.015) continue;
+
         const [r, g, b] = s.rgb;
+        const starRadius = s.r * scale * (0.82 + smoothTwinkle * 0.42);
+
+        // Soft atmospheric micro-halo on brighter twinkling peaks
+        if (s.isSupernova || (smoothTwinkle > 0.72 && s.r > 1.0)) {
+          ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${(alpha * 0.22).toFixed(3)})`;
+          ctx.beginPath();
+          ctx.arc(sx2D, sy2D, starRadius * 3.1, 0, Math.PI * 2);
+          ctx.fill();
+        }
 
         ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${alpha.toFixed(3)})`;
         ctx.beginPath();
-        ctx.arc(sx2D, sy2D, s.r * scale, 0, Math.PI * 2);
+        ctx.arc(sx2D, sy2D, starRadius, 0, Math.PI * 2);
         ctx.fill();
 
-        if (s.isSupernova && tw > 0.78) {
-          const flareAlpha = (tw - 0.78) * 3.5;
-          const flareSize = s.r * scale * 7;
-          ctx.strokeStyle = `rgba(${r}, ${g}, ${b}, ${(flareAlpha * 0.7).toFixed(3)})`;
+        if (s.isSupernova && smoothTwinkle > 0.65) {
+          const flareAlpha = (smoothTwinkle - 0.65) * 2.4 * alpha;
+          const flareSize = starRadius * 5.8;
+          ctx.strokeStyle = `rgba(${r}, ${g}, ${b}, ${Math.min(0.85, flareAlpha).toFixed(3)})`;
           ctx.lineWidth = 0.55;
           ctx.beginPath();
           ctx.moveTo(sx2D, sy2D - flareSize);
