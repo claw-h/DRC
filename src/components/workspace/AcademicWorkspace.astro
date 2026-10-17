@@ -53,6 +53,7 @@ const { publications, books, classes } = Astro.props;
     private scrollCharge = 0;
     private isTransitionLocked = false;
     private chargeDecayTimer: number | null = null;
+    private lastContentScrollTime = 0;
 
     connectedCallback() {
       this.initViewTabsAndJumpBridges();
@@ -72,6 +73,7 @@ const { publications, books, classes } = Astro.props;
 
       this.activeViewIndex = nextIndex;
       this.scrollCharge = 0;
+      this.lastContentScrollTime = performance.now();
       this.updateChargeMeters(0);
 
       const targetId = VIEW_ORDER[nextIndex];
@@ -106,9 +108,7 @@ const { publications, books, classes } = Astro.props;
           view.dataset.enterDir = direction;
           const primaryReader = view.querySelector<HTMLElement>('[data-primary-reader]');
           if (primaryReader) {
-            if (direction === 'down' || direction === 'jump') {
-              primaryReader.scrollTop = 0;
-            }
+            primaryReader.scrollTop = 0;
           }
         }
       });
@@ -149,9 +149,10 @@ const { publications, books, classes } = Astro.props;
       });
     }
 
-    // 2. Seamless Scroll Progression (Publications -> Books -> Classes & back up without clicking)
+    // 2. Seamless Scroll Progression (scrolls publication/book content first; advances only after resting at boundary)
     private initSeamlessSectionScroll() {
-      const THRESHOLD = 165;
+      const THRESHOLD = 280;
+      const REST_GATE_MS = 380;
 
       this.addEventListener(
         'wheel',
@@ -161,31 +162,85 @@ const { publications, books, classes } = Astro.props;
             return;
           }
 
+          // If #stage-3 is not yet docked at the top of the viewport while scrolling down, let the window dock first
+          const stageRect = this.getBoundingClientRect();
+          if (stageRect.top > 8 && e.deltaY > 0) {
+            e.preventDefault();
+            window.scrollBy({ top: e.deltaY, behavior: 'auto' });
+            this.lastContentScrollTime = performance.now();
+            return;
+          }
+
           const activeView = this.querySelector<HTMLElement>(`#${VIEW_ORDER[this.activeViewIndex]}`);
           if (!activeView) return;
 
-          // Determine which scrollable pane the user is scrolling inside (default to primary right reader)
+          const primaryReader = activeView.querySelector<HTMLElement>('[data-primary-reader]');
+          if (!primaryReader) return;
+
+          // Check if the cursor is over the Left Index Pane
           const targetEl = e.target as HTMLElement | null;
-          const scrollPane =
-            targetEl?.closest<HTMLElement>('[data-scrollable-pane]') ||
-            activeView.querySelector<HTMLElement>('[data-primary-reader]');
+          const leftPane = targetEl?.closest<HTMLElement>('.workspace-pane-left');
+          const leftScroll = leftPane?.querySelector<HTMLElement>('[data-scrollable-pane]');
 
-          if (!scrollPane) return;
+          if (leftScroll) {
+            const leftCanScrollDown =
+              e.deltaY > 0 && leftScroll.scrollTop + leftScroll.clientHeight < leftScroll.scrollHeight - 4;
+            const leftCanScrollUp = e.deltaY < 0 && leftScroll.scrollTop > 4;
 
-          const { scrollTop, scrollHeight, clientHeight } = scrollPane;
-          const atBottom = scrollTop + clientHeight >= scrollHeight - 6;
-          const atTop = scrollTop <= 4;
-
-          // Update continuous progress bar inside NavStrip based on current scroll + view index
-          const maxScroll = Math.max(1, scrollHeight - clientHeight);
-          const localProgress = Math.min(1, Math.max(0, scrollTop / maxScroll));
-          const totalProgress = ((this.activeViewIndex + localProgress) / VIEW_ORDER.length) * 100;
-          const flowFill = document.getElementById('nav-scroll-flow-fill');
-          if (flowFill) {
-            flowFill.style.width = `${Math.max(12, totalProgress).toFixed(1)}%`;
+            if (leftCanScrollDown || leftCanScrollUp) {
+              // Let the left index list scroll natively without triggering section transitions
+              return;
+            }
           }
 
-          // Case A: Scrolling down at bottom boundary -> Advance to next section (Publications -> Books -> Classes)
+          const { scrollTop, scrollHeight, clientHeight } = primaryReader;
+          const maxScroll = Math.max(0, scrollHeight - clientHeight);
+          const atBottom = scrollTop >= maxScroll - 4;
+          const atTop = scrollTop <= 4;
+
+          // If the cursor is over the left pane (e.g. right after clicking a publication/book) and primaryReader can scroll,
+          // forward the wheel delta directly to primaryReader so the article/book content scrolls seamlessly!
+          const canScrollReaderDown = e.deltaY > 0 && !atBottom;
+          const canScrollReaderUp = e.deltaY < 0 && !atTop;
+
+          if (canScrollReaderDown || canScrollReaderUp) {
+            this.lastContentScrollTime = performance.now();
+            if (this.scrollCharge !== 0) {
+              this.scrollCharge = 0;
+              this.updateChargeMeters(0);
+            }
+
+            if (leftScroll || !targetEl?.closest('[data-primary-reader]')) {
+              e.preventDefault();
+              primaryReader.scrollTop += e.deltaY;
+            }
+
+            // Update continuous progress bar inside NavStrip based on current scroll + view index
+            const nextScrollTop = Math.min(maxScroll, Math.max(0, primaryReader.scrollTop));
+            const localProgress = maxScroll > 0 ? nextScrollTop / maxScroll : 1;
+            const totalProgress = ((this.activeViewIndex + localProgress) / VIEW_ORDER.length) * 100;
+            const flowFill = document.getElementById('nav-scroll-flow-fill');
+            if (flowFill) {
+              flowFill.style.width = `${Math.max(12, totalProgress).toFixed(1)}%`;
+            }
+            return;
+          }
+
+          // We are at the top or bottom boundary of the publication/book/class reader.
+          // Enforce a rest gate so trackpad momentum from scrolling the content never hijacks the view!
+          const now = performance.now();
+          const timeSinceContentScroll = now - this.lastContentScrollTime;
+          if (timeSinceContentScroll < REST_GATE_MS) {
+            e.preventDefault();
+            if (Math.abs(e.deltaY) > 6) {
+              this.lastContentScrollTime = now;
+            }
+            this.scrollCharge = 0;
+            this.updateChargeMeters(0);
+            return;
+          }
+
+          // Case A: Scrolling down AFTER resting at bottom boundary -> Charge & advance to next section
           if (e.deltaY > 0 && atBottom && this.activeViewIndex < VIEW_ORDER.length - 1) {
             e.preventDefault();
             this.scrollCharge = Math.max(0, this.scrollCharge) + e.deltaY;
@@ -207,7 +262,7 @@ const { publications, books, classes } = Astro.props;
             return;
           }
 
-          // Case B: Scrolling up at top boundary of Books or Classes -> Return to previous section
+          // Case B: Scrolling up AFTER resting at top boundary of Books or Classes -> Return to previous section
           if (e.deltaY < 0 && atTop && this.activeViewIndex > 0) {
             e.preventDefault();
             this.scrollCharge = Math.min(0, this.scrollCharge) + e.deltaY;
@@ -226,6 +281,12 @@ const { publications, books, classes } = Astro.props;
                 this.isTransitionLocked = false;
               }, 1050);
             }
+            return;
+          }
+
+          // Case C: Scrolling up at top boundary of 01 // PUBLICATIONS -> Scroll window back up to Stage 2 / Stage 1
+          if (e.deltaY < 0 && atTop && this.activeViewIndex === 0) {
+            window.scrollBy({ top: e.deltaY, behavior: 'auto' });
             return;
           }
 
@@ -258,9 +319,20 @@ const { publications, books, classes } = Astro.props;
       });
     }
 
-    // 4. Master-detail item selection + Title Scramble + Mobile horizontal drill-down scroll
+    // 4. Master-detail item selection + Title Scramble + Scroll reset + Mobile horizontal drill-down scroll
     private initItemSelectors() {
+      const resetReaderScroll = (splitContainer: HTMLElement | null) => {
+        const reader = splitContainer?.querySelector<HTMLElement>('[data-primary-reader]');
+        if (reader) {
+          reader.scrollTop = 0;
+        }
+        this.scrollCharge = 0;
+        this.lastContentScrollTime = performance.now();
+        this.updateChargeMeters(0);
+      };
+
       const drillToRightPane = (splitContainer: HTMLElement | null) => {
+        resetReaderScroll(splitContainer);
         if (!splitContainer) return;
         if (window.matchMedia('(max-width: 767px)').matches) {
           splitContainer.scrollBy({ left: splitContainer.clientWidth, behavior: 'auto' });

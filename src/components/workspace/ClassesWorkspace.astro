@@ -162,8 +162,8 @@ const { classes } = Astro.props;
                   Weekly Schedule &amp; Required Readings
                 </h4>
                 <div>
-                  {c.weeks.map((wk: any, wIdx: number) => (
-                    <details class="academic-accordion" name={`syllabus-${c.id}`} open={wIdx === 0}>
+                  {c.weeks.map((wk: any) => (
+                    <details class="academic-accordion" open>
                       <summary>
                         <span class="tabular" style="color: var(--accent); font-size: 0.8rem;">{wk.weekNumber}</span>
                         <span>{wk.topic}</span>

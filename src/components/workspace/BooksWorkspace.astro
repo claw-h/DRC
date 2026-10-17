@@ -199,8 +199,8 @@ const sortedBooks = [...books].sort((a, b) => b.data.year - a.data.year);
                   Table of Contents
                 </h4>
                 <div>
-                  {b.chapters.map((ch: any, cIdx: number) => (
-                    <details class="academic-accordion" name={`chapters-${b.id}`} open={cIdx === 0}>
+                  {b.chapters.map((ch: any) => (
+                    <details class="academic-accordion" open>
                       <summary>
                         <span class="tabular" style="color: var(--accent); font-size: 0.8rem;">CH {ch.number}</span>
                         <span>{ch.title}</span>

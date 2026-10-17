@@ -3,12 +3,14 @@
     position: relative;
     z-index: 10;
     padding-block-start: var(--chrome-height);
+    block-size: 100vh;
     block-size: 100dvh;
+    max-block-size: 100dvh;
     inline-size: 100%;
     background: color-mix(in oklab, var(--bg-canvas) 95%, transparent);
     display: flex;
     flex-direction: column;
-    overflow: clip;
+    overflow: hidden;
   }
 
   /* Cursor-Tracked Ambient Specular Light Spill (from portyxb InstrumentPanel.css) */
@@ -27,7 +29,10 @@
 
   /* View Caching via content-visibility: hidden + Smooth Channel Entry Animation */
   .spa-view {
+    flex: 1 1 0%;
+    min-block-size: 0;
     block-size: calc(100dvh - var(--chrome-height));
+    max-block-size: calc(100dvh - var(--chrome-height));
     inline-size: 100%;
     animation: channel-enter-down 1.15s cubic-bezier(0.16, 1, 0.3, 1);
   }
@@ -76,8 +81,12 @@
   /* Desktop Bipartite Split Interface (>= 768px) */
   .workspace-split {
     display: grid;
-    grid-template-columns: var(--sidebar-width, 390px) 1fr;
+    grid-template-columns: var(--sidebar-width, 390px) minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr);
     block-size: calc(100dvh - var(--chrome-height));
+    max-block-size: calc(100dvh - var(--chrome-height));
+    min-block-size: 0;
+    overflow: hidden;
     transition: grid-template-columns 0.95s cubic-bezier(0.16, 1, 0.3, 1);
     border-block-start: 1px solid var(--border-subtle);
   }
@@ -89,27 +98,37 @@
   .workspace-pane-left {
     border-inline-end: 1px solid var(--border-subtle);
     background: var(--bg-surface);
-    overflow: clip;
+    overflow: hidden;
     display: flex;
     flex-direction: column;
     block-size: 100%;
+    max-block-size: 100%;
+    min-block-size: 0;
+    min-inline-size: 0;
   }
 
   .workspace-pane-right {
     background: var(--bg-canvas);
-    overflow: clip;
+    overflow: hidden;
     display: flex;
     flex-direction: column;
     block-size: 100%;
+    max-block-size: 100%;
+    min-block-size: 0;
+    min-inline-size: 0;
     position: relative;
   }
 
   .pane-inner-scroll {
+    flex: 1 1 0%;
+    min-block-size: 0;
     inline-size: 100%;
     block-size: 100%;
     overflow-y: auto;
+    overflow-x: hidden;
     scrollbar-gutter: stable;
-    overscroll-behavior: contain;
+    overscroll-behavior-y: contain;
+    -webkit-overflow-scrolling: touch;
   }
 
   /* Pane Toolbars & In-Pane Close/Open Index Buttons */
@@ -727,8 +746,9 @@
       grid-template-columns: none;
       grid-auto-flow: column;
       grid-auto-columns: 100%;
-      grid-template-rows: 100%;
+      grid-template-rows: minmax(0, 1fr);
       overflow-x: auto;
+      overflow-y: hidden;
       scroll-snap-type: x mandatory;
       overscroll-behavior-x: none;
       scrollbar-width: none;

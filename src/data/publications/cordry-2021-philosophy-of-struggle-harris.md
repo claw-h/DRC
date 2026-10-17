@@ -22,11 +22,14 @@ citationBibtex: |
   }
 sections:
   - id: "sec-struggle"
-    heading: "§1 · Philosophy Born of Struggle"
-    body: "Against the pretense of bloodless, universalist detachment that characterizes much of canonical Anglo-American philosophy, Leonard Harris's oeuvre insists that philosophical inquiry emerges out of concrete historical struggles against misery, degradation, and premature death ('necro-being') [1]."
+    heading: "§1 · Philosophy Born of Struggle & Necro-Being"
+    body: "Against the pretense of bloodless, universalist detachment that characterizes much of canonical Anglo-American philosophy, Leonard Harris's oeuvre insists that philosophical inquiry emerges out of concrete historical struggles against misery, degradation, and premature death ('necro-being') [1]. Rather than treating racism and structural immiseration as peripheral applied problems, Harris demonstrates that epistemic frameworks are forged within contested fields of social survival and domination."
   - id: "sec-locke-pragmatism"
-    heading: "§2 · Critical Pragmatism & Insurrectionist Duty"
-    body: "Tracing Harris's recovery of Alain Locke's value pluralism alongside his fierce critique of gradualist classical pragmatism, this essay highlights why an insurrectionist ethos treats resistance to enslavement and systemic subjugation not merely as supererogatory heroism, but as a foundational moral imperative [2]."
+    heading: "§2 · Alain Locke's Critical Pragmatism & Value Pluralism"
+    body: "Tracing Harris's recovery of Alain Locke's value pluralism alongside his fierce critique of gradualist classical pragmatism, this essay highlights why an insurrectionist ethos treats resistance to enslavement and systemic subjugation not merely as supererogatory heroism, but as a foundational moral imperative [2]. Where classical Deweyan pragmatism often privileges melioristic consensus and institutional continuity, Harris exposes how polite reformism routinely leaves racialized hierarchies intact."
+  - id: "sec-continental-resonances"
+    heading: "§3 · Continental Encounters: Biopolitics, Insurrection & Liberation"
+    body: "Read alongside Francophone continental philosophy—from Frantz Fanon's sociogenic diagnosis of colonial violence to Michel Foucault's genealogy of biopower and Achille Mbembe's necropolitics—Harris's 'philosophy born of struggle' challenges continental theorists to ground structural critique in insurgent moral agency. Liberation requires both an unflinching empirical accounting of premature death and an affirmative spiritual commitment to dismantling the apparatuses that reproduce it."
 references:
   - num: 1
     citation: "Harris, L. (2020). A Philosophy of Struggle: The Leonard Harris Reader (ed. Lee A. McBride III). London: Bloomsbury Academic."
