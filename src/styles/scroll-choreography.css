@@ -105,22 +105,23 @@
   .header-neutral-cue {
     position: absolute;
     inset-block: 0;
-    inset-inline-start: calc(50% + 3.6rem);
+    inset-inline-start: calc(50% + 3.2rem);
     display: flex;
     align-items: center;
-    justify-content: center;
+    gap: 0.45rem;
     pointer-events: none;
     opacity: 0;
   }
 
   .persistent-header.is-load-expanding .header-neutral-cue {
-    animation: neutral-cue-visibility 3.1s cubic-bezier(0.22, 1, 0.36, 1) 0.15s 1 both;
+    animation: neutral-cue-visibility 3.4s cubic-bezier(0.22, 1, 0.36, 1) 0.15s 1 both;
     --animation-reduced: none;
   }
 
   .neutral-arrow-svg {
     width: 22px;
     height: 38px;
+    flex-shrink: 0;
     overflow: visible;
   }
 
@@ -136,24 +137,51 @@
   }
 
   .persistent-header.is-load-expanding .neutral-draw-line {
-    animation: neutral-arrow-stroke-draw 3.1s cubic-bezier(0.22, 1, 0.36, 1) 0.15s 1 both;
+    animation: neutral-arrow-stroke-draw 3.4s cubic-bezier(0.22, 1, 0.36, 1) 0.15s 1 both;
     --animation-reduced: none;
   }
 
   .persistent-header.is-load-expanding .neutral-draw-head {
-    animation: neutral-arrow-head-draw 3.1s cubic-bezier(0.22, 1, 0.36, 1) 0.15s 1 both;
+    animation: neutral-arrow-head-draw 3.4s cubic-bezier(0.22, 1, 0.36, 1) 0.15s 1 both;
     --animation-reduced: none;
+  }
+
+  .neutral-zone-copy {
+    display: flex;
+    flex-direction: column;
+    gap: 0.08rem;
+    line-height: 1.2;
+    white-space: nowrap;
+  }
+
+  .neutral-zone-title {
+    font-family: var(--font-mono);
+    font-size: 0.56rem;
+    font-weight: 600;
+    letter-spacing: 0.2em;
+    color: var(--accent);
+    text-transform: uppercase;
+  }
+
+  .neutral-zone-sub {
+    font-family: var(--font-mono);
+    font-size: 0.54rem;
+    letter-spacing: 0.06em;
+    color: var(--text-secondary);
   }
 
   @keyframes neutral-cue-visibility {
     0%, 5% {
       opacity: 0;
+      transform: translateY(-2px);
     }
-    20%, 72% {
-      opacity: 0.85;
+    20%, 74% {
+      opacity: 0.92;
+      transform: translateY(0);
     }
     96%, 100% {
       opacity: 0;
+      transform: translateY(-2px);
     }
   }
 

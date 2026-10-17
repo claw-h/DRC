@@ -187,6 +187,21 @@ const { publications, books, classes } = Astro.props;
               ? (document.elementFromPoint(e.clientX, e.clientY) as HTMLElement | null)
               : null) || (e.target as HTMLElement | null);
 
+          // Neutral Area (Title Bar): Scrolling up over the title bar always snaps directly back up top
+          if (hitEl?.closest('.persistent-chrome') && e.deltaY < 0) {
+            e.preventDefault();
+            this.scrollCharge = Math.min(0, this.scrollCharge) + e.deltaY;
+            if (this.chargeDecayTimer) clearTimeout(this.chargeDecayTimer);
+            this.chargeDecayTimer = window.setTimeout(() => {
+              this.scrollCharge = 0;
+            }, 300);
+            if (Math.abs(this.scrollCharge) >= 40) {
+              this.scrollCharge = 0;
+              (window as any).__drcSnapToStage?.(2);
+            }
+            return;
+          }
+
           const leftPane = hitEl?.closest<HTMLElement>('.workspace-pane-left');
           const leftScroll =
             leftPane && activeView.contains(leftPane)

@@ -16,7 +16,7 @@ const { profile, pubCount, bookCount, classCount } = Astro.props;
 
 <div class="persistent-chrome">
   <header class="persistent-header is-load-expanding" id="persistent-header">
-    <!-- Neutral Area Load-Time Calibration Cue: Vertical Two-Way Pointed Arrow Drawing In & Out -->
+    <!-- Neutral Area Load-Time Calibration Cue: Vertical Two-Way Pointed Arrow + Text -->
     <div class="header-neutral-cue" aria-hidden="true">
       <svg class="neutral-arrow-svg" viewBox="0 0 28 48" fill="none">
         <!-- Vertical two-way shaft drawing outward from center -->
@@ -26,6 +26,10 @@ const { profile, pubCount, bookCount, classCount } = Astro.props;
         <polyline points="9,11 14,4 19,11" pathLength="100" class="neutral-draw-head" />
         <polyline points="9,37 14,44 19,37" pathLength="100" class="neutral-draw-head" />
       </svg>
+      <div class="neutral-zone-copy">
+        <span class="neutral-zone-title tabular">NEUTRAL AREA</span>
+        <span class="neutral-zone-sub">(Scroll here to come back up top)</span>
+      </div>
     </div>
 
     <!-- Left-docking / Center-origin Brand Lockup: DRC (Dead-Center) -> Glides Left -> Duncan R. Cordry (Serif) -->
