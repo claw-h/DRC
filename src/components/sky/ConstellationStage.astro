@@ -1723,19 +1723,23 @@ const { featuredConstellationId = null } = Astro.props;
           const rPn = Math.max(12, Math.min(24, rad * scale * 0.95));
           this.ctx.rotate(baseAngle);
 
-          // Outer H-alpha / [N II] ruby shell
-          this.ctx.strokeStyle = isDark
-            ? `rgba(225, 90, 160, ${0.45 * alphaMultiplier})`
-            : `rgba(165, 50, 95, ${0.38 * alphaMultiplier})`;
+          const pnOuterBase: [number, number, number] = isDark ? [225, 90, 160] : [165, 50, 95];
+          const pnInnerBase: [number, number, number] = isDark ? [60, 240, 215] : [30, 115, 120];
+          const pnCoreBase: [number, number, number] = isDark ? [40, 180, 170] : [40, 100, 100];
+
+          const [pnOutR, pnOutG, pnOutB] = rotateRgbHue(pnOuterBase, currentHueShift);
+          const [pnInR, pnInG, pnInB] = rotateRgbHue(pnInnerBase, currentHueShift);
+          const [pnCorR, pnCorG, pnCorB] = rotateRgbHue(pnCoreBase, currentHueShift);
+
+          // Outer H-alpha / [N II] ruby shell (hue rotated)
+          this.ctx.strokeStyle = `rgba(${pnOutR}, ${pnOutG}, ${pnOutB}, ${(isDark ? 0.45 : 0.38) * alphaMultiplier})`;
           this.ctx.lineWidth = 2.0;
           this.ctx.beginPath();
           this.ctx.ellipse(0, 0, rPn, rPn * 0.72, 0, 0, Math.PI * 2);
           this.ctx.stroke();
 
-          // Inner [O III] cyan/teal torus
-          this.ctx.strokeStyle = isDark
-            ? `rgba(60, 240, 215, ${0.60 * alphaMultiplier})`
-            : `rgba(30, 115, 120, ${0.50 * alphaMultiplier})`;
+          // Inner [O III] cyan/teal torus (hue rotated)
+          this.ctx.strokeStyle = `rgba(${pnInR}, ${pnInG}, ${pnInB}, ${(isDark ? 0.60 : 0.50) * alphaMultiplier})`;
           this.ctx.lineWidth = 1.3;
           this.ctx.beginPath();
           this.ctx.ellipse(0, 0, rPn * 0.75, rPn * 0.54, 0, 0, Math.PI * 2);
@@ -1743,13 +1747,9 @@ const { featuredConstellationId = null } = Astro.props;
 
           // Faint interior hollow
           const innerGrad = this.ctx.createRadialGradient(0, 0, 0, 0, 0, rPn * 0.5);
-          if (isDark) {
-            innerGrad.addColorStop(0, `rgba(40, 180, 170, ${0.18 * alphaMultiplier})`);
-            innerGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
-          } else {
-            innerGrad.addColorStop(0, `rgba(40, 100, 100, ${0.12 * alphaMultiplier})`);
-            innerGrad.addColorStop(1, 'rgba(255, 255, 255, 0)');
-          }
+          const inA = (isDark ? 0.18 : 0.12) * alphaMultiplier;
+          innerGrad.addColorStop(0, `rgba(${pnCorR}, ${pnCorG}, ${pnCorB}, ${inA})`);
+          innerGrad.addColorStop(1, `rgba(${pnCorR}, ${pnCorG}, ${pnCorB}, 0)`);
           this.ctx.fillStyle = innerGrad;
           this.ctx.beginPath();
           this.ctx.ellipse(0, 0, rPn * 0.5, rPn * 0.36, 0, 0, Math.PI * 2);
@@ -1768,34 +1768,31 @@ const { featuredConstellationId = null } = Astro.props;
           const rNeb = Math.max(20, Math.min(45, rad * scale * 1.35));
           this.ctx.rotate(baseAngle);
 
+          // Rotate the H-alpha (pink/rose) and O-III (cyan/teal) hues by the current dynamic plate hue shift
+          const hAlphaBase: [number, number, number] = isDark ? [235, 105, 155] : [165, 55, 85];
+          const [haR, haG, haB] = rotateRgbHue(hAlphaBase, currentHueShift);
+
+          const o3Base: [number, number, number] = isDark ? [80, 220, 215] : [45, 120, 115];
+          const [o3R, o3G, o3B] = rotateRgbHue(o3Base, currentHueShift);
+
           // Asymmetric multi-lobed ionized cloud
-          // Lobe A: Hydrogen-Alpha Ruby/Rose wing
+          // Lobe A: Hydrogen-Alpha Ruby/Rose wing (hue rotated)
           const lobeAGrad = this.ctx.createRadialGradient(-rNeb * 0.25, -rNeb * 0.15, 2, -rNeb * 0.25, -rNeb * 0.15, rNeb * 0.85);
-          if (isDark) {
-            lobeAGrad.addColorStop(0, `rgba(235, 105, 155, ${0.28 * alphaMultiplier})`);
-            lobeAGrad.addColorStop(0.55, `rgba(200, 80, 130, ${0.10 * alphaMultiplier})`);
-            lobeAGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
-          } else {
-            lobeAGrad.addColorStop(0, `rgba(165, 55, 85, ${0.18 * alphaMultiplier})`);
-            lobeAGrad.addColorStop(0.55, `rgba(140, 45, 70, ${0.06 * alphaMultiplier})`);
-            lobeAGrad.addColorStop(1, 'rgba(255, 255, 255, 0)');
-          }
+          const haA = (isDark ? 0.28 : 0.18) * alphaMultiplier;
+          lobeAGrad.addColorStop(0, `rgba(${haR}, ${haG}, ${haB}, ${haA})`);
+          lobeAGrad.addColorStop(0.55, `rgba(${haR}, ${haG}, ${haB}, ${haA * 0.35})`);
+          lobeAGrad.addColorStop(1, `rgba(${haR}, ${haG}, ${haB}, 0)`);
           this.ctx.fillStyle = lobeAGrad;
           this.ctx.beginPath();
           this.ctx.ellipse(-rNeb * 0.25, -rNeb * 0.15, rNeb * 0.85, rNeb * 0.55, 0.4, 0, Math.PI * 2);
           this.ctx.fill();
 
-          // Lobe B: Oxygen-III Teal/Cyan pocket
+          // Lobe B: Oxygen-III Teal/Cyan pocket (hue rotated)
           const lobeBGrad = this.ctx.createRadialGradient(rNeb * 0.2, rNeb * 0.25, 1, rNeb * 0.2, rNeb * 0.25, rNeb * 0.70);
-          if (isDark) {
-            lobeBGrad.addColorStop(0, `rgba(80, 220, 215, ${0.24 * alphaMultiplier})`);
-            lobeBGrad.addColorStop(0.55, `rgba(60, 175, 180, ${0.08 * alphaMultiplier})`);
-            lobeBGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
-          } else {
-            lobeBGrad.addColorStop(0, `rgba(45, 120, 115, ${0.14 * alphaMultiplier})`);
-            lobeBGrad.addColorStop(0.55, `rgba(35, 95, 95, ${0.05 * alphaMultiplier})`);
-            lobeBGrad.addColorStop(1, 'rgba(255, 255, 255, 0)');
-          }
+          const o3A = (isDark ? 0.24 : 0.14) * alphaMultiplier;
+          lobeBGrad.addColorStop(0, `rgba(${o3R}, ${o3G}, ${o3B}, ${o3A})`);
+          lobeBGrad.addColorStop(0.55, `rgba(${o3R}, ${o3G}, ${o3B}, ${o3A * 0.33})`);
+          lobeBGrad.addColorStop(1, `rgba(${o3R}, ${o3G}, ${o3B}, 0)`);
           this.ctx.fillStyle = lobeBGrad;
           this.ctx.beginPath();
           this.ctx.ellipse(rNeb * 0.2, rNeb * 0.25, rNeb * 0.70, rNeb * 0.45, -0.35, 0, Math.PI * 2);
@@ -3282,6 +3279,193 @@ const { featuredConstellationId = null } = Astro.props;
     }
     g.putImageData(img, 0, 0);
     return canvas;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Volumetric Nebular Chromatic Engine & Plate-Randomized Genome
+  // ---------------------------------------------------------------------------
+
+  interface NebularCloudSpec {
+    relX: number;
+    relY: number;
+    radRatio: number;
+    freqX: number;
+    freqY: number;
+    phase: number;
+    baseHueDark: [number, number, number];
+    baseHueLight: [number, number, number];
+    baseDarkAlpha: number;
+    baseLightAlpha: number;
+  }
+
+  interface PlateNebularGenome {
+    plateBaseHueOffset: number; // 0..360, unique per plate
+    hueShiftSpeed: number;      // deg/ms
+    clouds: NebularCloudSpec[];
+  }
+
+  function rgbToHsl(r: number, g: number, b: number): [number, number, number] {
+    r /= 255; g /= 255; b /= 255;
+    const max = Math.max(r, g, b);
+    const min = Math.min(r, g, b);
+    let h = 0;
+    let s = 0;
+    const l = (max + min) / 2;
+
+    if (max !== min) {
+      const d = max - min;
+      s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+      switch (max) {
+        case r: h = ((g - b) / d + (g < b ? 6 : 0)) / 6; break;
+        case g: h = ((b - r) / d + 2) / 6; break;
+        case b: h = ((r - g) / d + 4) / 6; break;
+      }
+    }
+    return [h * 360, s, l];
+  }
+
+  function hslToRgb(h: number, s: number, l: number): [number, number, number] {
+    h = ((h % 360) + 360) % 360 / 360;
+    if (s === 0) {
+      const val = Math.round(l * 255);
+      return [val, val, val];
+    }
+    const hue2rgb = (p: number, q: number, t: number) => {
+      if (t < 0) t += 1;
+      if (t > 1) t -= 1;
+      if (t < 1 / 6) return p + (q - p) * 6 * t;
+      if (t < 1 / 2) return q;
+      if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
+      return p;
+    };
+    const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+    const p = 2 * l - q;
+    const r = Math.round(hue2rgb(p, q, h + 1 / 3) * 255);
+    const g = Math.round(hue2rgb(p, q, h) * 255);
+    const b = Math.round(hue2rgb(p, q, h - 1 / 3) * 255);
+    return [r, g, b];
+  }
+
+  function rotateRgbHue(rgb: [number, number, number], deltaDegrees: number): [number, number, number] {
+    const [h, s, l] = rgbToHsl(rgb[0], rgb[1], rgb[2]);
+    return hslToRgb(h + deltaDegrees, s, l);
+  }
+
+  function getConstellationSeed(con: any): number {
+    if (!con) return 42;
+    const idStr = String(con.id || con.iauCode || 'sky');
+    let h = 0x811c9dc5;
+    for (let i = 0; i < idStr.length; i++) {
+      h ^= idStr.charCodeAt(i);
+      h = Math.imul(h, 0x01000193);
+    }
+    return (h >>> 0);
+  }
+
+  function derivePlateNebulaGenome(con: any, salt: number = 0): PlateNebularGenome {
+    const baseSeed = getConstellationSeed(con);
+    // Combine baseSeed with salt using Murmur/Knuth hash to guarantee distinct distribution per plate and switch
+    let seed = (baseSeed ^ Math.imul(salt, 0x9e3779b9)) >>> 0;
+    const nextRnd = () => {
+      seed = (seed + 0x6D2B79F5) | 0;
+      let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+
+    // Golden angle dispersion (137.508 deg) + plate seed ensures maximum chromatic diversity across all 88 constellations
+    const plateBaseHueOffset = (baseSeed * 137.5077 + salt * 83.19 + nextRnd() * 360) % 360;
+
+    // Organic, continuous celestial hue shift speed (0.005 to 0.0075 deg/ms -> ~50s to 80s full harmonic cycle)
+    const hueShiftSpeed = 0.005 + nextRnd() * 0.0025;
+
+    // 6 Volumetric Nebular Clouds, distributed dynamically across the plate
+    const clouds: NebularCloudSpec[] = [
+      // 1. Primary Hydrogen-Alpha Wine/Rose cloud
+      {
+        relX: -0.22 + (nextRnd() - 0.5) * 0.28,
+        relY: -0.15 + (nextRnd() - 0.5) * 0.25,
+        radRatio: 0.55 + nextRnd() * 0.20,
+        freqX: 0.00004 + nextRnd() * 0.00003,
+        freqY: 0.00005 + nextRnd() * 0.00003,
+        phase: nextRnd() * Math.PI * 2,
+        baseHueDark: [225, 90, 145],
+        baseHueLight: [165, 50, 80],
+        baseDarkAlpha: 0.075,
+        baseLightAlpha: 0.045
+      },
+      // 2. Oxygen-III Celestial Cyan/Teal pocket
+      {
+        relX: 0.25 + (nextRnd() - 0.5) * 0.28,
+        relY: 0.18 + (nextRnd() - 0.5) * 0.25,
+        radRatio: 0.50 + nextRnd() * 0.18,
+        freqX: 0.00005 + nextRnd() * 0.00003,
+        freqY: 0.00004 + nextRnd() * 0.00003,
+        phase: nextRnd() * Math.PI * 2,
+        baseHueDark: [60, 215, 205],
+        baseHueLight: [35, 115, 120],
+        baseDarkAlpha: 0.065,
+        baseLightAlpha: 0.040
+      },
+      // 3. Stardust & Cosmic Dust Lane (Warm Amber/Ochre)
+      {
+        relX: 0.08 + (nextRnd() - 0.5) * 0.32,
+        relY: -0.26 + (nextRnd() - 0.5) * 0.25,
+        radRatio: 0.60 + nextRnd() * 0.20,
+        freqX: 0.00003 + nextRnd() * 0.00003,
+        freqY: 0.00005 + nextRnd() * 0.00003,
+        phase: nextRnd() * Math.PI * 2,
+        baseHueDark: [235, 175, 95],
+        baseHueLight: [175, 115, 30],
+        baseDarkAlpha: 0.055,
+        baseLightAlpha: 0.050
+      },
+      // 4. Lapis Lazuli Deep Sky Reflection Veil
+      {
+        relX: -0.18 + (nextRnd() - 0.5) * 0.30,
+        relY: 0.24 + (nextRnd() - 0.5) * 0.25,
+        radRatio: 0.52 + nextRnd() * 0.18,
+        freqX: 0.00005 + nextRnd() * 0.00003,
+        freqY: 0.00004 + nextRnd() * 0.00003,
+        phase: nextRnd() * Math.PI * 2,
+        baseHueDark: [85, 135, 240],
+        baseHueLight: [35, 75, 155],
+        baseDarkAlpha: 0.060,
+        baseLightAlpha: 0.050
+      },
+      // 5. Diffuse Ionized Outflow (Pale Rose)
+      {
+        relX: 0.32 + (nextRnd() - 0.5) * 0.26,
+        relY: -0.12 + (nextRnd() - 0.5) * 0.25,
+        radRatio: 0.45 + nextRnd() * 0.15,
+        freqX: 0.00004 + nextRnd() * 0.00004,
+        freqY: 0.00006 + nextRnd() * 0.00003,
+        phase: nextRnd() * Math.PI * 2,
+        baseHueDark: [215, 80, 120],
+        baseHueLight: [145, 45, 70],
+        baseDarkAlpha: 0.050,
+        baseLightAlpha: 0.035
+      },
+      // 6. Background Cosmic Veil (Pale Violet / Sepia)
+      {
+        relX: (nextRnd() - 0.5) * 0.18,
+        relY: 0.05 + (nextRnd() - 0.5) * 0.18,
+        radRatio: 0.75 + nextRnd() * 0.20,
+        freqX: 0.00003,
+        freqY: 0.00003,
+        phase: nextRnd() * Math.PI * 2,
+        baseHueDark: [160, 120, 210],
+        baseHueLight: [70, 85, 60],
+        baseDarkAlpha: 0.040,
+        baseLightAlpha: 0.035
+      }
+    ];
+
+    return {
+      plateBaseHueOffset,
+      hueShiftSpeed,
+      clouds
+    };
   }
 
   // ---------------------------------------------------------------------------
