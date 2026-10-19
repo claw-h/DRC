@@ -1,15 +1,53 @@
 import type { APIRoute } from 'astro';
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import { spawn } from 'node:child_process';
+import { Readable } from 'node:stream';
 import {
   verifyAdminSession,
   verifyCsrfToken,
   verifyPassword,
-} from '../../../lib/admin-auth';
-import { updateSystemState } from '../../../lib/system-state';
+} from '../../../lib/admin-auth.ts';
+import { updateSystemState } from '../../../lib/system-state.ts';
 
 export const prerender = false;
 
+// GET: Stream Archive Backup (.tar.gz)
+export const GET: APIRoute = async ({ request, cookies }) => {
+  if (!verifyAdminSession(cookies)) {
+    return new Response('Unauthorized session', { status: 401 });
+  }
+
+  const url = new URL(request.url);
+  const action = url.searchParams.get('action');
+
+  if (action === 'download-archive') {
+    try {
+      const today = new Date().toISOString().slice(0, 10);
+      const tar = spawn('tar', ['-czf', '-', 'src/data', 'public'], {
+        cwd: process.cwd(),
+      });
+
+      // Stream the gzipped tarball directly to client
+      const webStream = Readable.toWeb(tar.stdout as any);
+
+      return new Response(webStream as any, {
+        status: 200,
+        headers: {
+          'Content-Type': 'application/gzip',
+          'Content-Disposition': `attachment; filename="drc-observatory-archive-${today}.tar.gz"`,
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+        },
+      });
+    } catch (err: any) {
+      return new Response(`Failed generating archive: ${err?.message}`, { status: 500 });
+    }
+  }
+
+  return new Response('Invalid request', { status: 400 });
+};
+
+// POST: Lifecycle State Mutations & Escalated Protocols
 export const POST: APIRoute = async ({ request, cookies }) => {
   if (!verifyAdminSession(cookies)) {
     return new Response(JSON.stringify({ error: 'Unauthorized session' }), {
@@ -27,6 +65,18 @@ export const POST: APIRoute = async ({ request, cookies }) => {
   }
 
   const action = String(body.action || '');
+
+  // Archive metadata or download URL request
+  if (action === 'get-archive-url') {
+    return new Response(
+      JSON.stringify({
+        ok: true,
+        downloadUrl: '/api/admin/lifecycle?action=download-archive',
+        timestamp: new Date().toISOString(),
+      }),
+      { status: 200, headers: { 'Content-Type': 'application/json' } }
+    );
+  }
 
   // Level 1: Soft Maintenance Shutter (HTTP 503 toggle)
   if (action === 'toggle-offline') {

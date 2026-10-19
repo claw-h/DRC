@@ -3,21 +3,99 @@ export const prerender = false;
 
 import AdminLayout from '../../layouts/AdminLayout.astro';
 import { getSystemState } from '../../lib/system-state';
+import fs from 'node:fs/promises';
+import path from 'node:path';
 
 const systemState = await getSystemState();
+
+// Live archive telemetry
+let pubCount = 0;
+let bookCount = 0;
+let classCount = 0;
+try {
+  const pubs = await fs.readdir(path.resolve(process.cwd(), 'src/data/publications'));
+  pubCount = pubs.filter(f => f.endsWith('.md')).length;
+} catch {}
+try {
+  const books = await fs.readdir(path.resolve(process.cwd(), 'src/data/books'));
+  bookCount = books.filter(f => f.endsWith('.json')).length;
+} catch {}
+try {
+  const classes = await fs.readdir(path.resolve(process.cwd(), 'src/data/classes'));
+  classCount = classes.filter(f => f.endsWith('.json')).length;
+} catch {}
+
+// Server runtime telemetry
+const mem = process.memoryUsage();
+const rssMB = (mem.rss / 1024 / 1024).toFixed(1);
+const heapMB = (mem.heapUsed / 1024 / 1024).toFixed(1);
+const uptimeMin = Math.floor(process.uptime() / 60);
+const uptimeHrs = (uptimeMin / 60).toFixed(1);
 ---
 
 <AdminLayout title="System Lifecycle & Protocols" activeModule="system">
   <div class="module-container">
     <div class="module-header">
       <span class="module-kicker">MODULE 04 · SOVEREIGN LIFECYCLE & PROTOCOLS</span>
-      <h2>System Switchboard, Shutter & Purge Protocols</h2>
+      <h2>System Switchboard, Data Archive & Purge Protocols</h2>
       <p class="module-sub">
-        Execute administrative commands across the 3 escalating operational tiers of the DRC Observatory server.
+        Monitor host telemetry, download complete sovereign data backups, and execute administrative actions across the 3 escalating operational tiers.
       </p>
     </div>
 
+    <!-- Live Telemetry Deck -->
+    <section class="telemetry-deck" aria-label="Observatory Server Telemetry">
+      <div class="deck-stat">
+        <span class="stat-label">RUNTIME ENGINE</span>
+        <strong class="stat-value">{process.version} ({process.platform}-{process.arch})</strong>
+      </div>
+      <div class="deck-stat">
+        <span class="stat-label">SYSTEM MEMORY</span>
+        <strong class="stat-value">{rssMB} MB <span class="stat-detail">(Heap: {heapMB} MB)</span></strong>
+      </div>
+      <div class="deck-stat">
+        <span class="stat-label">SERVER UPTIME</span>
+        <strong class="stat-value">{uptimeHrs} hrs <span class="stat-detail">({uptimeMin} min)</span></strong>
+      </div>
+      <div class="deck-stat">
+        <span class="stat-label">ARCHIVE PAYLOAD</span>
+        <strong class="stat-value">{pubCount} papers · {bookCount} books · {classCount} courses</strong>
+      </div>
+    </section>
+
     <div class="lifecycle-stack">
+      <!-- Tier 0: Sovereign Archive Snapshot (.tar.gz) -->
+      <section class="lifecycle-card tier-archive" aria-labelledby="tier-archive-heading">
+        <div class="tier-lead">
+          <div class="tier-header-row">
+            <span class="tier-badge tier-badge-archive">TIER 00</span>
+            <span class="tier-type">DATA SOVEREIGNTY SNAPSHOT</span>
+          </div>
+          <h3 id="tier-archive-heading" class="tier-title">One-Click Sovereign Archive Backup (.tar.gz)</h3>
+          <p class="tier-desc">
+            Instantly packages the entire repository's academic data—including Markdown manuscripts, monograph syllabi,
+            course schedules, faculty portrait media, and all 5,000 celestial sky shards—into a compressed gzip tarball.
+            You own 100% of your data in standard, open formats forever.
+          </p>
+          <div class="archive-spec-row">
+            <span class="spec-tag">FORMAT: POSIX TAR.GZ</span>
+            <span class="spec-tag">CONTENTS: src/data/ & public/</span>
+            <span class="spec-tag">ZERO DATABASE LOCK-IN</span>
+          </div>
+        </div>
+
+        <div class="tier-action-box">
+          <a
+            href="/api/admin/lifecycle?action=download-archive"
+            download
+            id="download-archive-btn"
+            class="btn-tier btn-tier-archive"
+          >
+            ↓ Download Sovereign Archive Snapshot (.tar.gz)
+          </a>
+        </div>
+      </section>
+
       <!-- Tier 1: Soft Maintenance Shutter (HTTP 503) -->
       <section class="lifecycle-card tier-soft" aria-labelledby="tier-1-heading">
         <div class="tier-lead">
@@ -27,13 +105,13 @@ const systemState = await getSystemState();
           </div>
           <h3 id="tier-1-heading" class="tier-title">Public Observatory Shutter (HTTP 503 Maintenance)</h3>
           <p class="tier-desc">
-            Immediately intercepts public traffic at the middleware layer with the <code>/offline</code> screen while keeping
-            <code>/admin</code> fully accessible for updates and preparations.
+            Immediately intercepts public visitors at the middleware layer with the austere <code>/offline</code> calibration screen.
+            The sovereign <code>/admin</code> control panel remains 100% accessible to you for updates and preparations.
           </p>
           <div class="status-indicator-row">
             <span>Current Public State:</span>
             <strong id="shutter-status-label" class={systemState.offlineMode ? 'text-amber' : 'text-green'}>
-              {systemState.offlineMode ? 'OFFLINE (HTTP 503 ACTIVE)' : 'ONLINE (PUBLIC ACCESS ENABLED)'}
+              {systemState.offlineMode ? '● OFFLINE (HTTP 503 ACTIVE)' : '● ONLINE (PUBLIC ACCESS ENABLED)'}
             </strong>
           </div>
         </div>
@@ -45,7 +123,7 @@ const systemState = await getSystemState();
             data-currently-offline={String(systemState.offlineMode)}
             class={`btn-tier ${systemState.offlineMode ? 'btn-tier-success' : 'btn-tier-warning'}`}
           >
-            {systemState.offlineMode ? 'Re-Open Observatory Dome (Restore Public)' : 'Engage 503 Maintenance Shutter'}
+            {systemState.offlineMode ? 'Re-Open Observatory Dome (Restore Public Access)' : 'Engage 503 Maintenance Shutter'}
           </button>
         </div>
       </section>
@@ -59,8 +137,8 @@ const systemState = await getSystemState();
           </div>
           <h3 id="tier-2-heading" class="tier-title">Hard Node Server Termination (SIGTERM)</h3>
           <p class="tier-desc">
-            Gracefully terminates active HTTP socket connections and stops the Node/systemd process.
-            Restarting requires SSH, container orchestration, or host console execution.
+            Gracefully terminates active HTTP socket connections and halts the Node/systemd daemon process.
+            Restarting requires SSH, container orchestration, or host terminal restart.
           </p>
         </div>
 
@@ -90,7 +168,7 @@ const systemState = await getSystemState();
           <h3 id="tier-3-heading" class="tier-title">Sovereign Archive & Codebase Purge</h3>
           <p class="tier-desc">
             Irreversibly decommissions the observatory archive by wiping Markdown collections, celestial shard databases,
-            and cached assets from the disk, followed by immediate process termination. Requires two-factor textual confirmation.
+            and cached assets from the disk, followed by immediate process termination. Requires two-factor confirmation.
           </p>
         </div>
 
@@ -100,7 +178,7 @@ const systemState = await getSystemState();
             id="open-purge-modal-btn"
             class="btn-tier btn-tier-critical"
           >
-            Initiate Decommission Dialog…
+            Initiate Decommission Protocol…
           </button>
         </div>
       </section>
@@ -160,6 +238,12 @@ const systemState = await getSystemState();
     declare const notify: (message: string, status?: string) => void;
     declare const postAdmin: (url: string, payload: Record<string, any>) => Promise<any>;
 
+    // Tier 0: Archive Snapshot Download
+    const downloadBtn = document.getElementById('download-archive-btn') as HTMLAnchorElement | null;
+    downloadBtn?.addEventListener('click', () => {
+      notify('Packaging complete sovereign archive (src/data/ & public/) into .tar.gz…', 'info');
+    });
+
     // Tier 1: Soft Shutter Toggle
     const offlineBtn = document.getElementById('toggle-offline-btn') as HTMLButtonElement | null;
     const statusLabel = document.getElementById('shutter-status-label');
@@ -179,12 +263,12 @@ const systemState = await getSystemState();
       if (data.ok) {
         offlineBtn.setAttribute('data-currently-offline', String(nextOffline));
         offlineBtn.textContent = nextOffline
-          ? 'Re-Open Observatory Dome (Restore Public)'
+          ? 'Re-Open Observatory Dome (Restore Public Access)'
           : 'Engage 503 Maintenance Shutter';
         offlineBtn.className = `btn-tier ${nextOffline ? 'btn-tier-success' : 'btn-tier-warning'}`;
 
         if (statusLabel) {
-          statusLabel.textContent = nextOffline ? 'OFFLINE (HTTP 503 ACTIVE)' : 'ONLINE (PUBLIC ACCESS ENABLED)';
+          statusLabel.textContent = nextOffline ? '● OFFLINE (HTTP 503 ACTIVE)' : '● ONLINE (PUBLIC ACCESS ENABLED)';
           statusLabel.className = nextOffline ? 'text-amber' : 'text-green';
         }
         notify(data.message, 'success');
@@ -285,6 +369,43 @@ const systemState = await getSystemState();
     color: var(--text-secondary);
   }
 
+  /* Telemetry Deck */
+  .telemetry-deck {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 0.75rem;
+  }
+
+  .deck-stat {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-hairline);
+    border-radius: 0.5rem;
+    padding: 0.85rem 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .stat-label {
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    letter-spacing: 0.1em;
+    color: var(--text-tertiary);
+  }
+
+  .stat-value {
+    font-family: var(--font-mono);
+    font-size: 0.88rem;
+    font-weight: 500;
+    color: var(--text-primary);
+  }
+
+  .stat-detail {
+    font-weight: normal;
+    color: var(--text-secondary);
+    font-size: 0.78rem;
+  }
+
   .lifecycle-stack {
     display: flex;
     flex-direction: column;
@@ -299,6 +420,11 @@ const systemState = await getSystemState();
     display: flex;
     flex-direction: column;
     gap: 1.25rem;
+  }
+
+  .tier-archive {
+    border-left: 3px solid oklch(75% 0.16 220);
+    background: color-mix(in oklch, oklch(75% 0.16 220) 4%, var(--bg-elevated));
   }
 
   .tier-soft {
@@ -332,6 +458,12 @@ const systemState = await getSystemState();
     color: var(--accent);
   }
 
+  .tier-badge-archive {
+    color: oklch(80% 0.16 220);
+    border-color: color-mix(in oklch, oklch(75% 0.16 220) 40%, transparent);
+    background: color-mix(in oklch, oklch(75% 0.16 220) 12%, transparent);
+  }
+
   .tier-badge-critical {
     color: oklch(75% 0.2 25);
     border-color: color-mix(in oklch, oklch(62% 0.22 25) 40%, transparent);
@@ -358,6 +490,24 @@ const systemState = await getSystemState();
     line-height: 1.5;
   }
 
+  .archive-spec-row {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    margin-top: 0.75rem;
+  }
+
+  .spec-tag {
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    letter-spacing: 0.05em;
+    padding: 0.2rem 0.5rem;
+    border-radius: 0.25rem;
+    background: var(--bg-canvas);
+    border: 1px solid var(--border-hairline);
+    color: var(--text-secondary);
+  }
+
   .status-indicator-row {
     margin-top: 0.75rem;
     font-family: var(--font-mono);
@@ -381,6 +531,10 @@ const systemState = await getSystemState();
   }
 
   .btn-tier {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
     padding: 0.65rem 1.15rem;
     border-radius: 0.375rem;
     font-family: var(--font-mono);
@@ -388,6 +542,17 @@ const systemState = await getSystemState();
     letter-spacing: 0.05em;
     cursor: pointer;
     transition: all 0.18s ease;
+    border: 1px solid transparent;
+  }
+
+  .btn-tier-archive {
+    background: color-mix(in oklch, oklch(75% 0.16 220) 18%, var(--bg-surface));
+    border: 1px solid oklch(75% 0.16 220);
+    color: oklch(90% 0.12 220);
+  }
+  .btn-tier-archive:hover {
+    background: oklch(75% 0.16 220);
+    color: #000;
   }
 
   .btn-tier-warning {

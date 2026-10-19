@@ -6,7 +6,7 @@ import {
   checkLoginAllowed,
   recordFailedLogin,
   clearFailedLogins,
-} from '../../../lib/admin-auth';
+} from '../../../lib/admin-auth.ts';
 
 export const prerender = false;
 

@@ -4,90 +4,281 @@ export const prerender = false;
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import AdminLayout from '../../layouts/AdminLayout.astro';
+import { getSystemState } from '../../lib/system-state';
 
+const systemState = await getSystemState();
 const skyIndexPath = path.resolve(process.cwd(), 'public/data/sky/index.json');
 const skyIndexRaw = await fs.readFile(skyIndexPath, 'utf8');
 const skyIndex = JSON.parse(skyIndexRaw);
-const sampleCatalog = skyIndex.catalog || [];
+
+// Filter down strictly to the 88 unique canonical IAU constellations (no aliases)
+// and sort them sequentially by plateNumber 1..88
+const catalog = (skyIndex.catalog || [])
+  .filter((c: any) => !c.canonicalId)
+  .sort((a: any, b: any) => (a.plateNumber || 0) - (b.plateNumber || 0));
+
+const initialId = systemState.featuredConstellationId || (catalog[0]?.id || 'And');
+const initialEntry = catalog.find((c: any) => c.id.toLowerCase() === initialId.toLowerCase()) || catalog[0];
+
+// Preload initial constellation shard data directly on server for 0ms first-frame render
+let initialConstellation = null;
+if (initialEntry) {
+  try {
+    const rawShard = String(initialEntry.shard || 'shard-00.json');
+    const shardFile = rawShard.endsWith('.json') ? rawShard : `shard-${rawShard.padStart(2, '0')}.json`;
+    const shardPath = path.resolve(process.cwd(), `public/data/sky/shards/${shardFile}`);
+    const shardRaw = await fs.readFile(shardPath, 'utf8');
+    const shardArr = JSON.parse(shardRaw);
+    initialConstellation = shardArr.find((c: any) => c.id.toLowerCase() === initialEntry.id.toLowerCase());
+  } catch (err) {
+    console.error('Failed preloading initial constellation shard:', err);
+  }
+}
 ---
 
-<AdminLayout title="Constellation Shard Registry" activeModule="constellations">
-  <div class="module-container">
+<AdminLayout title="Constellation Shard Registry & Studio" activeModule="constellations">
+  <div class="module-container" data-initial-id={initialId}>
+    <script id="initial-constellation-json" type="application/json" set:html={JSON.stringify({
+      catalogEntry: initialEntry,
+      constellation: initialConstellation,
+      isFeatured: systemState.featuredConstellationId === initialEntry?.id
+    })}></script>
+
     <div class="module-header">
       <div class="header-split">
         <div>
-          <span class="module-kicker">MODULE 03 · URANOMETRIA SHARD REGISTRY</span>
-          <h2>Constellation Shard & Vertex Inspector</h2>
+          <span class="module-kicker">MODULE 03 · URANOMETRIA SHARD REGISTRY & STUDIO</span>
+          <h2>Constellation Canvas Studio & Vertex Editor</h2>
           <p class="module-sub">
-            Browse, inspect, and prune coordinate shards across the {skyIndex.total} active celestial artifacts.
+            Drag star vertices, adjust magnitudes ($m_V$), link/unlink astrolabe chords, and pin default sky orientations.
           </p>
         </div>
         <div class="telemetry-stats">
           <div class="stat-box">
-            <span class="stat-number">{skyIndex.total}</span>
-            <span class="stat-label">Active Constellations</span>
+            <span class="stat-number">{catalog.length}</span>
+            <span class="stat-label">Plates Registered</span>
           </div>
           <div class="stat-box">
-            <span class="stat-number">J2000.0</span>
-            <span class="stat-label">Astrometric Epoch</span>
+            <span class="stat-number" id="featured-sky-display">
+              {systemState.featuredConstellationId || 'RANDOM'}
+            </span>
+            <span class="stat-label">Pinned Sky Plate</span>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- Search & Filter Controls -->
-    <div class="search-bar-row">
-      <div class="search-input-wrap">
-        <span class="search-icon">⌕</span>
-        <input
-          type="search"
-          id="constellation-filter"
-          placeholder="Filter by IAU code, Latin designation, or English name (e.g. ORI, Orion, Andromeda, DRC-0001)…"
-          aria-label="Filter constellations"
-        />
-      </div>
-      <div class="filter-count" id="filter-count-badge">
-        Showing {sampleCatalog.length} of {skyIndex.total}
-      </div>
+    <!-- Top Section: Interactive Canvas Studio & Telemetry Inspector -->
+    <div class="studio-split">
+      <!-- Left: Interactive Astrolabe Canvas Stage -->
+      <section class="canvas-panel" aria-labelledby="canvas-stage-heading">
+        <div class="panel-head-bar">
+          <div class="panel-meta">
+            <span class="card-kicker">ASTROLABE CANVAS // J2000.0 COORDINATES</span>
+            <h3 id="canvas-stage-heading">
+              <span id="active-const-title">{initialEntry?.name || 'Andromeda'}</span>
+              <span id="active-const-code" class="code-badge">{initialEntry?.id || 'And'}</span>
+            </h3>
+          </div>
+          <div class="canvas-tools">
+            <button type="button" class="tool-btn is-active" id="tool-drag" data-tool="drag" title="Drag vertices to reposition">
+              ✦ Drag
+            </button>
+            <button type="button" class="tool-btn" id="tool-edge" data-tool="edge" title="Click two stars to connect or toggle edge">
+              ☍ Chords
+            </button>
+            <button type="button" class="tool-btn" id="tool-add" data-tool="add" title="Click on sky to drop a new star">
+              ✚ Add Star
+            </button>
+            <button type="button" class="tool-btn-outline" id="btn-revert" title="Revert to last saved shard state">
+              ↺ Revert
+            </button>
+          </div>
+        </div>
+
+        <div class="canvas-viewport-wrap" id="canvas-container">
+          <canvas id="constellation-canvas" width="600" height="600" class="astrolabe-canvas"></canvas>
+          <div class="canvas-guide-overlay">
+            <span class="guide-tick tick-top">N · 00h</span>
+            <span class="guide-tick tick-bottom">S · 12h</span>
+            <span class="guide-tick tick-left">E · 06h</span>
+            <span class="guide-tick tick-right">W · 18h</span>
+          </div>
+          <div class="canvas-instructions" id="canvas-instructions">
+            ✦ Drag Mode: Click & drag star vertices to reposition coordinates ($0\dots 10000$).
+          </div>
+        </div>
+      </section>
+
+      <!-- Right: Constellation Telemetry & Selected Vertex Property Panel -->
+      <section class="telemetry-panel" aria-labelledby="telemetry-heading">
+        <div class="panel-head-bar">
+          <span class="card-kicker">TELEMETRY & VERTEX INSPECTOR</span>
+          <h3 id="telemetry-heading">Plate Properties</h3>
+        </div>
+
+        <!-- Constellation Quick Switcher -->
+        <div class="quick-switcher-row">
+          <label for="constellation-select" class="mini-label">Active Constellation:</label>
+          <select id="constellation-select" class="admin-select">
+            {catalog.map((c: any) => (
+              <option value={c.id} selected={c.id === initialId}>
+                {c.plate || ''} — {c.name} ({c.id}) · {c.ra}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <!-- Astrometric Metadata Strip -->
+        <div class="meta-strip">
+          <div class="meta-item">
+            <span class="meta-label">Designation:</span>
+            <strong id="meta-name">{initialEntry?.name || 'Andromeda'}</strong>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">Genitive:</span>
+            <span id="meta-genitive" class="mono">{initialEntry?.genitive || initialEntry?.meaning || '—'}</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">Astrometric Coordinates:</span>
+            <span id="meta-coords" class="mono">{initialEntry?.ra} · {initialEntry?.dec}</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">Shard File:</span>
+            <span id="meta-shard" class="mono">{initialEntry?.shard || 'shard-00.json'}</span>
+          </div>
+        </div>
+
+        <!-- Pinned Default Sky Action -->
+        <div class="pin-box">
+          <div>
+            <span class="mini-label">Primary Landing Plate:</span>
+            <p class="pin-desc">Pin this constellation to load by default on the public portfolio sky.</p>
+          </div>
+          <button
+            type="button"
+            id="btn-pin-featured"
+            class={systemState.featuredConstellationId === initialEntry?.id ? 'btn-pin is-pinned' : 'btn-pin'}
+          >
+            {systemState.featuredConstellationId === initialEntry?.id ? '★ Pinned as Default Sky' : 'Pin as Default Sky'}
+          </button>
+        </div>
+
+        <!-- Selected Vertex Inspector Box -->
+        <div class="vertex-inspector-card" id="vertex-inspector-card">
+          <div class="inspector-head">
+            <span class="mini-label">SELECTED STAR VERTEX</span>
+            <span id="vertex-index-label" class="badge-vertex">#0</span>
+          </div>
+
+          <div class="inspector-body" id="inspector-body">
+            <div class="coord-display-row">
+              <div class="coord-col">
+                <span class="meta-label">X Coordinate (0–10000)</span>
+                <input type="number" id="star-x-input" min="0" max="10000" class="mono-num" />
+              </div>
+              <div class="coord-col">
+                <span class="meta-label">Y Coordinate (0–10000)</span>
+                <input type="number" id="star-y-input" min="0" max="10000" class="mono-num" />
+              </div>
+            </div>
+
+            <div class="slider-group">
+              <div class="slider-head">
+                <span class="meta-label">Apparent Magnitude ($m_V$):</span>
+                <span id="star-mag-display" class="mono font-bold">2.10</span>
+              </div>
+              <input type="range" id="star-mag-slider" min="0.0" max="6.0" step="0.05" value="2.1" class="tool-slider" />
+            </div>
+
+            <div class="form-row-2">
+              <label>
+                <span class="meta-label">Bayer Designation</span>
+                <input type="text" id="star-bayer-input" placeholder="e.g. α, β, γ" />
+              </label>
+              <label>
+                <span class="meta-label">Proper Name</span>
+                <input type="text" id="star-name-input" placeholder="e.g. Almach" />
+              </label>
+            </div>
+
+            <div class="vertex-actions">
+              <button type="button" id="btn-delete-vertex" class="btn-danger-sm">
+                ✕ Delete Selected Star
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Commit Actions -->
+        <div class="commit-row">
+          <button type="button" id="btn-save-mutations" class="btn-primary">
+            💾 Save Shard Mutations
+          </button>
+          <button type="button" id="btn-purge-constellation" class="btn-danger-outline">
+            🗑 Purge Plate
+          </button>
+        </div>
+      </section>
     </div>
 
-    <!-- Constellation Catalog Table -->
-    <div class="catalog-card">
+    <!-- Bottom Section: Searchable Catalog Table -->
+    <section class="catalog-section" aria-labelledby="catalog-table-heading">
+      <div class="catalog-header-bar">
+        <div>
+          <span class="card-kicker">URANOMETRIA REGISTRY ({catalog.length} PLATES)</span>
+          <h3 id="catalog-table-heading">Catalog Shard Index</h3>
+        </div>
+
+        <div class="search-wrap">
+          <span class="search-icon">⌕</span>
+          <input
+            type="search"
+            id="catalog-filter-input"
+            placeholder="Search by code, Latin name, or coordinates (e.g. ORI, Orion, Cas, Cygnus)…"
+            aria-label="Filter catalog"
+          />
+        </div>
+      </div>
+
       <div class="table-responsive">
-        <table class="constellation-table">
+        <table class="catalog-table">
           <thead>
             <tr>
-              <th>ID</th>
-              <th>Designation</th>
-              <th>English Equivalent</th>
-              <th>Epoch Coordinates (RA · Dec)</th>
-              <th>Shard File</th>
-              <th class="th-actions">Actions</th>
+              <th>Plate</th>
+              <th>IAU Code</th>
+              <th>Latin Designation</th>
+              <th>Meaning / English</th>
+              <th>Epoch Coordinates</th>
+              <th>Shard</th>
+              <th class="text-right">Actions</th>
             </tr>
           </thead>
-          <tbody id="constellation-tbody">
-            {sampleCatalog.map((item: any) => (
-              <tr data-con-row={`${item.id} ${item.name} ${item.english} ${item.ra} ${item.dec}`.toLowerCase()}>
-                <td class="mono-id">{item.id}</td>
+          <tbody id="catalog-tbody">
+            {catalog.map((item: any) => (
+              <tr data-cat-row={`${item.id} ${item.name} ${item.genitive || ''} ${item.meaning || ''} ${item.ra} ${item.dec}`.toLowerCase()}>
+                <td class="mono-plate">{item.plate || '—'}</td>
+                <td class="mono-code">{item.id}</td>
                 <td>
-                  <strong class="const-name">{item.name}</strong>
+                  <strong>{item.name}</strong>
+                  {item.genitive && <span class="text-secondary"> ({item.genitive})</span>}
                 </td>
-                <td class="text-secondary-sub">{item.english}</td>
+                <td class="text-secondary">{item.meaning || item.english || '—'}</td>
                 <td class="mono-coords">{item.ra} · {item.dec}</td>
                 <td class="mono-shard">{item.shard || 'shard-00.json'}</td>
-                <td class="td-actions">
-                  <div class="action-buttons">
-                    <a href={`/?sky=${item.id}`} target="_blank" rel="noopener noreferrer" class="btn-inspect">
-                      View ↗
-                    </a>
+                <td class="text-right">
+                  <div class="row-actions">
                     <button
                       type="button"
-                      class="btn-purge"
-                      data-delete-constellation={item.id}
-                      data-constellation-name={item.name}
+                      class="btn-table-edit"
+                      data-load-constellation={item.id}
+                      title="Load this constellation into the Canvas Editor above"
                     >
-                      Purge
+                      ✎ Edit
                     </button>
+                    <a href={`/?sky=${item.id}`} target="_blank" rel="noopener noreferrer" class="btn-table-view">
+                      Sky ↗
+                    </a>
                   </div>
                 </td>
               </tr>
@@ -95,59 +286,548 @@ const sampleCatalog = skyIndex.catalog || [];
           </tbody>
         </table>
       </div>
-    </div>
+    </section>
   </div>
 
   <script>
     declare const notify: (message: string, status?: string) => void;
     declare const postAdmin: (url: string, payload: Record<string, any>) => Promise<any>;
 
-    // Real-time client-side filter
-    const filterInput = document.getElementById('constellation-filter') as HTMLInputElement | null;
-    const countBadge = document.getElementById('filter-count-badge');
-    const rows = document.querySelectorAll<HTMLElement>('[data-con-row]');
+    // State Variables
+    let activeTool: 'drag' | 'edge' | 'add' = 'drag';
+    let currentId = (document.querySelector('.module-container') as HTMLElement)?.dataset.initialId || 'And';
+    let currentConstellation: any = null;
+    let selectedStarIndex: number | null = null;
+    let edgeStartIndex: number | null = null;
+    let isDragging = false;
 
-    filterInput?.addEventListener('input', (e) => {
-      const q = (e.currentTarget as HTMLInputElement).value.trim().toLowerCase();
-      let visible = 0;
+    const canvas = document.getElementById('constellation-canvas') as HTMLCanvasElement;
+    const ctx = canvas.getContext('2d');
+    const selectEl = document.getElementById('constellation-select') as HTMLSelectElement;
+    const instructionsEl = document.getElementById('canvas-instructions');
 
-      rows.forEach((row) => {
-        const text = row.dataset.conRow || '';
-        const match = q.length === 0 || text.includes(q);
-        row.hidden = !match;
-        if (match) visible++;
+    // Convert normalized 0..10000 space to canvas pixel space
+    function toCanvas(val: number): number {
+      return (val / 10000) * canvas.width;
+    }
+
+    function toNorm(px: number): number {
+      return Math.round((px / canvas.width) * 10000);
+    }
+
+    // Render Canvas
+    function renderConstellation() {
+      if (!ctx) return;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // Deep celestial background
+      ctx.fillStyle = '#080a0f';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // Draw Astrolabe Concentric Meridian Rings
+      const cx = canvas.width / 2;
+      const cy = canvas.height / 2;
+      ctx.strokeStyle = 'rgba(215, 185, 120, 0.08)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.arc(cx, cy, 260, 0, Math.PI * 2);
+      ctx.arc(cx, cy, 180, 0, Math.PI * 2);
+      ctx.arc(cx, cy, 100, 0, Math.PI * 2);
+      ctx.stroke();
+
+      // Cardinal axis crosshair
+      ctx.beginPath();
+      ctx.moveTo(cx, 16);
+      ctx.lineTo(cx, canvas.height - 16);
+      ctx.moveTo(16, cy);
+      ctx.lineTo(canvas.width - 16, cy);
+      ctx.stroke();
+
+      if (!currentConstellation || !Array.isArray(currentConstellation.stars)) {
+        ctx.fillStyle = '#6b7280';
+        ctx.font = '12px monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText('Loading celestial shards…', cx, cy);
+        return;
+      }
+
+      const stars = currentConstellation.stars;
+      const edges = currentConstellation.edges || [];
+
+      // 1. Draw Connecting Silverpoint Chords with 9px Breathing Halo
+      ctx.strokeStyle = 'rgba(215, 195, 145, 0.55)';
+      ctx.lineWidth = 1.25;
+
+      edges.forEach(([i, j]: [number, number]) => {
+        const starA = stars[i];
+        const starB = stars[j];
+        if (!starA || !starB) return;
+
+        const x1 = toCanvas(starA[0]);
+        const y1 = toCanvas(starA[1]);
+        const x2 = toCanvas(starB[0]);
+        const y2 = toCanvas(starB[1]);
+
+        const dx = x2 - x1;
+        const dy = y2 - y1;
+        const dist = Math.hypot(dx, dy);
+        if (dist <= 18) return;
+
+        const ux = dx / dist;
+        const uy = dy / dist;
+
+        // 9px breathing gap from both star centers
+        const startX = x1 + ux * 9;
+        const startY = y1 + uy * 9;
+        const endX = x2 - ux * 9;
+        const endY = y2 - uy * 9;
+
+        ctx.beginPath();
+        ctx.moveTo(startX, startY);
+        ctx.lineTo(endX, endY);
+        ctx.stroke();
       });
 
-      if (countBadge) {
-        countBadge.textContent = `Showing ${visible} of ${rows.length}`;
+      // 2. Draw Stars & Bayer Letter Labels
+      stars.forEach((s: any, idx: number) => {
+        const x = toCanvas(s[0]);
+        const y = toCanvas(s[1]);
+        const mag = Number(s[2]) || 3.0;
+        const properName = s[5] || '';
+        const bayer = s[6] || '';
+        const isSelected = selectedStarIndex === idx;
+        const isEdgeStart = edgeStartIndex === idx;
+
+        // Radius inversely proportional to magnitude
+        const radius = Math.max(2.5, 6.5 - mag * 0.7);
+
+        // Halo / Airy disk
+        const haloGrad = ctx.createRadialGradient(x, y, 0, x, y, radius * 3);
+        haloGrad.addColorStop(0, 'rgba(255, 255, 255, 0.95)');
+        haloGrad.addColorStop(0.3, isSelected ? 'rgba(235, 195, 100, 0.6)' : 'rgba(215, 225, 255, 0.4)');
+        haloGrad.addColorStop(1, 'rgba(200, 220, 255, 0)');
+
+        ctx.fillStyle = haloGrad;
+        ctx.beginPath();
+        ctx.arc(x, y, radius * 3, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Star Core
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.arc(x, y, radius, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Selected Reticle
+        if (isSelected || isEdgeStart) {
+          ctx.strokeStyle = isEdgeStart ? '#ff7043' : 'rgba(215, 185, 120, 0.9)';
+          ctx.lineWidth = 1.5;
+          ctx.beginPath();
+          ctx.arc(x, y, radius + 7, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+
+        // Star Typography (Bayer Greek + Proper Name)
+        ctx.fillStyle = isSelected ? '#ffde8a' : 'rgba(235, 235, 245, 0.75)';
+        ctx.font = 'italic 11px serif';
+        ctx.textAlign = 'left';
+        const label = [bayer, properName].filter(Boolean).join(' ');
+        if (label) {
+          ctx.fillText(label, x + radius + 7, y + 4);
+        }
+      });
+    }
+
+    // Apply Constellation Shard Data & Update DOM
+    function applyConstellationData(data: any, shouldNotify = false) {
+      if (!data || !data.constellation) return;
+      currentConstellation = data.constellation;
+      currentId = data.constellation.id || currentId;
+      const cat = data.catalogEntry || currentConstellation;
+
+      // Update header & meta displays
+      const titleEl = document.getElementById('active-const-title');
+      const codeEl = document.getElementById('active-const-code');
+      const nameEl = document.getElementById('meta-name');
+      const genitiveEl = document.getElementById('meta-genitive');
+      const coordsEl = document.getElementById('meta-coords');
+      const shardEl = document.getElementById('meta-shard');
+      const pinBtn = document.getElementById('btn-pin-featured');
+
+      if (titleEl) titleEl.textContent = cat.name;
+      if (codeEl) codeEl.textContent = cat.id;
+      if (nameEl) nameEl.textContent = cat.name;
+      if (genitiveEl) genitiveEl.textContent = cat.genitive || cat.meaning || '—';
+      if (coordsEl) coordsEl.textContent = `${cat.ra} · ${cat.dec}`;
+      if (shardEl) shardEl.textContent = cat.shard || 'shard-00.json';
+
+      if (pinBtn) {
+        pinBtn.textContent = data.isFeatured ? '★ Pinned as Default Sky' : 'Pin as Default Sky';
+        pinBtn.className = data.isFeatured ? 'btn-pin is-pinned' : 'btn-pin';
+      }
+
+      if (selectEl) selectEl.value = cat.id;
+
+      // Select primary alpha star by default
+      if (Array.isArray(currentConstellation.stars) && currentConstellation.stars.length > 0) {
+        selectStar(0);
+      } else {
+        selectStar(null);
+      }
+
+      renderConstellation();
+      if (shouldNotify) {
+        notify(`Loaded Plate: ${cat.name} (${cat.id})`, 'success');
+      }
+    }
+
+    // Load Constellation Shard from Server
+    async function loadConstellation(id: string) {
+      currentId = id;
+      selectedStarIndex = null;
+      edgeStartIndex = null;
+      notify(`Retrieving coordinates for ${id}…`, 'info');
+
+      try {
+        const data = await postAdmin('/api/admin/constellations', {
+          action: 'get-constellation',
+          id,
+        });
+
+        if (data.ok && data.constellation) {
+          applyConstellationData(data, true);
+        } else {
+          notify(data.error || 'Failed loading constellation shard.', 'error');
+        }
+      } catch (err: any) {
+        notify('Network error retrieving constellation shard.', 'error');
+      }
+    }
+
+    // Star Selection Handler
+    function selectStar(idx: number | null) {
+      selectedStarIndex = idx;
+      const inspector = document.getElementById('vertex-inspector-card');
+      const idxLabel = document.getElementById('vertex-index-label');
+      const xInput = document.getElementById('star-x-input') as HTMLInputElement;
+      const yInput = document.getElementById('star-y-input') as HTMLInputElement;
+      const magSlider = document.getElementById('star-mag-slider') as HTMLInputElement;
+      const magDisplay = document.getElementById('star-mag-display');
+      const bayerInput = document.getElementById('star-bayer-input') as HTMLInputElement;
+      const nameInput = document.getElementById('star-name-input') as HTMLInputElement;
+
+      if (idx === null || !currentConstellation?.stars?.[idx]) {
+        if (inspector) inspector.classList.add('is-dimmed');
+        if (idxLabel) idxLabel.textContent = 'None';
+        return;
+      }
+
+      if (inspector) inspector.classList.remove('is-dimmed');
+      const star = currentConstellation.stars[idx];
+      if (idxLabel) idxLabel.textContent = `#${idx} (${star[6] || 'Star'})`;
+      if (xInput) xInput.value = String(star[0]);
+      if (yInput) yInput.value = String(star[1]);
+      if (magSlider) magSlider.value = String(star[2]);
+      if (magDisplay) magDisplay.textContent = Number(star[2]).toFixed(2);
+      if (bayerInput) bayerInput.value = String(star[6] || '');
+      if (nameInput) nameInput.value = String(star[5] || '');
+
+      renderConstellation();
+    }
+
+    // Find star under mouse click
+    function getStarAt(px: number, py: number): number | null {
+      if (!currentConstellation?.stars) return null;
+      for (let i = 0; i < currentConstellation.stars.length; i++) {
+        const s = currentConstellation.stars[i];
+        const sx = toCanvas(s[0]);
+        const sy = toCanvas(s[1]);
+        if (Math.hypot(px - sx, py - sy) < 14) {
+          return i;
+        }
+      }
+      return null;
+    }
+
+    // Canvas Mouse Interactions
+    canvas.addEventListener('mousedown', (e) => {
+      const rect = canvas.getBoundingClientRect();
+      const scaleX = canvas.width / rect.width;
+      const scaleY = canvas.height / rect.height;
+      const mouseX = (e.clientX - rect.left) * scaleX;
+      const mouseY = (e.clientY - rect.top) * scaleY;
+
+      const clickedStar = getStarAt(mouseX, mouseY);
+
+      // Tool: Drag Vertex
+      if (activeTool === 'drag') {
+        if (clickedStar !== null) {
+          selectStar(clickedStar);
+          isDragging = true;
+          canvas.style.cursor = 'grabbing';
+        } else {
+          selectStar(null);
+        }
+      }
+
+      // Tool: Connect / Cut Chord
+      if (activeTool === 'edge') {
+        if (clickedStar !== null) {
+          if (edgeStartIndex === null) {
+            edgeStartIndex = clickedStar;
+            selectStar(clickedStar);
+            notify(`Star #${clickedStar} selected as chord origin. Click second star to connect/unlink.`, 'info');
+          } else {
+            if (edgeStartIndex !== clickedStar) {
+              const a = Math.min(edgeStartIndex, clickedStar);
+              const b = Math.max(edgeStartIndex, clickedStar);
+              const edges: Array<[number, number]> = currentConstellation.edges || [];
+              const exists = edges.findIndex(([i, j]) => i === a && j === b);
+
+              if (exists !== -1) {
+                edges.splice(exists, 1);
+                notify(`Removed chord between #${a} and #${b}.`, 'warn');
+              } else {
+                edges.push([a, b]);
+                notify(`Linked chord between #${a} and #${b}.`, 'success');
+              }
+              currentConstellation.edges = edges;
+            }
+            edgeStartIndex = null;
+            renderConstellation();
+          }
+        }
+      }
+
+      // Tool: Add Star Vertex
+      if (activeTool === 'add') {
+        const normX = toNorm(mouseX);
+        const normY = toNorm(mouseY);
+        const newStar = [normX, normY, 3.2, 5, 0, '', '', 12];
+        currentConstellation.stars.push(newStar);
+        selectStar(currentConstellation.stars.length - 1);
+        notify(`Added new star vertex at coordinates [${normX}, ${normY}].`, 'success');
       }
     });
 
-    // Prune / Delete Constellation Handler
-    document.querySelectorAll<HTMLButtonElement>('[data-delete-constellation]').forEach((btn) => {
-      btn.addEventListener('click', async () => {
-        const id = btn.dataset.deleteConstellation;
-        const name = btn.dataset.constellationName || id;
-        if (!id) return;
+    window.addEventListener('mousemove', (e) => {
+      if (!isDragging || selectedStarIndex === null || !currentConstellation?.stars?.[selectedStarIndex]) return;
+      const rect = canvas.getBoundingClientRect();
+      const scaleX = canvas.width / rect.width;
+      const scaleY = canvas.height / rect.height;
+      const mouseX = (e.clientX - rect.left) * scaleX;
+      const mouseY = (e.clientY - rect.top) * scaleY;
 
-        const confirmed = confirm(`Are you sure you want to permanently purge constellation ${id} (${name}) from the celestial catalog?`);
-        if (!confirmed) return;
+      const normX = Math.max(0, Math.min(10000, toNorm(mouseX)));
+      const normY = Math.max(0, Math.min(10000, toNorm(mouseY)));
 
-        btn.disabled = true;
-        btn.textContent = '…';
-        notify(`Purging constellation ${id} from shard index…`, 'info');
+      currentConstellation.stars[selectedStarIndex][0] = normX;
+      currentConstellation.stars[selectedStarIndex][1] = normY;
 
-        const data = await postAdmin('/api/admin/constellations', { id });
-        if (data.ok) {
-          notify(data.message || `Constellation ${id} pruned.`, 'success');
-          btn.closest('tr')?.remove();
-        } else {
-          btn.disabled = false;
-          btn.textContent = 'Purge';
-          notify(data.error || 'Failed to prune constellation.', 'error');
+      (document.getElementById('star-x-input') as HTMLInputElement).value = String(normX);
+      (document.getElementById('star-y-input') as HTMLInputElement).value = String(normY);
+
+      renderConstellation();
+    });
+
+    window.addEventListener('mouseup', () => {
+      if (isDragging) {
+        isDragging = false;
+        canvas.style.cursor = 'crosshair';
+      }
+    });
+
+    // Property Inspector Synchronizers
+    document.getElementById('star-x-input')?.addEventListener('input', (e) => {
+      if (selectedStarIndex === null) return;
+      currentConstellation.stars[selectedStarIndex][0] = Number((e.target as HTMLInputElement).value);
+      renderConstellation();
+    });
+
+    document.getElementById('star-y-input')?.addEventListener('input', (e) => {
+      if (selectedStarIndex === null) return;
+      currentConstellation.stars[selectedStarIndex][1] = Number((e.target as HTMLInputElement).value);
+      renderConstellation();
+    });
+
+    document.getElementById('star-mag-slider')?.addEventListener('input', (e) => {
+      if (selectedStarIndex === null) return;
+      const val = Number((e.target as HTMLInputElement).value);
+      currentConstellation.stars[selectedStarIndex][2] = val;
+      const disp = document.getElementById('star-mag-display');
+      if (disp) disp.textContent = val.toFixed(2);
+      renderConstellation();
+    });
+
+    document.getElementById('star-bayer-input')?.addEventListener('input', (e) => {
+      if (selectedStarIndex === null) return;
+      currentConstellation.stars[selectedStarIndex][6] = (e.target as HTMLInputElement).value;
+      renderConstellation();
+    });
+
+    document.getElementById('star-name-input')?.addEventListener('input', (e) => {
+      if (selectedStarIndex === null) return;
+      currentConstellation.stars[selectedStarIndex][5] = (e.target as HTMLInputElement).value;
+      renderConstellation();
+    });
+
+    // Delete Vertex
+    document.getElementById('btn-delete-vertex')?.addEventListener('click', () => {
+      if (selectedStarIndex === null || !currentConstellation?.stars) return;
+      const removedIdx = selectedStarIndex;
+
+      // Remove star
+      currentConstellation.stars.splice(removedIdx, 1);
+
+      // Re-index edges
+      const nextEdges: Array<[number, number]> = [];
+      (currentConstellation.edges || []).forEach(([a, b]: [number, number]) => {
+        if (a === removedIdx || b === removedIdx) return; // remove connected edge
+        nextEdges.push([a > removedIdx ? a - 1 : a, b > removedIdx ? b - 1 : b]);
+      });
+      currentConstellation.edges = nextEdges;
+
+      selectStar(null);
+      notify(`Removed star vertex #${removedIdx}.`, 'warn');
+    });
+
+    // Tool Toggles
+    const toolButtons = document.querySelectorAll<HTMLButtonElement>('.tool-btn');
+    toolButtons.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        toolButtons.forEach((b) => b.classList.remove('is-active'));
+        btn.classList.add('is-active');
+        activeTool = btn.dataset.tool as any;
+        edgeStartIndex = null;
+
+        if (instructionsEl) {
+          if (activeTool === 'drag') instructionsEl.textContent = '✦ Drag Mode: Click & drag star vertices to reposition coordinates ($0..10000).';
+          if (activeTool === 'edge') instructionsEl.textContent = '☍ Chord Mode: Click origin star, then click target star to link or unlink.';
+          if (activeTool === 'add') instructionsEl.textContent = '✚ Add Mode: Click anywhere on the sky canvas to drop a new star vertex.';
+        }
+        renderConstellation();
+      });
+    });
+
+    // Revert to saved shard state
+    document.getElementById('btn-revert')?.addEventListener('click', () => {
+      loadConstellation(currentId);
+    });
+
+    // Save Shard Mutations
+    document.getElementById('btn-save-mutations')?.addEventListener('click', async () => {
+      if (!currentConstellation) return;
+      const btn = document.getElementById('btn-save-mutations') as HTMLButtonElement;
+      btn.disabled = true;
+      btn.textContent = 'Writing Shard…';
+
+      notify(`Committing coordinate mutations for ${currentId} to shard…`, 'info');
+      const data = await postAdmin('/api/admin/constellations', {
+        action: 'update-coordinates',
+        id: currentId,
+        stars: currentConstellation.stars,
+        edges: currentConstellation.edges,
+      });
+
+      btn.disabled = false;
+      btn.textContent = '💾 Save Shard Mutations';
+
+      if (data.ok) {
+        notify(data.message || 'Shard coordinates committed successfully.', 'success');
+      } else {
+        notify(data.error || 'Failed saving shard mutations.', 'error');
+      }
+    });
+
+    // Pin Featured Sky
+    const pinBtn = document.getElementById('btn-pin-featured');
+    pinBtn?.addEventListener('click', async () => {
+      const isCurrentlyPinned = pinBtn.classList.contains('is-pinned');
+      const nextPin = !isCurrentlyPinned;
+
+      const data = await postAdmin('/api/admin/constellations', {
+        action: 'pin-featured',
+        id: currentId,
+        pin: nextPin,
+      });
+
+      if (data.ok) {
+        pinBtn.className = nextPin ? 'btn-pin is-pinned' : 'btn-pin';
+        pinBtn.textContent = nextPin ? '★ Pinned as Default Sky' : 'Pin as Default Sky';
+        const display = document.getElementById('featured-sky-display');
+        if (display) display.textContent = nextPin ? currentId : 'RANDOM';
+        notify(data.message, 'success');
+      } else {
+        notify(data.error || 'Failed to pin featured sky.', 'error');
+      }
+    });
+
+    // Purge Constellation
+    document.getElementById('btn-purge-constellation')?.addEventListener('click', async () => {
+      if (!confirm(`Are you sure you want to permanently purge constellation "${currentId}" from the master celestial shards?`)) {
+        return;
+      }
+
+      notify(`Purging constellation ${currentId}…`, 'warn');
+      const data = await postAdmin('/api/admin/constellations', {
+        action: 'delete',
+        id: currentId,
+      });
+
+      if (data.ok) {
+        notify(data.message, 'success');
+        setTimeout(() => window.location.reload(), 1200);
+      } else {
+        notify(data.error || 'Failed to purge constellation.', 'error');
+      }
+    });
+
+    // Dropdown Quick Switcher
+    selectEl?.addEventListener('change', () => {
+      loadConstellation(selectEl.value);
+    });
+
+    // Catalog Search Filter
+    const filterInput = document.getElementById('catalog-filter-input') as HTMLInputElement;
+    const catRows = document.querySelectorAll<HTMLElement>('[data-cat-row]');
+
+    filterInput?.addEventListener('input', () => {
+      const q = filterInput.value.trim().toLowerCase();
+      catRows.forEach((row) => {
+        const text = row.dataset.catRow || '';
+        row.hidden = q.length > 0 && !text.includes(q);
+      });
+    });
+
+    // Table "Edit" Button Handlers
+    document.querySelectorAll<HTMLButtonElement>('[data-load-constellation]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const id = btn.dataset.loadConstellation;
+        if (id) {
+          loadConstellation(id);
+          window.scrollTo({ top: 0, behavior: 'smooth' });
         }
       });
     });
+
+    // Initial Load: Render preloaded server shard immediately (0ms blank delay)
+    const preloadedEl = document.getElementById('initial-constellation-json');
+    let loadedFromSSR = false;
+    if (preloadedEl) {
+      try {
+        const preloaded = JSON.parse(preloadedEl.textContent || '{}');
+        if (preloaded?.constellation) {
+          applyConstellationData(preloaded, false);
+          loadedFromSSR = true;
+        }
+      } catch (e) {
+        console.error('Could not parse preloaded constellation JSON:', e);
+      }
+    }
+
+    if (!loadedFromSSR) {
+      loadConstellation(currentId);
+    }
   </script>
 </AdminLayout>
 
@@ -155,12 +835,12 @@ const sampleCatalog = skyIndex.catalog || [];
   .module-container {
     display: flex;
     flex-direction: column;
-    gap: 1.5rem;
+    gap: 1.75rem;
   }
 
   .module-header {
     border-bottom: 1px solid var(--border-hairline);
-    padding-bottom: 1rem;
+    padding-bottom: 1.25rem;
   }
 
   .header-split {
@@ -202,11 +882,12 @@ const sampleCatalog = skyIndex.catalog || [];
     background: var(--bg-surface);
     border: 1px solid var(--border-hairline);
     border-radius: 0.375rem;
+    min-width: 95px;
   }
 
   .stat-number {
     font-family: var(--font-mono);
-    font-size: 1.1rem;
+    font-size: 1.15rem;
     font-weight: 600;
     color: var(--accent);
   }
@@ -218,29 +899,445 @@ const sampleCatalog = skyIndex.catalog || [];
     letter-spacing: 0.05em;
   }
 
-  /* Search row */
-  .search-bar-row {
+  /* Studio Split Layout */
+  .studio-split {
+    display: grid;
+    grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+    gap: 1.5rem;
+    align-items: start;
+  }
+
+  @media (max-width: 960px) {
+    .studio-split {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .canvas-panel,
+  .telemetry-panel {
+    padding: 1.5rem;
+    border-radius: 0.75rem;
+    border: 1px solid var(--border-hairline);
+    background: var(--bg-elevated);
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+  }
+
+  .panel-head-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    border-bottom: 1px solid var(--border-hairline);
+    padding-bottom: 0.75rem;
+  }
+
+  .panel-head-bar h3 {
+    margin: 0.2rem 0 0;
+    font-size: 1.15rem;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .code-badge {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    padding: 0.15rem 0.45rem;
+    border-radius: 0.25rem;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-hairline);
+    color: var(--accent);
+  }
+
+  .canvas-tools {
+    display: flex;
+    gap: 0.4rem;
+  }
+
+  .tool-btn {
+    padding: 0.45rem 0.75rem;
+    border-radius: 0.25rem;
+    border: 1px solid var(--border-hairline);
+    background: var(--bg-surface);
+    color: var(--text-secondary);
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+
+  .tool-btn:hover {
+    color: var(--text-primary);
+    border-color: var(--accent);
+  }
+
+  .tool-btn.is-active {
+    background: var(--accent);
+    color: var(--bg-canvas);
+    border-color: var(--accent);
+    font-weight: 600;
+  }
+
+  .tool-btn-outline {
+    padding: 0.45rem 0.65rem;
+    border-radius: 0.25rem;
+    border: 1px solid var(--border-hairline);
+    background: transparent;
+    color: var(--text-tertiary);
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    cursor: pointer;
+  }
+
+  .tool-btn-outline:hover {
+    color: var(--text-primary);
+    border-color: var(--text-secondary);
+  }
+
+  /* Viewport */
+  .canvas-viewport-wrap {
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: #05070a;
+    border: 1px solid var(--border-hairline);
+    border-radius: 0.5rem;
+    padding: 1rem;
+    overflow: hidden;
+  }
+
+  .astrolabe-canvas {
+    width: 100%;
+    max-width: 540px;
+    height: auto;
+    aspect-ratio: 1 / 1;
+    cursor: crosshair;
+    border-radius: 0.35rem;
+    box-shadow: 0 4px 32px rgba(0, 0, 0, 0.8);
+  }
+
+  .canvas-guide-overlay {
+    position: absolute;
+    inset: 1rem;
+    pointer-events: none;
+  }
+
+  .guide-tick {
+    position: absolute;
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    color: rgba(215, 185, 120, 0.4);
+    letter-spacing: 0.05em;
+  }
+
+  .tick-top { top: 0.4rem; left: 50%; transform: translateX(-50%); }
+  .tick-bottom { bottom: 0.4rem; left: 50%; transform: translateX(-50%); }
+  .tick-left { left: 0.4rem; top: 50%; transform: translateY(-50%); }
+  .tick-right { right: 0.4rem; top: 50%; transform: translateY(-50%); }
+
+  .canvas-instructions {
+    position: absolute;
+    bottom: 0.5rem;
+    left: 50%;
+    transform: translateX(-50%);
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    color: var(--text-secondary);
+    background: rgba(14, 18, 25, 0.85);
+    padding: 0.2rem 0.65rem;
+    border-radius: 9999px;
+    border: 1px solid var(--border-hairline);
+    white-space: nowrap;
+    pointer-events: none;
+  }
+
+  /* Right Telemetry Column */
+  .quick-switcher-row {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+  }
+
+  .mini-label {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    color: var(--text-tertiary);
+    letter-spacing: 0.05em;
+  }
+
+  .meta-strip {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
+    padding: 1rem;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-hairline);
+    border-radius: 0.5rem;
+    font-size: 0.82rem;
+  }
+
+  .meta-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+  }
+
+  .meta-label {
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    color: var(--text-secondary);
+  }
+
+  .mono {
+    font-family: var(--font-mono);
+    color: var(--accent);
+  }
+
+  .pin-box {
     display: flex;
     justify-content: space-between;
     align-items: center;
     gap: 1rem;
-    flex-wrap: wrap;
+    padding: 0.85rem 1rem;
+    background: var(--bg-surface);
+    border: 1px dashed var(--border-hairline);
+    border-radius: 0.5rem;
   }
 
-  .search-input-wrap {
-    flex: 1;
-    min-width: 280px;
+  .pin-desc {
+    margin: 0.15rem 0 0;
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+  }
+
+  .btn-pin {
+    padding: 0.45rem 0.85rem;
+    border-radius: 0.35rem;
+    border: 1px solid var(--border-hairline);
+    background: var(--bg-elevated);
+    color: var(--text-primary);
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.15s ease;
+  }
+
+  .btn-pin:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  .btn-pin.is-pinned {
+    background: color-mix(in oklch, var(--accent) 20%, var(--bg-surface));
+    border-color: var(--accent);
+    color: var(--accent);
+    font-weight: 600;
+  }
+
+  /* Vertex Inspector Card */
+  .vertex-inspector-card {
+    padding: 1.25rem;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-hairline);
+    border-radius: 0.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    transition: opacity 0.2s ease;
+  }
+
+  .vertex-inspector-card.is-dimmed {
+    opacity: 0.45;
+    pointer-events: none;
+  }
+
+  .inspector-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--border-hairline);
+    padding-bottom: 0.5rem;
+  }
+
+  .badge-vertex {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--accent);
+    padding: 0.1rem 0.4rem;
+    background: var(--bg-canvas);
+    border: 1px solid var(--border-hairline);
+    border-radius: 0.25rem;
+  }
+
+  .inspector-body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+  }
+
+  .coord-display-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+  }
+
+  .coord-col {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .mono-num {
+    font-family: var(--font-mono);
+    font-size: 0.88rem;
+    padding: 0.5rem 0.65rem;
+    border-radius: 0.25rem;
+    border: 1px solid var(--border-hairline);
+    background: var(--bg-canvas);
+    color: var(--text-primary);
+  }
+
+  .slider-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .slider-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .tool-slider {
+    accent-color: var(--accent);
+  }
+
+  .form-row-2 {
+    display: grid;
+    grid-template-columns: 1fr 1.5fr;
+    gap: 0.75rem;
+  }
+
+  .form-row-2 label {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .form-row-2 input {
+    padding: 0.5rem 0.65rem;
+    border-radius: 0.25rem;
+    border: 1px solid var(--border-hairline);
+    background: var(--bg-canvas);
+    color: var(--text-primary);
+    font-size: 0.85rem;
+  }
+
+  .vertex-actions {
+    display: flex;
+    justify-content: flex-end;
+  }
+
+  .btn-danger-sm {
+    padding: 0.4rem 0.75rem;
+    border-radius: 0.25rem;
+    border: 1px solid color-mix(in oklch, oklch(65% 0.2 25) 30%, transparent);
+    background: color-mix(in oklch, oklch(65% 0.2 25) 10%, transparent);
+    color: oklch(78% 0.16 25);
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    cursor: pointer;
+  }
+
+  .btn-danger-sm:hover {
+    background: oklch(65% 0.2 25);
+    color: #fff;
+  }
+
+  /* Commit Row */
+  .commit-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.75rem;
+    padding-top: 0.5rem;
+    border-top: 1px solid var(--border-hairline);
+  }
+
+  .btn-primary {
+    padding: 0.75rem 1.25rem;
+    border-radius: 0.375rem;
+    border: 1px solid var(--accent);
+    background: color-mix(in oklch, var(--accent) 18%, var(--bg-surface));
+    color: var(--text-primary);
+    font-family: var(--font-mono);
+    font-size: 0.82rem;
+    letter-spacing: 0.05em;
+    cursor: pointer;
+    transition: all 0.18s ease;
+  }
+
+  .btn-primary:hover {
+    background: var(--accent);
+    color: var(--bg-canvas);
+  }
+
+  .btn-danger-outline {
+    padding: 0.65rem 1rem;
+    border-radius: 0.375rem;
+    border: 1px solid color-mix(in oklch, oklch(65% 0.2 25) 35%, transparent);
+    background: transparent;
+    color: oklch(78% 0.16 25);
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    cursor: pointer;
+  }
+
+  .btn-danger-outline:hover {
+    background: color-mix(in oklch, oklch(65% 0.2 25) 20%, transparent);
+  }
+
+  /* Bottom Catalog Section */
+  .catalog-section {
+    border-radius: 0.75rem;
+    border: 1px solid var(--border-hairline);
+    background: var(--bg-elevated);
+    overflow: hidden;
+  }
+
+  .catalog-header-bar {
+    padding: 1.25rem 1.5rem;
+    background: var(--bg-surface);
+    border-bottom: 1px solid var(--border-hairline);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+
+  .catalog-header-bar h3 {
+    margin: 0.2rem 0 0;
+    font-size: 1.05rem;
+    font-weight: 500;
+  }
+
+  .search-wrap {
     display: flex;
     align-items: center;
     background: var(--bg-canvas);
     border: 1px solid var(--border-hairline);
     border-radius: 0.375rem;
     padding: 0 0.75rem;
-  }
-
-  .search-input-wrap:focus-within {
-    border-color: var(--accent);
-    box-shadow: 0 0 0 1px var(--accent);
+    min-width: 280px;
   }
 
   .search-icon {
@@ -249,51 +1346,32 @@ const sampleCatalog = skyIndex.catalog || [];
     margin-right: 0.5rem;
   }
 
-  .search-input-wrap input {
-    width: 100%;
-    padding: 0.65rem 0;
+  .search-wrap input {
     border: none;
     background: transparent;
     color: var(--text-primary);
-    font-family: inherit;
-    font-size: 0.88rem;
+    padding: 0.55rem 0;
+    font-size: 0.85rem;
+    width: 100%;
   }
 
-  .search-input-wrap input:focus {
+  .search-wrap input:focus {
     outline: none;
-  }
-
-  .filter-count {
-    font-family: var(--font-mono);
-    font-size: 0.75rem;
-    color: var(--text-secondary);
-    padding: 0.45rem 0.75rem;
-    background: var(--bg-surface);
-    border-radius: 0.375rem;
-    border: 1px solid var(--border-hairline);
-  }
-
-  /* Table styling */
-  .catalog-card {
-    border-radius: 0.75rem;
-    border: 1px solid var(--border-hairline);
-    background: var(--bg-elevated);
-    overflow: hidden;
   }
 
   .table-responsive {
     overflow-x: auto;
-    max-height: 640px;
+    max-height: 480px;
   }
 
-  .constellation-table {
+  .catalog-table {
     width: 100%;
     border-collapse: collapse;
-    font-size: 0.85rem;
+    font-size: 0.84rem;
     text-align: left;
   }
 
-  .constellation-table thead {
+  .catalog-table thead {
     position: sticky;
     top: 0;
     background: var(--bg-surface);
@@ -301,41 +1379,33 @@ const sampleCatalog = skyIndex.catalog || [];
     z-index: 2;
   }
 
-  .constellation-table th {
-    padding: 0.75rem 1rem;
+  .catalog-table th {
+    padding: 0.65rem 1.25rem;
     font-family: var(--font-mono);
     font-size: 0.72rem;
-    letter-spacing: 0.08em;
     color: var(--text-secondary);
-    font-weight: 600;
   }
 
-  .constellation-table td {
-    padding: 0.75rem 1rem;
+  .catalog-table td {
+    padding: 0.65rem 1.25rem;
     border-bottom: 1px solid color-mix(in oklch, var(--border-hairline) 40%, transparent);
   }
 
-  .constellation-table tr:hover td {
+  .catalog-table tr:hover td {
     background: color-mix(in oklch, var(--accent) 4%, transparent);
   }
 
-  .mono-id {
+  .mono-plate,
+  .mono-code {
     font-family: var(--font-mono);
     font-weight: 600;
     color: var(--accent);
-  }
-
-  .const-name {
-    color: var(--text-primary);
-  }
-
-  .text-secondary-sub {
-    color: var(--text-secondary);
+    white-space: nowrap;
   }
 
   .mono-coords {
     font-family: var(--font-mono);
-    font-size: 0.8rem;
+    font-size: 0.78rem;
     color: var(--text-secondary);
   }
 
@@ -345,47 +1415,44 @@ const sampleCatalog = skyIndex.catalog || [];
     color: var(--text-tertiary);
   }
 
-  .th-actions, .td-actions {
+  .text-right {
     text-align: right;
   }
 
-  .action-buttons {
+  .row-actions {
     display: inline-flex;
     gap: 0.4rem;
   }
 
-  .btn-inspect {
+  .btn-table-edit {
+    padding: 0.25rem 0.55rem;
+    border-radius: 0.25rem;
+    border: 1px solid var(--accent);
+    background: color-mix(in oklch, var(--accent) 12%, var(--bg-surface));
+    color: var(--text-primary);
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    cursor: pointer;
+  }
+
+  .btn-table-edit:hover {
+    background: var(--accent);
+    color: var(--bg-canvas);
+  }
+
+  .btn-table-view {
     padding: 0.25rem 0.55rem;
     border-radius: 0.25rem;
     border: 1px solid var(--border-hairline);
-    background: transparent;
+    background: var(--bg-surface);
     color: var(--text-primary);
     text-decoration: none;
     font-family: var(--font-mono);
     font-size: 0.75rem;
-    transition: all 0.15s ease;
   }
 
-  .btn-inspect:hover {
-    background: var(--bg-surface);
+  .btn-table-view:hover {
     border-color: var(--accent);
     color: var(--accent);
-  }
-
-  .btn-purge {
-    padding: 0.25rem 0.55rem;
-    border-radius: 0.25rem;
-    border: 1px solid color-mix(in oklch, oklch(65% 0.2 25) 30%, transparent);
-    background: color-mix(in oklch, oklch(65% 0.2 25) 10%, transparent);
-    color: oklch(75% 0.16 25);
-    font-family: var(--font-mono);
-    font-size: 0.75rem;
-    cursor: pointer;
-    transition: all 0.15s ease;
-  }
-
-  .btn-purge:hover {
-    background: color-mix(in oklch, oklch(65% 0.2 25) 20%, transparent);
-    border-color: oklch(75% 0.16 25);
   }
 </style>

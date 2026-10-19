@@ -10,95 +10,175 @@ const profile = await getFacultyProfile();
 <AdminLayout title="Media Atelier & Visiting Card" activeModule="media">
   <div class="module-container">
     <div class="module-header">
-      <span class="module-kicker">MODULE 02 · MEDIA & CREDENTIALS ATELIER</span>
-      <h2>Visiting Card Portrait & Office Telemetry</h2>
-      <p class="module-sub">
-        Upload, client-crop, and synchronize Professor Cordry's official Faculty ID portrait (4:5 ratio) and office telemetry.
-      </p>
+      <div class="header-split">
+        <div>
+          <span class="module-kicker">MODULE 02 · MEDIA & CREDENTIALS ATELIER</span>
+          <h2>Interactive Canvas Cropper & Faculty Credentials</h2>
+          <p class="module-sub">
+            Crop portraits and book covers on a browser `<canvas>` with pan, zoom, and rotation controls. 100% zero server C++ dependencies.
+          </p>
+        </div>
+        <div class="mode-toggles">
+          <button type="button" class="mode-btn is-active" id="mode-btn-portrait" data-mode="portrait">
+            <span>4:5 Faculty Portrait</span>
+          </button>
+          <button type="button" class="mode-btn" id="mode-btn-book" data-mode="book-cover">
+            <span>2:3 Monograph Cover</span>
+          </button>
+        </div>
+      </div>
     </div>
 
-    <div class="atelier-grid">
-      <!-- Left: Interactive Canvas Cropper -->
-      <section class="atelier-card" aria-labelledby="card-cropper-heading">
-        <h3 id="card-cropper-heading" class="card-title">4:5 Aspect-Ratio Client Cropper</h3>
-        <p class="card-desc">
-          Images are cropped and WebP-encoded directly in your browser canvas. No server-side C++ image binaries are required.
-        </p>
-
-        <div class="canvas-stage">
-          <canvas id="portrait-crop-canvas" width="320" height="400" class="crop-canvas"></canvas>
-          <div class="canvas-overlay-guide">4:5 FACULTY PORTRAIT FRAME (320 × 400)</div>
+    <div class="studio-grid">
+      <!-- Left Column: Interactive Canvas & Pan/Zoom Controls -->
+      <section class="studio-card" aria-labelledby="canvas-heading">
+        <div class="card-top">
+          <span class="card-kicker" id="cropper-aspect-label">4:5 ASPECT RATIO // 320 × 400</span>
+          <h3 id="canvas-heading">Interactive Viewport</h3>
+          <p class="card-desc">Click and drag inside the frame to pan. Use the slider or mouse wheel to zoom.</p>
         </div>
 
-        <div class="upload-controls">
-          <label class="file-picker-btn">
-            <span>Choose Image File (JPG, PNG, WebP)</span>
-            <input type="file" id="portrait-file" accept="image/*" class="sr-only" />
-          </label>
-          <span class="file-name-display" id="file-chosen-name">No file selected yet</span>
+        <div class="viewport-stage" id="viewport-dropzone">
+          <canvas id="studio-canvas" width="320" height="400" class="crop-canvas"></canvas>
+          <div class="canvas-crosshairs"></div>
+          <div class="canvas-watermark" id="canvas-watermark">DRC ATELIER · 4:5 FRAME</div>
+          <div class="drop-hint" id="drop-hint">Drop image file here</div>
+        </div>
+
+        <!-- Interactive Transformation Controls -->
+        <div class="transform-controls">
+          <div class="zoom-row">
+            <span class="control-label">Zoom:</span>
+            <button type="button" id="zoom-out-btn" class="btn-tool" title="Zoom Out">−</button>
+            <input type="range" id="zoom-slider" min="0.5" max="3" step="0.05" value="1" class="tool-slider" />
+            <button type="button" id="zoom-in-btn" class="btn-tool" title="Zoom In">+</button>
+            <span id="zoom-val-display" class="zoom-val">100%</span>
+          </div>
+
+          <div class="tool-actions-row">
+            <button type="button" id="rotate-btn" class="btn-tool-action">
+              ↻ Rotate 90°
+            </button>
+            <button type="button" id="reset-view-btn" class="btn-tool-action">
+              ⟲ Reset View
+            </button>
+            <label class="btn-file-select">
+              <span>Choose Image…</span>
+              <input type="file" id="image-file-input" accept="image/*" class="sr-only" />
+            </label>
+          </div>
+          <span class="file-name-sub" id="file-status">No file loaded. Showing default sample.</span>
         </div>
       </section>
 
-      <!-- Right: Office Telemetry & Save -->
-      <section class="atelier-card" aria-labelledby="card-telemetry-heading">
-        <h3 id="card-telemetry-heading" class="card-title">Visiting Card & Office Telemetry</h3>
-        <p class="card-desc">
-          Update the coordinates displayed in the expanding Faculty ID Card modal on the main portfolio.
-        </p>
-
-        <form id="media-form" class="atelier-form">
-          <div class="form-group">
-            <label for="profile-name">Scholar Full Name</label>
-            <input type="text" id="profile-name" value={profile.name} disabled class="input-disabled" />
+      <!-- Right Column: Context-Aware Target Controls & Live Card Preview -->
+      <div class="studio-sidebar">
+        <!-- MODE A: Portrait & Faculty ID Card Telemetry Form -->
+        <section class="studio-card" id="portrait-panel">
+          <div class="card-top">
+            <span class="card-kicker">CREDENTIALS TARGET</span>
+            <h3>Faculty ID Card & Office Telemetry</h3>
+            <p class="card-desc">Synchronizes with the expanding Faculty ID Card modal on the public portfolio.</p>
           </div>
 
-          <div class="form-group">
-            <label for="profile-title">Faculty Title</label>
-            <input type="text" id="profile-title" value={profile.title} disabled class="input-disabled" />
-          </div>
-
-          <div class="form-group">
-            <label for="profile-office">Office Location</label>
-            <input
-              type="text"
-              id="profile-office"
-              name="office"
-              value={profile.office}
-              placeholder="e.g. Faculty Block · Rajiv Gandhi Education City"
-              required
-            />
-          </div>
-
-          <div class="form-group">
-            <label for="profile-hours">Consultation / Office Hours</label>
-            <input
-              type="text"
-              id="profile-hours"
-              name="officeHours"
-              value={profile.officeHours}
-              placeholder="e.g. By Appointment · Semesters I & II"
-              required
-            />
-          </div>
-
-          <div class="form-group">
-            <label>Current Saved Portrait URL</label>
-            <div class="preview-row">
-              <img
-                src={profile.portraitUrl}
-                alt={profile.name}
-                class="current-portrait-thumb"
-                id="current-thumb"
+          <form id="portrait-form" class="studio-form">
+            <div class="form-group">
+              <label for="office-input">Office Location</label>
+              <input
+                type="text"
+                id="office-input"
+                name="office"
+                value={profile.office}
+                placeholder="Faculty Block · Rajiv Gandhi Education City"
+                required
               />
-              <span class="mono-url">{profile.portraitUrl}</span>
+            </div>
+
+            <div class="form-group">
+              <label for="hours-input">Office / Consultation Hours</label>
+              <input
+                type="text"
+                id="hours-input"
+                name="officeHours"
+                value={profile.officeHours}
+                placeholder="By Appointment · Semesters I & II"
+                required
+              />
+            </div>
+
+            <div class="form-group">
+              <label for="phone-input">Office Telephone Telemetry</label>
+              <input
+                type="text"
+                id="phone-input"
+                name="phone"
+                value={profile.phone}
+                placeholder="+91 (0130) 230-0000"
+              />
+            </div>
+
+            <button type="submit" id="save-portrait-btn" class="btn-primary">
+              Export WebP & Update Faculty ID Card
+            </button>
+          </form>
+
+          <!-- Live Faculty ID Card Mockup -->
+          <div class="id-card-preview-wrap">
+            <span class="mini-kicker">LIVE FACULTY ID CARD PREVIEW</span>
+            <div class="id-card-mock">
+              <div class="id-card-photo">
+                <img id="live-preview-photo" src={profile.portraitUrl} alt="Duncan R. Cordry" />
+              </div>
+              <div class="id-card-details">
+                <div class="id-card-badge">ASHOKA UNIVERSITY · FACULTY</div>
+                <h4 class="id-card-name">{profile.name}</h4>
+                <div class="id-card-title">{profile.title}</div>
+                <div class="id-card-meta">
+                  <span id="preview-office">{profile.office}</span>
+                  <span id="preview-hours">{profile.officeHours}</span>
+                </div>
+              </div>
             </div>
           </div>
+        </section>
 
-          <button type="submit" id="save-media-btn" class="btn-primary">
-            Save Cropped Portrait & Telemetry
-          </button>
-        </form>
-      </section>
+        <!-- MODE B: Book Cover Monograph Export Form -->
+        <section class="studio-card" id="book-cover-panel" hidden>
+          <div class="card-top">
+            <span class="card-kicker">MONOGRAPH TARGET</span>
+            <h3>Book Cover Publisher (2:3 Ratio)</h3>
+            <p class="card-desc">Exports high-resolution WebP monograph artwork into <code>public/images/books/</code>.</p>
+          </div>
+
+          <form id="book-cover-form" class="studio-form">
+            <div class="form-group">
+              <label for="book-slug-input">Monograph Short Slug / Title</label>
+              <input
+                type="text"
+                id="book-slug-input"
+                placeholder="e.g. technical-objects-spiritual-practices"
+                value="monograph-cover"
+                required
+              />
+              <span class="help-text">Will be saved to: <code>/images/books/[slug]-[timestamp].webp</code></span>
+            </div>
+
+            <button type="submit" id="save-book-cover-btn" class="btn-primary">
+              Export 2:3 Monograph Cover WebP
+            </button>
+          </form>
+
+          <div id="cover-result-box" class="result-box" hidden>
+            <span class="mini-kicker">EXPORT READY</span>
+            <p class="result-text">Image generated and written to server filesystem:</p>
+            <div class="url-copy-row">
+              <input type="text" id="cover-url-output" readonly class="mono-input" />
+              <button type="button" id="copy-url-btn" class="btn-copy">Copy URL</button>
+            </div>
+            <p class="help-text">Paste this URL into the "Cover Image Path" field in Module 01 (Monographs).</p>
+          </div>
+        </section>
+      </div>
     </div>
   </div>
 
@@ -106,82 +186,313 @@ const profile = await getFacultyProfile();
     declare const notify: (message: string, status?: string) => void;
     declare const postAdmin: (url: string, payload: Record<string, any>) => Promise<any>;
 
-    const cropCanvas = document.getElementById('portrait-crop-canvas') as HTMLCanvasElement | null;
-    const ctx = cropCanvas?.getContext('2d');
-    const fileChosenName = document.getElementById('file-chosen-name');
-    let croppedDataUrl = '';
+    // State Variables
+    let currentMode: 'portrait' | 'book-cover' = 'portrait';
+    let currentImage: HTMLImageElement | null = null;
+    let zoomLevel = 1.0;
+    let rotationDeg = 0;
+    let panX = 0;
+    let panY = 0;
+    let isDragging = false;
+    let dragStartX = 0;
+    let dragStartY = 0;
 
-    // Initialize blank canvas state
-    if (ctx && cropCanvas) {
-      ctx.fillStyle = '#0f1117';
-      ctx.fillRect(0, 0, cropCanvas.width, cropCanvas.height);
-      ctx.strokeStyle = 'rgba(215, 185, 120, 0.4)';
-      ctx.lineWidth = 1;
-      ctx.strokeRect(16, 16, cropCanvas.width - 32, cropCanvas.height - 32);
-      ctx.fillStyle = '#8b949e';
-      ctx.font = '11px monospace';
-      ctx.textAlign = 'center';
-      ctx.fillText('SELECT IMAGE TO PREVIEW 4:5 CROP', cropCanvas.width / 2, cropCanvas.height / 2);
-    }
+    const canvas = document.getElementById('studio-canvas') as HTMLCanvasElement;
+    const ctx = canvas.getContext('2d');
+    const zoomSlider = document.getElementById('zoom-slider') as HTMLInputElement;
+    const zoomValDisplay = document.getElementById('zoom-val-display');
+    const fileStatus = document.getElementById('file-status');
+    const dropzone = document.getElementById('viewport-dropzone');
+    const aspectLabel = document.getElementById('cropper-aspect-label');
+    const watermark = document.getElementById('canvas-watermark');
+    const livePhoto = document.getElementById('live-preview-photo') as HTMLImageElement;
 
-    // Handle Image Upload & Client Canvas Center-Crop
-    document.getElementById('portrait-file')?.addEventListener('change', (e) => {
-      const file = (e.currentTarget as HTMLInputElement).files?.[0];
-      if (!file || !cropCanvas || !ctx) return;
+    // Render Canvas Loop
+    function renderCanvas() {
+      if (!ctx) return;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      if (fileChosenName) {
-        fileChosenName.textContent = `${file.name} (${Math.round(file.size / 1024)} KB)`;
+      if (!currentImage) {
+        ctx.fillStyle = '#0e1117';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.strokeStyle = 'rgba(215, 185, 120, 0.3)';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(16, 16, canvas.width - 32, canvas.height - 32);
+
+        ctx.fillStyle = '#8b949e';
+        ctx.font = '11px monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText('SELECT IMAGE OR DRAG & DROP HERE', canvas.width / 2, canvas.height / 2 - 8);
+        ctx.fillStyle = '#586069';
+        ctx.fillText(`FRAME: ${canvas.width} × ${canvas.height}`, canvas.width / 2, canvas.height / 2 + 14);
+        return;
       }
 
+      ctx.save();
+      // Clip to viewport canvas
+      ctx.beginPath();
+      ctx.rect(0, 0, canvas.width, canvas.height);
+      ctx.clip();
+
+      // Background fill
+      ctx.fillStyle = '#0a0d14';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // Translate to canvas center + pan
+      ctx.translate(canvas.width / 2 + panX, canvas.height / 2 + panY);
+      ctx.rotate((rotationDeg * Math.PI) / 180);
+      ctx.scale(zoomLevel, zoomLevel);
+
+      // Draw image centered
+      const imgW = currentImage.width;
+      const imgH = currentImage.height;
+      ctx.drawImage(currentImage, -imgW / 2, -imgH / 2, imgW, imgH);
+
+      ctx.restore();
+
+      // Update live ID card preview if in portrait mode
+      if (currentMode === 'portrait' && livePhoto) {
+        livePhoto.src = canvas.toDataURL('image/webp', 0.85);
+      }
+    }
+
+    // Set Aspect Ratio Mode
+    function setMode(mode: 'portrait' | 'book-cover') {
+      currentMode = mode;
+      const portraitBtn = document.getElementById('mode-btn-portrait');
+      const bookBtn = document.getElementById('mode-btn-book');
+      const portraitPanel = document.getElementById('portrait-panel');
+      const bookPanel = document.getElementById('book-cover-panel');
+
+      if (mode === 'portrait') {
+        canvas.width = 320;
+        canvas.height = 400; // 4:5
+        if (aspectLabel) aspectLabel.textContent = '4:5 ASPECT RATIO // 320 × 400 (FACULTY ID)';
+        if (watermark) watermark.textContent = 'DRC ATELIER · 4:5 FRAME';
+        portraitBtn?.classList.add('is-active');
+        bookBtn?.classList.remove('is-active');
+        if (portraitPanel) portraitPanel.hidden = false;
+        if (bookPanel) bookPanel.hidden = true;
+      } else {
+        canvas.width = 300;
+        canvas.height = 450; // 2:3
+        if (aspectLabel) aspectLabel.textContent = '2:3 ASPECT RATIO // 300 × 450 (MONOGRAPH)';
+        if (watermark) watermark.textContent = 'DRC ATELIER · 2:3 MONOGRAPH';
+        portraitBtn?.classList.remove('is-active');
+        bookBtn?.classList.add('is-active');
+        if (portraitPanel) portraitPanel.hidden = true;
+        if (bookPanel) bookPanel.hidden = false;
+      }
+
+      resetTransform();
+    }
+
+    function resetTransform() {
+      if (!currentImage) return;
+      const scaleX = canvas.width / currentImage.width;
+      const scaleY = canvas.height / currentImage.height;
+      zoomLevel = Math.max(scaleX, scaleY);
+      panX = 0;
+      panY = 0;
+      rotationDeg = 0;
+      if (zoomSlider) {
+        zoomSlider.value = String(zoomLevel);
+        zoomSlider.min = String(zoomLevel * 0.5);
+        zoomSlider.max = String(zoomLevel * 3.0);
+      }
+      if (zoomValDisplay) zoomValDisplay.textContent = `${Math.round(zoomLevel * 100)}%`;
+      renderCanvas();
+    }
+
+    function loadImageFromFile(file: File) {
+      if (!file) return;
+      if (fileStatus) fileStatus.textContent = `${file.name} (${Math.round(file.size / 1024)} KB)`;
       const reader = new FileReader();
       reader.onload = () => {
         const img = new Image();
         img.onload = () => {
-          const targetAspect = 4 / 5;
-          const srcAspect = img.width / img.height;
-          let sx = 0, sy = 0, sw = img.width, sh = img.height;
-
-          if (srcAspect > targetAspect) {
-            sw = img.height * targetAspect;
-            sx = (img.width - sw) / 2;
-          } else {
-            sh = img.width / targetAspect;
-            sy = (img.height - sh) / 2;
-          }
-
-          ctx.clearRect(0, 0, cropCanvas.width, cropCanvas.height);
-          ctx.drawImage(img, sx, sy, sw, sh, 0, 0, cropCanvas.width, cropCanvas.height);
-          
-          // Export high-quality WebP blob directly on client
-          croppedDataUrl = cropCanvas.toDataURL('image/webp', 0.90);
-          notify('Portrait successfully center-cropped to 4:5 ratio on client canvas.', 'success');
+          currentImage = img;
+          resetTransform();
+          notify(`Loaded ${file.name} into atelier viewport.`, 'info');
         };
         img.src = String(reader.result);
       };
       reader.readAsDataURL(file);
+    }
+
+    // Load initial profile portrait as starting canvas image
+    const initialImg = new Image();
+    initialImg.crossOrigin = 'anonymous';
+    initialImg.onload = () => {
+      currentImage = initialImg;
+      resetTransform();
+    };
+    initialImg.src = livePhoto?.src || '/images/duncan-cordry-portrait.jpg';
+
+    // File Input
+    document.getElementById('image-file-input')?.addEventListener('change', (e) => {
+      const file = (e.currentTarget as HTMLInputElement).files?.[0];
+      if (file) loadImageFromFile(file);
     });
 
-    // Submit Telemetry and Media
-    document.getElementById('media-form')?.addEventListener('submit', async (e) => {
+    // Drag and Drop onto canvas dropzone
+    dropzone?.addEventListener('dragover', (e) => {
       e.preventDefault();
-      const office = (document.getElementById('profile-office') as HTMLInputElement).value;
-      const officeHours = (document.getElementById('profile-hours') as HTMLInputElement).value;
+      dropzone.classList.add('is-dragover');
+    });
 
-      notify('Writing portrait and office telemetry to filesystem…', 'info');
+    dropzone?.addEventListener('dragleave', () => {
+      dropzone.classList.remove('is-dragover');
+    });
+
+    dropzone?.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropzone.classList.remove('is-dragover');
+      const file = e.dataTransfer?.files?.[0];
+      if (file) loadImageFromFile(file);
+    });
+
+    // Pan (Mouse / Touch)
+    canvas.addEventListener('mousedown', (e) => {
+      isDragging = true;
+      dragStartX = e.clientX - panX;
+      dragStartY = e.clientY - panY;
+      canvas.style.cursor = 'grabbing';
+    });
+
+    window.addEventListener('mousemove', (e) => {
+      if (!isDragging) return;
+      panX = e.clientX - dragStartX;
+      panY = e.clientY - dragStartY;
+      renderCanvas();
+    });
+
+    window.addEventListener('mouseup', () => {
+      if (isDragging) {
+        isDragging = false;
+        canvas.style.cursor = 'grab';
+      }
+    });
+
+    // Mouse wheel zoom
+    canvas.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      const delta = e.deltaY * -0.002;
+      zoomLevel = Math.max(0.2, Math.min(4.0, zoomLevel + delta));
+      if (zoomSlider) zoomSlider.value = String(zoomLevel);
+      if (zoomValDisplay) zoomValDisplay.textContent = `${Math.round(zoomLevel * 100)}%`;
+      renderCanvas();
+    });
+
+    // Zoom Slider & Buttons
+    zoomSlider?.addEventListener('input', (e) => {
+      zoomLevel = Number((e.currentTarget as HTMLInputElement).value);
+      if (zoomValDisplay) zoomValDisplay.textContent = `${Math.round(zoomLevel * 100)}%`;
+      renderCanvas();
+    });
+
+    document.getElementById('zoom-in-btn')?.addEventListener('click', () => {
+      zoomLevel = Math.min(4.0, zoomLevel + 0.1);
+      if (zoomSlider) zoomSlider.value = String(zoomLevel);
+      if (zoomValDisplay) zoomValDisplay.textContent = `${Math.round(zoomLevel * 100)}%`;
+      renderCanvas();
+    });
+
+    document.getElementById('zoom-out-btn')?.addEventListener('click', () => {
+      zoomLevel = Math.max(0.2, zoomLevel - 0.1);
+      if (zoomSlider) zoomSlider.value = String(zoomLevel);
+      if (zoomValDisplay) zoomValDisplay.textContent = `${Math.round(zoomLevel * 100)}%`;
+      renderCanvas();
+    });
+
+    document.getElementById('rotate-btn')?.addEventListener('click', () => {
+      rotationDeg = (rotationDeg + 90) % 360;
+      renderCanvas();
+    });
+
+    document.getElementById('reset-view-btn')?.addEventListener('click', resetTransform);
+
+    // Mode Toggle Buttons
+    document.getElementById('mode-btn-portrait')?.addEventListener('click', () => setMode('portrait'));
+    document.getElementById('mode-btn-book')?.addEventListener('click', () => setMode('book-cover'));
+
+    // Real-time Text Mirroring for Mockup Card
+    const officeInput = document.getElementById('office-input') as HTMLInputElement;
+    const hoursInput = document.getElementById('hours-input') as HTMLInputElement;
+    const previewOffice = document.getElementById('preview-office');
+    const previewHours = document.getElementById('preview-hours');
+
+    officeInput?.addEventListener('input', () => {
+      if (previewOffice) previewOffice.textContent = officeInput.value || 'Office Location';
+    });
+    hoursInput?.addEventListener('input', () => {
+      if (previewHours) previewHours.textContent = hoursInput.value || 'Consultation Hours';
+    });
+
+    // 1. Submit Portrait & Telemetry
+    document.getElementById('portrait-form')?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const submitBtn = document.getElementById('save-portrait-btn') as HTMLButtonElement;
+      if (submitBtn) submitBtn.disabled = true;
+
+      const webpDataUrl = canvas.toDataURL('image/webp', 0.90);
+      const office = officeInput.value;
+      const officeHours = hoursInput.value;
+      const phone = (document.getElementById('phone-input') as HTMLInputElement)?.value || '';
+
+      notify('Encoding 4:5 WebP and saving to /public/images/…', 'info');
       const data = await postAdmin('/api/admin/media', {
-        dataUrl: croppedDataUrl,
+        target: 'portrait',
+        dataUrl: webpDataUrl,
         office,
         officeHours,
+        phone,
       });
 
+      if (submitBtn) submitBtn.disabled = false;
       if (data.ok) {
-        notify(data.message || 'Updated credentials successfully.', 'success');
-        if (data.portraitUrl) {
-          const thumb = document.getElementById('current-thumb') as HTMLImageElement | null;
-          if (thumb) thumb.src = `${data.portraitUrl}?t=${Date.now()}`;
-        }
+        notify('Faculty ID portrait and telemetry updated successfully!', 'success');
       } else {
         notify(data.error || 'Failed to update credentials.', 'error');
+      }
+    });
+
+    // 2. Submit Monograph Book Cover
+    document.getElementById('book-cover-form')?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const submitBtn = document.getElementById('save-book-cover-btn') as HTMLButtonElement;
+      if (submitBtn) submitBtn.disabled = true;
+
+      const slugInput = document.getElementById('book-slug-input') as HTMLInputElement;
+      const webpDataUrl = canvas.toDataURL('image/webp', 0.90);
+
+      notify('Encoding 2:3 Monograph cover to /public/images/books/…', 'info');
+      const data = await postAdmin('/api/admin/media', {
+        target: 'book-cover',
+        dataUrl: webpDataUrl,
+        customFileName: slugInput.value,
+      });
+
+      if (submitBtn) submitBtn.disabled = false;
+      if (data.ok && data.imageUrl) {
+        notify(data.message || 'Book cover saved!', 'success');
+        const resultBox = document.getElementById('cover-result-box');
+        const urlOutput = document.getElementById('cover-url-output') as HTMLInputElement;
+        if (resultBox && urlOutput) {
+          resultBox.hidden = false;
+          urlOutput.value = data.imageUrl;
+        }
+      } else {
+        notify(data.error || 'Failed to export cover.', 'error');
+      }
+    });
+
+    // Copy URL to Clipboard
+    document.getElementById('copy-url-btn')?.addEventListener('click', () => {
+      const urlOutput = document.getElementById('cover-url-output') as HTMLInputElement;
+      if (urlOutput?.value) {
+        navigator.clipboard.writeText(urlOutput.value);
+        notify('Copied image path to clipboard!', 'success');
       }
     });
   </script>
@@ -196,7 +507,15 @@ const profile = await getFacultyProfile();
 
   .module-header {
     border-bottom: 1px solid var(--border-hairline);
-    padding-bottom: 1rem;
+    padding-bottom: 1.25rem;
+  }
+
+  .header-split {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    flex-wrap: wrap;
+    gap: 1.25rem;
   }
 
   .module-kicker {
@@ -206,7 +525,7 @@ const profile = await getFacultyProfile();
     color: var(--accent);
   }
 
-  .module-header h2 {
+  .header-split h2 {
     margin: 0.25rem 0 0.25rem;
     font-size: var(--step-1);
     font-weight: 500;
@@ -218,13 +537,44 @@ const profile = await getFacultyProfile();
     color: var(--text-secondary);
   }
 
-  .atelier-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(min(100%, 480px), 1fr));
-    gap: 1.5rem;
+  .mode-toggles {
+    display: flex;
+    gap: 0.5rem;
   }
 
-  .atelier-card {
+  .mode-btn {
+    padding: 0.55rem 0.95rem;
+    border-radius: 0.375rem;
+    border: 1px solid var(--border-hairline);
+    background: var(--bg-surface);
+    color: var(--text-secondary);
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+
+  .mode-btn:hover {
+    color: var(--text-primary);
+    border-color: var(--accent);
+  }
+
+  .mode-btn.is-active {
+    background: var(--bg-elevated);
+    border-color: var(--accent);
+    color: var(--accent);
+    box-shadow: 0 0 0 1px var(--accent);
+  }
+
+  /* Studio Grid */
+  .studio-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 460px), 1fr));
+    gap: 1.5rem;
+    align-items: start;
+  }
+
+  .studio-card {
     padding: 1.5rem;
     border-radius: 0.75rem;
     border: 1px solid var(--border-hairline);
@@ -234,74 +584,178 @@ const profile = await getFacultyProfile();
     gap: 1.25rem;
   }
 
-  .card-title {
+  .card-top {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .card-kicker {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.1em;
+    color: var(--accent);
+  }
+
+  .card-top h3 {
     margin: 0;
     font-size: 1.05rem;
     font-weight: 500;
   }
 
   .card-desc {
-    margin: -0.5rem 0 0;
+    margin: 0;
     font-size: 0.82rem;
     color: var(--text-secondary);
   }
 
-  .canvas-stage {
+  /* Viewport Stage */
+  .viewport-stage {
     position: relative;
     display: flex;
-    flex-direction: column;
+    justify-content: center;
     align-items: center;
     background: var(--bg-canvas);
     border: 1px solid var(--border-hairline);
     border-radius: 0.5rem;
-    padding: 1.25rem;
+    padding: 1.5rem;
+    overflow: hidden;
+    cursor: grab;
+    user-select: none;
+    transition: border-color 0.2s ease;
+  }
+
+  .viewport-stage.is-dragover {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px var(--accent);
   }
 
   .crop-canvas {
     max-width: 100%;
     height: auto;
-    border-radius: 0.375rem;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+    border-radius: 0.35rem;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+    background: #000;
   }
 
-  .canvas-overlay-guide {
-    margin-top: 0.75rem;
+  .canvas-watermark {
+    position: absolute;
+    bottom: 0.75rem;
+    right: 0.85rem;
     font-family: var(--font-mono);
-    font-size: 0.72rem;
+    font-size: 0.68rem;
     letter-spacing: 0.08em;
     color: var(--text-tertiary);
+    pointer-events: none;
   }
 
-  .upload-controls {
+  .drop-hint {
+    display: none;
+  }
+
+  /* Transform Controls */
+  .transform-controls {
     display: flex;
     flex-direction: column;
-    gap: 0.5rem;
-  }
-
-  .file-picker-btn {
-    display: inline-flex;
-    justify-content: center;
-    align-items: center;
-    padding: 0.65rem 1rem;
+    gap: 0.85rem;
+    padding: 1rem;
     background: var(--bg-surface);
-    border: 1px dashed var(--border-hairline);
-    border-radius: 0.375rem;
-    font-family: var(--font-mono);
-    font-size: 0.82rem;
-    color: var(--accent);
-    cursor: pointer;
-    transition: all 0.2s ease;
+    border: 1px solid var(--border-hairline);
+    border-radius: 0.5rem;
   }
 
-  .file-picker-btn:hover {
-    border-color: var(--accent);
-    background: color-mix(in oklch, var(--accent) 8%, var(--bg-surface));
+  .zoom-row {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
   }
 
-  .file-name-display {
+  .control-label {
     font-family: var(--font-mono);
     font-size: 0.75rem;
     color: var(--text-secondary);
+    min-width: 48px;
+  }
+
+  .tool-slider {
+    flex: 1;
+    accent-color: var(--accent);
+  }
+
+  .zoom-val {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    color: var(--accent);
+    min-width: 42px;
+    text-align: right;
+  }
+
+  .btn-tool {
+    width: 28px;
+    height: 28px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 0.25rem;
+    border: 1px solid var(--border-hairline);
+    background: var(--bg-elevated);
+    color: var(--text-primary);
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 0.9rem;
+  }
+
+  .btn-tool:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  .tool-actions-row {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  .btn-tool-action {
+    padding: 0.45rem 0.75rem;
+    border-radius: 0.25rem;
+    border: 1px solid var(--border-hairline);
+    background: var(--bg-elevated);
+    color: var(--text-primary);
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+
+  .btn-tool-action:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  .btn-file-select {
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    padding: 0.45rem 0.85rem;
+    border-radius: 0.25rem;
+    border: 1px solid var(--accent);
+    background: color-mix(in oklch, var(--accent) 15%, var(--bg-surface));
+    color: var(--text-primary);
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    cursor: pointer;
+  }
+
+  .btn-file-select:hover {
+    background: var(--accent);
+    color: var(--bg-canvas);
+  }
+
+  .file-name-sub {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    color: var(--text-tertiary);
   }
 
   .sr-only {
@@ -315,8 +769,14 @@ const profile = await getFacultyProfile();
     border: 0;
   }
 
-  /* Form Styles */
-  .atelier-form {
+  /* Studio Sidebar */
+  .studio-sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+
+  .studio-form {
     display: flex;
     flex-direction: column;
     gap: 1rem;
@@ -330,8 +790,7 @@ const profile = await getFacultyProfile();
 
   .form-group label {
     font-family: var(--font-mono);
-    font-size: 0.78rem;
-    letter-spacing: 0.05em;
+    font-size: 0.75rem;
     color: var(--text-secondary);
   }
 
@@ -342,7 +801,7 @@ const profile = await getFacultyProfile();
     background: var(--bg-canvas);
     color: var(--text-primary);
     font-family: inherit;
-    font-size: 0.9rem;
+    font-size: 0.88rem;
   }
 
   .form-group input:focus {
@@ -351,35 +810,14 @@ const profile = await getFacultyProfile();
     box-shadow: 0 0 0 1px var(--accent);
   }
 
-  .input-disabled {
-    opacity: 0.65;
-    cursor: not-allowed;
-    background: var(--bg-surface) !important;
+  .help-text {
+    font-size: 0.75rem;
+    color: var(--text-tertiary);
   }
 
-  .preview-row {
-    display: flex;
-    align-items: center;
-    gap: 0.85rem;
-    padding: 0.5rem;
-    background: var(--bg-canvas);
-    border-radius: 0.375rem;
-    border: 1px solid var(--border-hairline);
-  }
-
-  .current-portrait-thumb {
-    width: 44px;
-    height: 55px;
-    object-fit: cover;
-    border-radius: 0.25rem;
-    border: 1px solid var(--border-hairline);
-  }
-
-  .mono-url {
+  .help-text code {
     font-family: var(--font-mono);
-    font-size: 0.72rem;
-    color: var(--text-secondary);
-    word-break: break-all;
+    color: var(--accent);
   }
 
   .btn-primary {
@@ -389,14 +827,139 @@ const profile = await getFacultyProfile();
     background: color-mix(in oklch, var(--accent) 18%, var(--bg-surface));
     color: var(--text-primary);
     font-family: var(--font-mono);
-    font-size: 0.85rem;
-    letter-spacing: 0.06em;
+    font-size: 0.82rem;
+    letter-spacing: 0.05em;
     cursor: pointer;
-    transition: all 0.2s ease;
-    margin-top: 0.5rem;
+    transition: all 0.18s ease;
+    margin-top: 0.35rem;
   }
 
   .btn-primary:hover {
+    background: var(--accent);
+    color: var(--bg-canvas);
+  }
+
+  /* Live ID Card Mockup */
+  .id-card-preview-wrap {
+    margin-top: 0.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+  }
+
+  .mini-kicker {
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    letter-spacing: 0.1em;
+    color: var(--text-tertiary);
+  }
+
+  .id-card-mock {
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+    padding: 1.25rem;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-hairline);
+    border-radius: 0.5rem;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+  }
+
+  .id-card-photo {
+    width: 72px;
+    height: 90px; /* 4:5 */
+    border-radius: 0.35rem;
+    overflow: hidden;
+    border: 1px solid var(--border-hairline);
+    flex-shrink: 0;
+    background: #000;
+  }
+
+  .id-card-photo img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .id-card-details {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+  }
+
+  .id-card-badge {
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    letter-spacing: 0.08em;
+    color: var(--accent);
+  }
+
+  .id-card-name {
+    margin: 0;
+    font-size: 1.05rem;
+    font-weight: 500;
+  }
+
+  .id-card-title {
+    font-size: 0.78rem;
+    color: var(--text-secondary);
+  }
+
+  .id-card-meta {
+    margin-top: 0.25rem;
+    display: flex;
+    flex-direction: column;
+    font-size: 0.72rem;
+    color: var(--text-tertiary);
+    font-family: var(--font-mono);
+  }
+
+  /* Result Box for Book Cover */
+  .result-box {
+    margin-top: 1rem;
+    padding: 1rem;
+    background: var(--bg-surface);
+    border: 1px solid color-mix(in oklch, oklch(75% 0.18 145) 30%, var(--border-hairline));
+    border-radius: 0.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .result-text {
+    margin: 0;
+    font-size: 0.8rem;
+    color: var(--text-primary);
+  }
+
+  .url-copy-row {
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  .mono-input {
+    flex: 1;
+    padding: 0.45rem 0.65rem;
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    background: var(--bg-canvas);
+    border: 1px solid var(--border-hairline);
+    border-radius: 0.25rem;
+    color: var(--text-primary);
+  }
+
+  .btn-copy {
+    padding: 0.45rem 0.75rem;
+    border-radius: 0.25rem;
+    border: 1px solid var(--accent);
+    background: var(--bg-elevated);
+    color: var(--text-primary);
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    cursor: pointer;
+  }
+
+  .btn-copy:hover {
     background: var(--accent);
     color: var(--bg-canvas);
   }

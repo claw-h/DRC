@@ -381,6 +381,25 @@ const navItems = [
     border: none;
     background: transparent;
     z-index: 9999;
+    opacity: 0;
+    transform: translateY(12px);
+    transition:
+      opacity 0.24s cubic-bezier(0.16, 1, 0.3, 1),
+      transform 0.24s cubic-bezier(0.16, 1, 0.3, 1),
+      overlay 0.24s allow-discrete,
+      display 0.24s allow-discrete;
+  }
+
+  .admin-toast:popover-open {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  @starting-style {
+    .admin-toast:popover-open {
+      opacity: 0;
+      transform: translateY(12px);
+    }
   }
 
   .toast-inner {

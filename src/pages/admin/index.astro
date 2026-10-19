@@ -4,163 +4,462 @@ export const prerender = false;
 import AdminLayout from '../../layouts/AdminLayout.astro';
 import { getCollection } from 'astro:content';
 
-const publications = await getCollection('publications').catch(() => []);
+const publications = (await getCollection('publications').catch(() => [])).sort((a, b) => b.data.year - a.data.year);
+const books = (await getCollection('books').catch(() => [])).sort((a, b) => b.data.year - a.data.year);
 const classes = await getCollection('classes').catch(() => []);
 ---
 
 <AdminLayout title="Content & Classes Dispatch" activeModule="content">
   <div class="module-container">
     <div class="module-header">
-      <span class="module-kicker">MODULE 01 · ARCHIVAL INGESTION & DISPATCH</span>
-      <h2>Manuscript Publisher & Curriculum Dispatch</h2>
-      <p class="module-sub">
-        Ingest academic papers via Crossref DOI automation and publish university seminars directly into Astro Content Collections.
-      </p>
+      <div class="header-split">
+        <div>
+          <span class="module-kicker">MODULE 01 · ACADEMIC CONTENT ENGINE</span>
+          <h2>Publications, Monographs & Curriculum Dispatch</h2>
+          <p class="module-sub">
+            Ingest manuscripts via Crossref DOI / BibTeX automation, author monographs, and publish university syllabi.
+          </p>
+        </div>
+        <div class="telemetry-stats">
+          <div class="stat-box">
+            <span class="stat-number">{publications.length}</span>
+            <span class="stat-label">Publications</span>
+          </div>
+          <div class="stat-box">
+            <span class="stat-number">{books.length}</span>
+            <span class="stat-label">Monographs</span>
+          </div>
+          <div class="stat-box">
+            <span class="stat-number">{classes.length}</span>
+            <span class="stat-label">Seminars</span>
+          </div>
+        </div>
+      </div>
     </div>
 
-    <div class="admin-grid">
-      <!-- Section A: One-Paste DOI Importer & Manuscript Form -->
-      <section class="admin-panel" aria-labelledby="panel-doi">
-        <div class="panel-head">
-          <span class="panel-kicker">AUTOMATION · ONE-PASTE DOI INGESTION</span>
-          <h3 id="panel-doi">Crossref Metadata Ingestion & Paper Dispatch</h3>
+    <!-- Content Engine Navigation Switcher -->
+    <div class="content-tab-bar" role="tablist" aria-label="Content Dispatch Types">
+      <button type="button" class="tab-btn is-active" id="tab-btn-pubs" role="tab" aria-selected="true" aria-controls="tab-pubs">
+        <span>01 · Papers & Manuscripts</span>
+        <span class="badge-count">{publications.length}</span>
+      </button>
+      <button type="button" class="tab-btn" id="tab-btn-books" role="tab" aria-selected="false" aria-controls="tab-books">
+        <span>02 · Books & Monographs</span>
+        <span class="badge-count">{books.length}</span>
+      </button>
+      <button type="button" class="tab-btn" id="tab-btn-classes" role="tab" aria-selected="false" aria-controls="tab-classes">
+        <span>03 · Courses & Syllabi</span>
+        <span class="badge-count">{classes.length}</span>
+      </button>
+      <button type="button" class="tab-btn" id="tab-btn-ledger" role="tab" aria-selected="false" aria-controls="tab-ledger">
+        <span>04 · Master Collections Ledger</span>
+      </button>
+    </div>
+
+    <!-- TAB 1: Publications & Manuscripts -->
+    <div id="tab-pubs" class="tab-content is-active" role="tabpanel" aria-labelledby="tab-btn-pubs">
+      <div class="two-col-layout">
+        <!-- Ingestion Hub -->
+        <div class="panel-card">
+          <div class="card-head">
+            <span class="card-kicker">AUTOMATION HUB</span>
+            <h3>One-Paste DOI & BibTeX Auto-Importer</h3>
+            <p class="card-desc">Instantly populate publication metadata from Crossref REST APIs or BibTeX strings.</p>
+          </div>
+
+          <div class="importer-stack">
+            <div class="input-action-row">
+              <input
+                type="text"
+                id="doi-input"
+                placeholder="Paste DOI (e.g. 10.1086/734192 or 10.5840/ipq2022…)"
+                aria-label="DOI Input"
+              />
+              <button type="button" id="doi-fetch-btn" class="btn-accent">
+                Resolve DOI
+              </button>
+            </div>
+
+            <div class="bibtex-paste-box">
+              <label for="bibtex-quick-paste" class="mini-label">Or paste BibTeX entry snippet:</label>
+              <textarea
+                id="bibtex-quick-paste"
+                rows="3"
+                placeholder="@article{cordry2024, author = {Cordry, Duncan R.}, title = {...}, year = {2024}}"
+              ></textarea>
+              <button type="button" id="bibtex-parse-btn" class="btn-outline-sm">
+                Parse BibTeX →
+              </button>
+            </div>
+          </div>
         </div>
 
-        <div class="doi-bar">
-          <input
-            type="text"
-            id="doi-input"
-            placeholder="Paste DOI (e.g. 10.1086/734192 or 10.5840/ipq2022…)"
-            aria-label="Digital Object Identifier"
-          />
-          <button type="button" id="doi-fetch-btn" class="btn-accent">
-            Auto-Populate via Crossref
-          </button>
+        <!-- Publication Form -->
+        <div class="panel-card">
+          <div class="card-head">
+            <span class="card-kicker">MANUSCRIPT SCHEMA</span>
+            <h3>Publish Manuscript Record</h3>
+          </div>
+
+          <form id="pub-form" class="editor-form">
+            <div class="form-row-2">
+              <label>
+                <span>Article Title *</span>
+                <input type="text" name="title" id="pub-title" placeholder="e.g. Epistemic Horizons in..." required />
+              </label>
+              <label>
+                <span>Publication Year *</span>
+                <input type="number" name="year" id="pub-year" value="2026" required />
+              </label>
+            </div>
+
+            <div class="form-row-2">
+              <label>
+                <span>Journal / Venue *</span>
+                <input type="text" name="venue" id="pub-venue" placeholder="e.g. Journal of French and Francophone Philosophy" required />
+              </label>
+              <label>
+                <span>Volume & Issue</span>
+                <input type="text" name="volumeIssue" id="pub-volume" placeholder="e.g. Vol. 42, Issue 1" />
+              </label>
+            </div>
+
+            <div class="form-row-2">
+              <label>
+                <span>DOI Identifier</span>
+                <input type="text" name="doi" id="pub-doi" placeholder="e.g. 10.xxxx/yyyy" />
+              </label>
+              <label>
+                <span>Co-Authors (comma-separated)</span>
+                <input type="text" name="coAuthors" id="pub-authors" placeholder="e.g. Wynter, S., Stiegler, B." />
+              </label>
+            </div>
+
+            <label>
+              <span>PDF Asset Link / URL</span>
+              <input type="text" name="pdfUrl" id="pub-pdf" placeholder="e.g. /papers/cordry-2026.pdf" />
+            </label>
+
+            <label>
+              <span>Abstract / Executive Summary *</span>
+              <textarea name="abstract" id="pub-abstract" rows="4" placeholder="Enter abstract…" required></textarea>
+            </label>
+
+            <label>
+              <span>BibTeX Citation Code</span>
+              <textarea name="citationBibtex" id="pub-bibtex" rows="3" class="mono-code" placeholder="BibTeX citation block…"></textarea>
+            </label>
+
+            <button type="submit" id="pub-submit-btn" class="btn-primary">
+              Commit Manuscript to Content Layer
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 2: Books & Monographs -->
+    <div id="tab-books" class="tab-content" role="tabpanel" aria-labelledby="tab-btn-books" hidden>
+      <div class="panel-card max-w-form">
+        <div class="card-head">
+          <span class="card-kicker">MONOGRAPH ARCHIVE</span>
+          <h3>Author Academic Monograph</h3>
+          <p class="card-desc">Generates a validated Markdown record in <code>src/data/books/</code>.</p>
         </div>
 
-        <form id="pub-create-form" class="admin-form">
+        <form id="book-form" class="editor-form">
           <div class="form-row-2">
             <label>
-              <span>Manuscript Title</span>
-              <input type="text" name="title" id="pub-title" placeholder="e.g. The Architecture of Technical Memory" required />
+              <span>Monograph Title *</span>
+              <input type="text" name="title" id="book-title" placeholder="e.g. Technical Objects & Spiritual Practices" required />
             </label>
             <label>
-              <span>Publication Year</span>
-              <input type="number" name="year" id="pub-year" value="2026" required />
+              <span>Subtitle</span>
+              <input type="text" name="subtitle" id="book-subtitle" placeholder="e.g. Organology, the Organic & Inorganic" />
+            </label>
+          </div>
+
+          <div class="form-row-3">
+            <label>
+              <span>Publication Year *</span>
+              <input type="number" name="year" id="book-year" value="2026" required />
+            </label>
+            <label>
+              <span>Publisher Imprint *</span>
+              <input type="text" name="publisher" id="book-publisher" value="Ashoka University · Philosophy Monograph" required />
+            </label>
+            <label>
+              <span>ISBN / Catalog ID *</span>
+              <input type="text" name="isbn" id="book-isbn" value="ASHOKA-PHIL-2026-DRC" required />
             </label>
           </div>
 
           <div class="form-row-2">
             <label>
-              <span>Journal / Conference Venue</span>
-              <input type="text" name="venue" id="pub-venue" placeholder="e.g. Journal of French and Francophone Philosophy" required />
+              <span>Page Count</span>
+              <input type="number" name="pages" id="book-pages" value="220" />
             </label>
             <label>
-              <span>DOI Identifier</span>
-              <input type="text" name="doi" id="pub-doi" placeholder="10.xxxx/yyyy" />
+              <span>Cover Image Path</span>
+              <input type="text" name="coverImage" id="book-cover" value="/images/books/celestial-mechanics.svg" />
             </label>
           </div>
 
           <label>
-            <span>Abstract / Summary</span>
-            <textarea name="abstract" id="pub-abstract" rows="4" placeholder="Enter academic abstract…" required></textarea>
+            <span>Monograph Synopsis *</span>
+            <textarea name="synopsis" id="book-synopsis" rows="4" placeholder="Overview of the core thesis, philosophical lineages, and arguments…" required></textarea>
           </label>
 
-          <button type="submit" id="pub-submit-btn" class="btn-primary">
-            Commit Manuscript to Content Collection
+          <!-- Chapters Builder -->
+          <div class="repeater-section">
+            <div class="repeater-head">
+              <span class="mini-label">Monograph Chapters</span>
+              <button type="button" id="add-chapter-btn" class="btn-outline-sm">+ Add Chapter</button>
+            </div>
+            <div id="chapters-container" class="repeater-list">
+              <div class="repeater-item chapter-row">
+                <input type="text" class="ch-num" placeholder="01" value="01" />
+                <input type="text" class="ch-title" placeholder="Chapter Title" value="Between the Organic and the Inorganic" />
+                <input type="text" class="ch-summary" placeholder="Summary statement" value="Investigates ontological continuity..." />
+                <button type="button" class="btn-remove-row" title="Remove chapter">✕</button>
+              </div>
+            </div>
+          </div>
+
+          <button type="submit" id="book-submit-btn" class="btn-primary">
+            Publish Monograph to Book Shelf
           </button>
         </form>
-      </section>
+      </div>
+    </div>
 
-      <!-- Section B: Seminar & Course Dispatch -->
-      <section class="admin-panel" aria-labelledby="panel-classes">
-        <div class="panel-head">
-          <span class="panel-kicker">CURRICULUM · SYLLABUS DISPATCH</span>
-          <h3 id="panel-classes">Add University Seminar / Course</h3>
+    <!-- TAB 3: Courses & Seminars -->
+    <div id="tab-classes" class="tab-content" role="tabpanel" aria-labelledby="tab-btn-classes" hidden>
+      <div class="panel-card max-w-form">
+        <div class="card-head">
+          <span class="card-kicker">CURRICULUM SUITE</span>
+          <h3>Dispatch University Seminar Syllabus</h3>
+          <p class="card-desc">Generates course schedules and weekly reading lists in <code>src/data/classes/</code>.</p>
         </div>
 
-        <form id="class-create-form" class="admin-form">
-          <div class="form-row-2">
+        <form id="class-form" class="editor-form">
+          <div class="form-row-3">
             <label>
-              <span>Course Code</span>
-              <input type="text" name="code" placeholder="e.g. PHIL 3070" required />
+              <span>Course Code *</span>
+              <input type="text" name="code" id="class-code" placeholder="e.g. PHIL 3070" required />
             </label>
             <label>
-              <span>Academic Term</span>
-              <input type="text" name="term" value="Monsoon 2026" required />
+              <span>Academic Term *</span>
+              <input type="text" name="term" id="class-term" value="Monsoon 2026" required />
+            </label>
+            <label>
+              <span>Academic Year *</span>
+              <input type="text" name="academicYear" id="class-year" value="2025–2026" required />
             </label>
           </div>
 
           <div class="form-row-2">
             <label>
-              <span>Course Title</span>
-              <input type="text" name="title" placeholder="e.g. Continental Philosophies of Technology" required />
+              <span>Seminar Title *</span>
+              <input type="text" name="title" id="class-title" placeholder="e.g. Continental Philosophy of Technology" required />
             </label>
             <label>
-              <span>Level</span>
-              <select name="level" class="admin-select">
+              <span>Level *</span>
+              <select name="level" id="class-level" class="admin-select">
                 <option value="Graduate">Graduate</option>
                 <option value="Undergraduate">Undergraduate</option>
-                <option value="Seminar">Seminar</option>
+                <option value="Seminar" selected>Seminar</option>
               </select>
             </label>
           </div>
 
-          <label>
-            <span>Lecture Hall / Institution Location</span>
-            <input type="text" name="location" value="Ashoka University · Department of Philosophy" required />
-          </label>
+          <div class="form-row-2">
+            <label>
+              <span>Meeting Schedule / Room Location *</span>
+              <input type="text" name="location" id="class-location" value="Ashoka University · Department of Philosophy" required />
+            </label>
+            <label>
+              <span>Syllabus PDF Route</span>
+              <input type="text" name="syllabusPdf" id="class-pdf" value="/cv" />
+            </label>
+          </div>
 
           <label>
-            <span>Syllabus Synopsis</span>
-            <textarea name="description" rows="4" placeholder="Course overview and foundational themes…" required></textarea>
+            <span>Course Summary & Objectives *</span>
+            <textarea name="description" id="class-desc" rows="4" placeholder="Course syllabus overview…" required></textarea>
           </label>
+
+          <!-- Weekly Modules Builder -->
+          <div class="repeater-section">
+            <div class="repeater-head">
+              <span class="mini-label">Syllabus Weekly Schedule</span>
+              <button type="button" id="add-week-btn" class="btn-outline-sm">+ Add Week</button>
+            </div>
+            <div id="weeks-container" class="repeater-list">
+              <div class="repeater-item week-row">
+                <input type="text" class="wk-num" placeholder="WK 01" value="WK 01" />
+                <input type="text" class="wk-topic" placeholder="Weekly Topic" value="Foundational Norms & Technics" />
+                <textarea class="wk-readings" rows="2" placeholder="Readings (one per line)">Georges Canguilhem (1952), Machine and Organism&#10;André Leroi-Gourhan (1964), Gesture and Speech</textarea>
+                <button type="button" class="btn-remove-row" title="Remove week">✕</button>
+              </div>
+            </div>
+          </div>
 
           <button type="submit" id="class-submit-btn" class="btn-primary">
-            Publish Course to Academic Interface
+            Publish Seminar Syllabus
           </button>
         </form>
-      </section>
+      </div>
     </div>
 
-    <!-- Section C: Active Collection Ledger -->
-    <div class="ledger-section">
-      <div class="ledger-header">
-        <span class="panel-kicker">COLLECTIONS LEDGER</span>
-        <h3>Currently Live Records in Sovereign Archive</h3>
-      </div>
-
-      <div class="ledger-grid">
-        <!-- Publications Ledger -->
-        <div class="ledger-card">
-          <h4 class="ledger-title">Publications ({publications.length})</h4>
-          <ul class="ledger-list">
-            {publications.map((pub) => (
-              <li class="ledger-item">
-                <span class="ledger-year">{pub.data.year}</span>
-                <div class="ledger-info">
-                  <strong>{pub.data.title}</strong>
-                  <span class="ledger-venue">{pub.data.venue}</span>
-                </div>
-              </li>
-            ))}
-          </ul>
+    <!-- TAB 4: Master Collections Ledger -->
+    <div id="tab-ledger" class="tab-content" role="tabpanel" aria-labelledby="tab-btn-ledger" hidden>
+      <div class="ledger-stack">
+        <!-- Publications Ledger Table -->
+        <div class="ledger-box">
+          <div class="box-head">
+            <span class="card-kicker">COLLECTION: PUBLICATIONS ({publications.length})</span>
+            <h3>Manuscripts & Refereed Articles</h3>
+          </div>
+          <div class="table-wrap">
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th>Year</th>
+                  <th>Title</th>
+                  <th>Venue</th>
+                  <th>DOI</th>
+                  <th class="text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {publications.map((pub) => (
+                  <tr data-item-row={`publications-${pub.id}`}>
+                    <td class="mono">{pub.data.year}</td>
+                    <td>
+                      <strong>{pub.data.title}</strong>
+                      {pub.data.subtitle && <span class="sub-text"> — {pub.data.subtitle}</span>}
+                    </td>
+                    <td class="text-secondary">{pub.data.venue}</td>
+                    <td class="mono-doi">{pub.data.doi || '—'}</td>
+                    <td class="text-right">
+                      <div class="row-actions">
+                        <a href={`/publications/${pub.id}`} target="_blank" rel="noopener noreferrer" class="btn-table-view">
+                          View ↗
+                        </a>
+                        <button
+                          type="button"
+                          class="btn-table-delete"
+                          data-delete-type="publications"
+                          data-delete-id={pub.id}
+                          data-delete-name={pub.data.title}
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
 
-        <!-- Classes Ledger -->
-        <div class="ledger-card">
-          <h4 class="ledger-title">Courses & Seminars ({classes.length})</h4>
-          <ul class="ledger-list">
-            {classes.map((cls) => (
-              <li class="ledger-item">
-                <span class="ledger-code">{cls.data.courseCode}</span>
-                <div class="ledger-info">
-                  <strong>{cls.data.title}</strong>
-                  <span class="ledger-term">{cls.data.term} · {cls.data.level}</span>
-                </div>
-              </li>
-            ))}
-          </ul>
+        <!-- Books Ledger Table -->
+        <div class="ledger-box">
+          <div class="box-head">
+            <span class="card-kicker">COLLECTION: BOOKS ({books.length})</span>
+            <h3>Authored Monographs</h3>
+          </div>
+          <div class="table-wrap">
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th>Year</th>
+                  <th>Title</th>
+                  <th>Publisher</th>
+                  <th>ISBN</th>
+                  <th class="text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {books.map((b) => (
+                  <tr data-item-row={`books-${b.id}`}>
+                    <td class="mono">{b.data.year}</td>
+                    <td>
+                      <strong>{b.data.title}</strong>
+                      {b.data.subtitle && <span class="sub-text"> — {b.data.subtitle}</span>}
+                    </td>
+                    <td class="text-secondary">{b.data.publisher}</td>
+                    <td class="mono-doi">{b.data.isbn}</td>
+                    <td class="text-right">
+                      <div class="row-actions">
+                        <a href="/#books" target="_blank" rel="noopener noreferrer" class="btn-table-view">
+                          View ↗
+                        </a>
+                        <button
+                          type="button"
+                          class="btn-table-delete"
+                          data-delete-type="books"
+                          data-delete-id={b.id}
+                          data-delete-name={b.data.title}
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Classes Ledger Table -->
+        <div class="ledger-box">
+          <div class="box-head">
+            <span class="card-kicker">COLLECTION: CLASSES ({classes.length})</span>
+            <h3>University Courses & Seminars</h3>
+          </div>
+          <div class="table-wrap">
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th>Code</th>
+                  <th>Title</th>
+                  <th>Term</th>
+                  <th>Level</th>
+                  <th class="text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {classes.map((c) => (
+                  <tr data-item-row={`classes-${c.id}`}>
+                    <td class="mono font-bold">{c.data.courseCode}</td>
+                    <td><strong>{c.data.title}</strong></td>
+                    <td class="text-secondary">{c.data.term} ({c.data.academicYear})</td>
+                    <td><span class="level-pill">{c.data.level}</span></td>
+                    <td class="text-right">
+                      <div class="row-actions">
+                        <a href="/#classes" target="_blank" rel="noopener noreferrer" class="btn-table-view">
+                          View ↗
+                        </a>
+                        <button
+                          type="button"
+                          class="btn-table-delete"
+                          data-delete-type="classes"
+                          data-delete-id={c.id}
+                          data-delete-name={c.data.title}
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     </div>
@@ -170,9 +469,37 @@ const classes = await getCollection('classes').catch(() => []);
     declare const notify: (message: string, status?: string) => void;
     declare const postAdmin: (url: string, payload: Record<string, any>) => Promise<any>;
 
-    // 1. One-Paste DOI Importer
-    const fetchBtn = document.getElementById('doi-fetch-btn') as HTMLButtonElement | null;
-    fetchBtn?.addEventListener('click', async () => {
+    // 1. Content Tab Bar Navigation
+    const tabBtns = document.querySelectorAll<HTMLButtonElement>('.content-tab-bar .tab-btn');
+    const tabContents = document.querySelectorAll<HTMLElement>('.tab-content');
+
+    tabBtns.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const targetId = btn.getAttribute('aria-controls');
+        if (!targetId) return;
+
+        tabBtns.forEach((b) => {
+          b.classList.remove('is-active');
+          b.setAttribute('aria-selected', 'false');
+        });
+        tabContents.forEach((c) => {
+          c.classList.remove('is-active');
+          c.hidden = true;
+        });
+
+        btn.classList.add('is-active');
+        btn.setAttribute('aria-selected', 'true');
+        const targetEl = document.getElementById(targetId);
+        if (targetEl) {
+          targetEl.classList.add('is-active');
+          targetEl.hidden = false;
+        }
+      });
+    });
+
+    // 2. DOI Auto-Populate Resolver
+    const doiBtn = document.getElementById('doi-fetch-btn') as HTMLButtonElement | null;
+    doiBtn?.addEventListener('click', async () => {
       const doiInput = document.getElementById('doi-input') as HTMLInputElement | null;
       const doi = doiInput?.value.trim() || '';
       if (!doi) {
@@ -181,35 +508,72 @@ const classes = await getCollection('classes').catch(() => []);
         return;
       }
 
-      if (fetchBtn) {
-        fetchBtn.disabled = true;
-        fetchBtn.textContent = 'Resolving via Crossref…';
+      if (doiBtn) {
+        doiBtn.disabled = true;
+        doiBtn.textContent = 'Resolving…';
       }
 
-      notify('Querying Crossref metadata registry…', 'info');
+      notify('Querying Crossref metadata index…', 'info');
       const data = await postAdmin('/api/admin/content', {
         action: 'import-doi',
         doi,
       });
 
-      if (fetchBtn) {
-        fetchBtn.disabled = false;
-        fetchBtn.textContent = 'Auto-Populate via Crossref';
+      if (doiBtn) {
+        doiBtn.disabled = false;
+        doiBtn.textContent = 'Resolve DOI';
       }
 
       if (data.ok && data.metadata) {
-        (document.getElementById('pub-title') as HTMLInputElement).value = data.metadata.title;
-        (document.getElementById('pub-year') as HTMLInputElement).value = String(data.metadata.year);
-        (document.getElementById('pub-venue') as HTMLInputElement).value = data.metadata.venue;
-        (document.getElementById('pub-doi') as HTMLInputElement).value = data.metadata.doi;
-        notify(`Imported metadata: "${data.metadata.title}"`, 'success');
+        const m = data.metadata;
+        (document.getElementById('pub-title') as HTMLInputElement).value = m.title || '';
+        (document.getElementById('pub-year') as HTMLInputElement).value = String(m.year || 2026);
+        (document.getElementById('pub-venue') as HTMLInputElement).value = m.venue || '';
+        (document.getElementById('pub-doi') as HTMLInputElement).value = m.doi || '';
+        (document.getElementById('pub-volume') as HTMLInputElement).value = m.volumeIssue || '';
+        (document.getElementById('pub-authors') as HTMLInputElement).value = (m.coAuthors || []).join(', ');
+        (document.getElementById('pub-abstract') as HTMLTextAreaElement).value = m.abstract || '';
+        (document.getElementById('pub-bibtex') as HTMLTextAreaElement).value = m.citationBibtex || '';
+        notify(`Resolved metadata: "${m.title}"`, 'success');
       } else {
-        notify(data.error || 'Could not resolve DOI from Crossref.', 'error');
+        notify(data.error || 'Failed to resolve DOI.', 'error');
       }
     });
 
-    // 2. Commit Publication
-    document.getElementById('pub-create-form')?.addEventListener('submit', async (e) => {
+    // 3. BibTeX Parser Quick Import
+    document.getElementById('bibtex-parse-btn')?.addEventListener('click', async () => {
+      const textarea = document.getElementById('bibtex-quick-paste') as HTMLTextAreaElement | null;
+      const rawBib = textarea?.value.trim() || '';
+      if (!rawBib) {
+        notify('Please paste BibTeX code first.', 'warn');
+        textarea?.focus();
+        return;
+      }
+
+      notify('Parsing BibTeX snippet…', 'info');
+      const data = await postAdmin('/api/admin/content', {
+        action: 'parse-bibtex',
+        bibtex: rawBib,
+      });
+
+      if (data.ok && data.metadata) {
+        const m = data.metadata;
+        (document.getElementById('pub-title') as HTMLInputElement).value = m.title || '';
+        (document.getElementById('pub-year') as HTMLInputElement).value = String(m.year || 2026);
+        (document.getElementById('pub-venue') as HTMLInputElement).value = m.venue || '';
+        (document.getElementById('pub-doi') as HTMLInputElement).value = m.doi || '';
+        (document.getElementById('pub-volume') as HTMLInputElement).value = m.volumeIssue || '';
+        (document.getElementById('pub-authors') as HTMLInputElement).value = (m.coAuthors || []).join(', ');
+        (document.getElementById('pub-abstract') as HTMLTextAreaElement).value = m.abstract || '';
+        (document.getElementById('pub-bibtex') as HTMLTextAreaElement).value = m.citationBibtex || rawBib;
+        notify('Parsed BibTeX fields into form.', 'success');
+      } else {
+        notify(data.error || 'Unable to parse BibTeX.', 'error');
+      }
+    });
+
+    // 4. Submit Publication
+    document.getElementById('pub-form')?.addEventListener('submit', async (e) => {
       e.preventDefault();
       const form = e.currentTarget as HTMLFormElement;
       const submitBtn = document.getElementById('pub-submit-btn') as HTMLButtonElement | null;
@@ -223,50 +587,184 @@ const classes = await getCollection('classes').catch(() => []);
         title: fd.get('title'),
         year: fd.get('year'),
         venue: fd.get('venue'),
+        volumeIssue: fd.get('volumeIssue'),
         doi: fd.get('doi'),
+        coAuthors: fd.get('coAuthors'),
+        pdfUrl: fd.get('pdfUrl'),
         abstract: fd.get('abstract'),
+        citationBibtex: fd.get('citationBibtex'),
       });
 
       if (submitBtn) submitBtn.disabled = false;
-
       if (data.ok) {
-        notify(data.message || 'Manuscript committed to collection!', 'success');
+        notify(data.message || 'Committed publication successfully.', 'success');
         form.reset();
-        setTimeout(() => window.location.reload(), 1500);
+        setTimeout(() => window.location.reload(), 1200);
       } else {
         notify(data.error || 'Failed to save publication.', 'error');
       }
     });
 
-    // 3. Dispatch Class
-    document.getElementById('class-create-form')?.addEventListener('submit', async (e) => {
+    // 5. Dynamic Chapter Repeater
+    document.getElementById('add-chapter-btn')?.addEventListener('click', () => {
+      const container = document.getElementById('chapters-container');
+      if (!container) return;
+      const count = container.querySelectorAll('.chapter-row').length + 1;
+      const numStr = String(count).padStart(2, '0');
+
+      const row = document.createElement('div');
+      row.className = 'repeater-item chapter-row';
+      row.innerHTML = `
+        <input type="text" class="ch-num" placeholder="${numStr}" value="${numStr}" />
+        <input type="text" class="ch-title" placeholder="Chapter Title" />
+        <input type="text" class="ch-summary" placeholder="Summary statement" />
+        <button type="button" class="btn-remove-row" title="Remove chapter">✕</button>
+      `;
+      container.appendChild(row);
+      (row.querySelector('.ch-title') as HTMLInputElement)?.focus();
+    });
+
+    // 6. Submit Book
+    document.getElementById('book-form')?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const form = e.currentTarget as HTMLFormElement;
+      const submitBtn = document.getElementById('book-submit-btn') as HTMLButtonElement | null;
+      if (submitBtn) submitBtn.disabled = true;
+
+      const fd = new FormData(form);
+      const chapterRows = document.querySelectorAll<HTMLElement>('.chapter-row');
+      const chapters: Array<{ number: string; title: string; summary: string }> = [];
+
+      chapterRows.forEach((row) => {
+        const num = (row.querySelector('.ch-num') as HTMLInputElement)?.value || '';
+        const title = (row.querySelector('.ch-title') as HTMLInputElement)?.value || '';
+        const summary = (row.querySelector('.ch-summary') as HTMLInputElement)?.value || '';
+        if (title.trim()) chapters.push({ number: num, title, summary });
+      });
+
+      notify('Writing monograph to src/data/books/…', 'info');
+      const data = await postAdmin('/api/admin/content', {
+        action: 'create-book',
+        title: fd.get('title'),
+        subtitle: fd.get('subtitle'),
+        year: fd.get('year'),
+        publisher: fd.get('publisher'),
+        isbn: fd.get('isbn'),
+        pages: fd.get('pages'),
+        coverImage: fd.get('coverImage'),
+        synopsis: fd.get('synopsis'),
+        chapters,
+      });
+
+      if (submitBtn) submitBtn.disabled = false;
+      if (data.ok) {
+        notify(data.message || 'Published monograph successfully.', 'success');
+        form.reset();
+        setTimeout(() => window.location.reload(), 1200);
+      } else {
+        notify(data.error || 'Failed to save monograph.', 'error');
+      }
+    });
+
+    // 7. Dynamic Week Repeater
+    document.getElementById('add-week-btn')?.addEventListener('click', () => {
+      const container = document.getElementById('weeks-container');
+      if (!container) return;
+      const count = container.querySelectorAll('.week-row').length + 1;
+      const numStr = `WK ${String(count).padStart(2, '0')}`;
+
+      const row = document.createElement('div');
+      row.className = 'repeater-item week-row';
+      row.innerHTML = `
+        <input type="text" class="wk-num" placeholder="${numStr}" value="${numStr}" />
+        <input type="text" class="wk-topic" placeholder="Weekly Topic" />
+        <textarea class="wk-readings" rows="2" placeholder="Readings (one per line)"></textarea>
+        <button type="button" class="btn-remove-row" title="Remove week">✕</button>
+      `;
+      container.appendChild(row);
+      (row.querySelector('.wk-topic') as HTMLInputElement)?.focus();
+    });
+
+    // Generic row deletion in repeaters
+    document.addEventListener('click', (e) => {
+      const btn = (e.target as HTMLElement).closest('.btn-remove-row');
+      if (btn) btn.closest('.repeater-item')?.remove();
+    });
+
+    // 8. Submit Class
+    document.getElementById('class-form')?.addEventListener('submit', async (e) => {
       e.preventDefault();
       const form = e.currentTarget as HTMLFormElement;
       const submitBtn = document.getElementById('class-submit-btn') as HTMLButtonElement | null;
       if (submitBtn) submitBtn.disabled = true;
 
       const fd = new FormData(form);
-      notify('Writing course markdown to src/data/classes/…', 'info');
+      const weekRows = document.querySelectorAll<HTMLElement>('.week-row');
+      const weeks: Array<{ weekNumber: string; topic: string; readings: string[] }> = [];
 
+      weekRows.forEach((row) => {
+        const wkNum = (row.querySelector('.wk-num') as HTMLInputElement)?.value || '';
+        const topic = (row.querySelector('.wk-topic') as HTMLInputElement)?.value || '';
+        const readingsRaw = (row.querySelector('.wk-readings') as HTMLTextAreaElement)?.value || '';
+        const readings = readingsRaw.split('\n').map((r) => r.trim()).filter(Boolean);
+        if (topic.trim()) weeks.push({ weekNumber: wkNum, topic, readings });
+      });
+
+      notify('Writing seminar syllabus to src/data/classes/…', 'info');
       const data = await postAdmin('/api/admin/content', {
         action: 'create-class',
         code: fd.get('code'),
         term: fd.get('term'),
+        academicYear: fd.get('academicYear'),
         title: fd.get('title'),
         level: fd.get('level'),
         location: fd.get('location'),
+        syllabusPdf: fd.get('syllabusPdf'),
         description: fd.get('description'),
+        weeks,
       });
 
       if (submitBtn) submitBtn.disabled = false;
-
       if (data.ok) {
-        notify(data.message || 'Course published to collection!', 'success');
+        notify(data.message || 'Published course syllabus successfully.', 'success');
         form.reset();
-        setTimeout(() => window.location.reload(), 1500);
+        setTimeout(() => window.location.reload(), 1200);
       } else {
-        notify(data.error || 'Failed to save class.', 'error');
+        notify(data.error || 'Failed to save course.', 'error');
       }
+    });
+
+    // 9. Prune & Delete Content Rows
+    document.querySelectorAll<HTMLButtonElement>('[data-delete-type]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const type = btn.dataset.deleteType;
+        const id = btn.dataset.deleteId;
+        const name = btn.dataset.deleteName || id;
+        if (!type || !id) return;
+
+        if (!confirm(`Are you sure you want to permanently delete "${name}" from ${type}?`)) {
+          return;
+        }
+
+        btn.disabled = true;
+        btn.textContent = '…';
+        notify(`Deleting ${id} from ${type}…`, 'info');
+
+        const data = await postAdmin('/api/admin/content', {
+          action: 'delete-content',
+          type,
+          id,
+        });
+
+        if (data.ok) {
+          notify(data.message || `Deleted ${id}.`, 'success');
+          document.querySelector(`[data-item-row="${type}-${id}"]`)?.remove();
+        } else {
+          btn.disabled = false;
+          btn.textContent = '✕';
+          notify(data.error || 'Failed to delete record.', 'error');
+        }
+      });
     });
   </script>
 </AdminLayout>
@@ -280,7 +778,15 @@ const classes = await getCollection('classes').catch(() => []);
 
   .module-header {
     border-bottom: 1px solid var(--border-hairline);
-    padding-bottom: 1rem;
+    padding-bottom: 1.25rem;
+  }
+
+  .header-split {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    flex-wrap: wrap;
+    gap: 1.25rem;
   }
 
   .module-kicker {
@@ -290,7 +796,7 @@ const classes = await getCollection('classes').catch(() => []);
     color: var(--accent);
   }
 
-  .module-header h2 {
+  .header-split h2 {
     margin: 0.25rem 0 0.25rem;
     font-size: var(--step-1);
     font-weight: 500;
@@ -302,13 +808,97 @@ const classes = await getCollection('classes').catch(() => []);
     color: var(--text-secondary);
   }
 
-  .admin-grid {
+  .telemetry-stats {
+    display: flex;
+    gap: 0.75rem;
+  }
+
+  .stat-box {
+    display: flex;
+    flex-direction: column;
+    padding: 0.5rem 0.85rem;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-hairline);
+    border-radius: 0.375rem;
+    min-width: 90px;
+  }
+
+  .stat-number {
+    font-family: var(--font-mono);
+    font-size: 1.15rem;
+    font-weight: 600;
+    color: var(--accent);
+  }
+
+  .stat-label {
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    color: var(--text-tertiary);
+    letter-spacing: 0.05em;
+  }
+
+  /* Content Tab Bar */
+  .content-tab-bar {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    border-bottom: 1px solid var(--border-hairline);
+    padding-bottom: 0.5rem;
+  }
+
+  .tab-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.55rem 0.95rem;
+    border-radius: 0.375rem;
+    border: 1px solid var(--border-hairline);
+    background: var(--bg-surface);
+    color: var(--text-secondary);
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    letter-spacing: 0.04em;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+
+  .tab-btn:hover {
+    color: var(--text-primary);
+    border-color: var(--accent);
+  }
+
+  .tab-btn.is-active {
+    background: var(--bg-elevated);
+    color: var(--accent);
+    border-color: var(--accent);
+    box-shadow: 0 0 0 1px var(--accent);
+  }
+
+  .badge-count {
+    padding: 0.1rem 0.4rem;
+    border-radius: 9999px;
+    background: var(--bg-canvas);
+    font-size: 0.7rem;
+    color: var(--text-tertiary);
+  }
+
+  .tab-btn.is-active .badge-count {
+    background: color-mix(in oklch, var(--accent) 20%, transparent);
+    color: var(--accent);
+  }
+
+  /* Layout grids */
+  .two-col-layout {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(min(100%, 540px), 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 500px), 1fr));
     gap: 1.5rem;
   }
 
-  .admin-panel {
+  .max-w-form {
+    max-width: 880px;
+  }
+
+  .panel-card {
     padding: 1.5rem;
     border-radius: 0.75rem;
     border: 1px solid var(--border-hairline);
@@ -318,55 +908,27 @@ const classes = await getCollection('classes').catch(() => []);
     gap: 1.25rem;
   }
 
-  .panel-head h3 {
-    margin: 0.25rem 0 0;
+  .card-kicker {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.1em;
+    color: var(--accent);
+  }
+
+  .card-head h3 {
+    margin: 0.2rem 0 0.25rem;
     font-size: 1.05rem;
     font-weight: 500;
   }
 
-  .doi-bar {
-    display: flex;
-    gap: 0.5rem;
-    flex-wrap: wrap;
+  .card-desc {
+    margin: 0;
+    font-size: 0.82rem;
+    color: var(--text-secondary);
   }
 
-  .doi-bar input {
-    flex: 1;
-    min-width: 220px;
-    padding: 0.6rem 0.8rem;
-    border-radius: 0.375rem;
-    border: 1px solid var(--border-hairline);
-    background: var(--bg-canvas);
-    color: var(--text-primary);
-    font-family: inherit;
-    font-size: 0.85rem;
-  }
-
-  .doi-bar input:focus {
-    outline: none;
-    border-color: var(--accent);
-  }
-
-  .btn-accent {
-    padding: 0.6rem 0.95rem;
-    border-radius: 0.375rem;
-    background: color-mix(in oklch, var(--accent) 18%, var(--bg-surface));
-    border: 1px solid var(--accent);
-    color: var(--text-primary);
-    font-family: var(--font-mono);
-    font-size: 0.78rem;
-    letter-spacing: 0.05em;
-    cursor: pointer;
-    transition: all 0.18s ease;
-    white-space: nowrap;
-  }
-
-  .btn-accent:hover {
-    background: var(--accent);
-    color: var(--bg-canvas);
-  }
-
-  .admin-form {
+  /* Form controls */
+  .editor-form {
     display: flex;
     flex-direction: column;
     gap: 1rem;
@@ -374,22 +936,27 @@ const classes = await getCollection('classes').catch(() => []);
 
   .form-row-2 {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
     gap: 0.85rem;
   }
 
-  .admin-form label {
+  .form-row-3 {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 0.85rem;
+  }
+
+  .editor-form label {
     display: flex;
     flex-direction: column;
     gap: 0.35rem;
     font-family: var(--font-mono);
     font-size: 0.75rem;
-    letter-spacing: 0.04em;
     color: var(--text-secondary);
   }
 
-  .admin-form input,
-  .admin-form textarea,
+  .editor-form input,
+  .editor-form textarea,
   .admin-select {
     padding: 0.6rem 0.8rem;
     border-radius: 0.375rem;
@@ -400,11 +967,224 @@ const classes = await getCollection('classes').catch(() => []);
     font-size: 0.88rem;
   }
 
-  .admin-form input:focus,
-  .admin-form textarea:focus,
+  .editor-form input:focus,
+  .editor-form textarea:focus,
   .admin-select:focus {
     outline: none;
     border-color: var(--accent);
+    box-shadow: 0 0 0 1px var(--accent);
+  }
+
+  .mono-code {
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+  }
+
+  /* Importer stack */
+  .importer-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+  }
+
+  .input-action-row {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  .input-action-row input {
+    flex: 1;
+    min-width: 220px;
+    padding: 0.6rem 0.8rem;
+    border-radius: 0.375rem;
+    border: 1px solid var(--border-hairline);
+    background: var(--bg-canvas);
+    color: var(--text-primary);
+  }
+
+  .btn-accent {
+    padding: 0.6rem 1rem;
+    border-radius: 0.375rem;
+    background: color-mix(in oklch, var(--accent) 18%, var(--bg-surface));
+    border: 1px solid var(--accent);
+    color: var(--text-primary);
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    cursor: pointer;
+  }
+
+  .btn-accent:hover {
+    background: var(--accent);
+    color: var(--bg-canvas);
+  }
+
+  .bibtex-paste-box {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+  }
+
+  .mini-label {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    color: var(--text-tertiary);
+    letter-spacing: 0.05em;
+  }
+
+  .bibtex-paste-box textarea {
+    padding: 0.6rem 0.8rem;
+    border-radius: 0.375rem;
+    border: 1px solid var(--border-hairline);
+    background: var(--bg-canvas);
+    color: var(--text-primary);
+    font-family: var(--font-mono);
+    font-size: 0.76rem;
+  }
+
+  .btn-outline-sm {
+    align-self: flex-start;
+    padding: 0.35rem 0.65rem;
+    border-radius: 0.25rem;
+    border: 1px solid var(--border-hairline);
+    background: var(--bg-surface);
+    color: var(--text-primary);
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    cursor: pointer;
+  }
+
+  .btn-outline-sm:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  /* Repeaters (Chapters & Weeks) */
+  .repeater-section {
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+    padding: 1.25rem;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-hairline);
+    border-radius: 0.5rem;
+  }
+
+  .repeater-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid color-mix(in oklch, var(--border-hairline) 60%, transparent);
+    padding-bottom: 0.5rem;
+  }
+
+  .repeater-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+  }
+
+  .repeater-section :global(.repeater-item) {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    padding: 0.65rem 0.85rem;
+    background: var(--bg-canvas);
+    border: 1px solid var(--border-hairline);
+    border-radius: 0.45rem;
+    transition: all 0.15s ease;
+  }
+
+  .repeater-section :global(.repeater-item:hover) {
+    border-color: color-mix(in oklch, var(--accent) 45%, var(--border-hairline));
+  }
+
+  .repeater-section :global(.ch-num),
+  .repeater-section :global(.wk-num) {
+    width: 65px;
+    flex-shrink: 0;
+    padding: 0.6rem 0.4rem;
+    border-radius: 0.35rem;
+    border: 1px solid var(--border-hairline);
+    background: var(--bg-elevated);
+    color: var(--accent);
+    font-family: var(--font-mono);
+    font-weight: 600;
+    font-size: 0.82rem;
+    text-align: center;
+  }
+
+  .repeater-section :global(.ch-title),
+  .repeater-section :global(.wk-topic) {
+    flex: 1;
+    min-width: 160px;
+    padding: 0.6rem 0.8rem;
+    border-radius: 0.35rem;
+    border: 1px solid var(--border-hairline);
+    background: var(--bg-surface);
+    color: var(--text-primary);
+    font-family: inherit;
+    font-size: 0.85rem;
+  }
+
+  .repeater-section :global(.ch-summary) {
+    flex: 2;
+    min-width: 220px;
+    padding: 0.6rem 0.8rem;
+    border-radius: 0.35rem;
+    border: 1px solid var(--border-hairline);
+    background: var(--bg-surface);
+    color: var(--text-primary);
+    font-family: inherit;
+    font-size: 0.85rem;
+  }
+
+  .repeater-section :global(.wk-readings) {
+    flex: 2;
+    min-width: 220px;
+    padding: 0.6rem 0.8rem;
+    border-radius: 0.35rem;
+    border: 1px solid var(--border-hairline);
+    background: var(--bg-surface);
+    color: var(--text-primary);
+    font-family: inherit;
+    font-size: 0.82rem;
+    line-height: 1.4;
+    resize: vertical;
+  }
+
+  .repeater-section :global(.ch-num:focus),
+  .repeater-section :global(.wk-num:focus),
+  .repeater-section :global(.ch-title:focus),
+  .repeater-section :global(.wk-topic:focus),
+  .repeater-section :global(.ch-summary:focus),
+  .repeater-section :global(.wk-readings:focus) {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 1px var(--accent);
+  }
+
+  .repeater-section :global(.btn-remove-row) {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    flex-shrink: 0;
+    border-radius: 0.35rem;
+    border: 1px solid color-mix(in oklch, oklch(65% 0.2 25) 35%, transparent);
+    background: color-mix(in oklch, oklch(65% 0.2 25) 10%, transparent);
+    color: oklch(78% 0.16 25);
+    cursor: pointer;
+    font-size: 0.85rem;
+    transition: all 0.15s ease;
+  }
+
+  .repeater-section :global(.btn-remove-row:hover) {
+    background: oklch(65% 0.2 25);
+    color: #fff;
+    border-color: oklch(65% 0.2 25);
+    transform: scale(1.05);
   }
 
   .btn-primary {
@@ -418,7 +1198,7 @@ const classes = await getCollection('classes').catch(() => []);
     letter-spacing: 0.05em;
     cursor: pointer;
     transition: all 0.18s ease;
-    margin-top: 0.35rem;
+    margin-top: 0.5rem;
   }
 
   .btn-primary:hover {
@@ -426,88 +1206,125 @@ const classes = await getCollection('classes').catch(() => []);
     color: var(--bg-canvas);
   }
 
-  /* Collections Ledger */
-  .ledger-section {
-    padding: 1.5rem;
-    border-radius: 0.75rem;
-    border: 1px solid var(--border-hairline);
-    background: var(--bg-surface);
+  /* Master Ledger Section */
+  .ledger-stack {
     display: flex;
     flex-direction: column;
-    gap: 1.25rem;
+    gap: 2rem;
   }
 
-  .ledger-header h3 {
+  .ledger-box {
+    border-radius: 0.75rem;
+    border: 1px solid var(--border-hairline);
+    background: var(--bg-elevated);
+    overflow: hidden;
+  }
+
+  .box-head {
+    padding: 1.25rem 1.5rem;
+    border-bottom: 1px solid var(--border-hairline);
+    background: var(--bg-surface);
+  }
+
+  .box-head h3 {
     margin: 0.2rem 0 0;
     font-size: 1.05rem;
     font-weight: 500;
   }
 
-  .ledger-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(min(100%, 360px), 1fr));
-    gap: 1.5rem;
+  .table-wrap {
+    overflow-x: auto;
   }
 
-  .ledger-card {
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
+  .admin-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.84rem;
+    text-align: left;
   }
 
-  .ledger-title {
-    margin: 0;
+  .admin-table th {
+    padding: 0.65rem 1.25rem;
     font-family: var(--font-mono);
-    font-size: 0.82rem;
-    letter-spacing: 0.08em;
-    color: var(--accent);
+    font-size: 0.72rem;
+    color: var(--text-secondary);
     border-bottom: 1px solid var(--border-hairline);
-    padding-bottom: 0.4rem;
-  }
-
-  .ledger-list {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-    max-height: 280px;
-    overflow-y: auto;
-  }
-
-  .ledger-item {
-    display: flex;
-    align-items: flex-start;
-    gap: 0.65rem;
-    padding: 0.45rem 0.65rem;
-    border-radius: 0.375rem;
-    background: var(--bg-elevated);
-    border: 1px solid var(--border-hairline);
-    font-size: 0.82rem;
-  }
-
-  .ledger-year,
-  .ledger-code {
-    font-family: var(--font-mono);
-    font-size: 0.75rem;
-    font-weight: 600;
-    color: var(--accent);
-    padding: 0.15rem 0.35rem;
     background: var(--bg-surface);
-    border-radius: 0.25rem;
+  }
+
+  .admin-table td {
+    padding: 0.75rem 1.25rem;
+    border-bottom: 1px solid color-mix(in oklch, var(--border-hairline) 40%, transparent);
+  }
+
+  .admin-table tr:hover td {
+    background: color-mix(in oklch, var(--accent) 4%, transparent);
+  }
+
+  .mono {
+    font-family: var(--font-mono);
+    color: var(--accent);
     white-space: nowrap;
   }
 
-  .ledger-info {
-    display: flex;
-    flex-direction: column;
-    gap: 0.15rem;
+  .mono-doi {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    color: var(--text-tertiary);
   }
 
-  .ledger-venue,
-  .ledger-term {
-    font-size: 0.74rem;
+  .sub-text {
+    font-weight: 400;
     color: var(--text-secondary);
+  }
+
+  .level-pill {
+    padding: 0.15rem 0.45rem;
+    border-radius: 0.25rem;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-hairline);
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    color: var(--text-secondary);
+  }
+
+  .text-right {
+    text-align: right;
+  }
+
+  .row-actions {
+    display: inline-flex;
+    gap: 0.4rem;
+  }
+
+  .btn-table-view {
+    padding: 0.25rem 0.55rem;
+    border-radius: 0.25rem;
+    border: 1px solid var(--border-hairline);
+    background: var(--bg-surface);
+    color: var(--text-primary);
+    text-decoration: none;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+  }
+
+  .btn-table-view:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  .btn-table-delete {
+    padding: 0.25rem 0.55rem;
+    border-radius: 0.25rem;
+    border: 1px solid color-mix(in oklch, oklch(65% 0.2 25) 30%, transparent);
+    background: transparent;
+    color: oklch(75% 0.16 25);
+    cursor: pointer;
+    font-size: 0.75rem;
+  }
+
+  .btn-table-delete:hover {
+    background: color-mix(in oklch, oklch(65% 0.2 25) 20%, transparent);
+    border-color: oklch(75% 0.16 25);
   }
 </style>
