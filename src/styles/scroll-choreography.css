@@ -1,6 +1,6 @@
 @layer layout {
   html.portfolio-scroller {
-    scroll-behavior: auto;
+    scroll-behavior: smooth;
     scrollbar-width: none;
     overflow-x: hidden;
     timeline-scope: --stage-sky, --stage-header, --stage-workspace;
@@ -12,14 +12,24 @@
 
   .snap-stage {
     position: relative;
-    block-size: 100vh;
-    block-size: 100dvh;
+    min-block-size: 100vh;
+    min-block-size: 100dvh;
     inline-size: 100%;
   }
 
-  #stage-1 { view-timeline: --stage-sky block; }
-  #stage-2 { view-timeline: --stage-header block; }
-  #stage-3 { view-timeline: --stage-workspace block; }
+  #stage-1 {
+    block-size: 100dvh;
+    view-timeline: --stage-sky block;
+  }
+  #stage-2 {
+    min-block-size: 100dvh;
+    block-size: auto;
+    view-timeline: --stage-header block;
+  }
+  #stage-3 {
+    block-size: 100dvh;
+    view-timeline: --stage-workspace block;
+  }
 
   /* Fixed Constellation Sky Backdrop */
   .sky-backdrop {
@@ -27,7 +37,7 @@
     inset: 0;
     z-index: 0;
     isolation: isolate;
-    transition: opacity 0.42s cubic-bezier(0.22, 1, 0.36, 1);
+    transition: opacity 0.65s cubic-bezier(0.16, 1, 0.3, 1);
   }
 
   body[data-stage="stage-2"] .sky-backdrop {
@@ -42,7 +52,7 @@
     position: fixed;
     inset-block-start: 0;
     inset-inline: 0;
-    z-index: 30;
+    z-index: 40;
     pointer-events: none;
   }
 
@@ -63,240 +73,160 @@
     background: color-mix(in oklab, var(--bg-surface) 82%, transparent);
     backdrop-filter: blur(16px);
     border-block-end: 1px solid var(--border-subtle);
-    overflow: hidden;
-    transition:
-      background 1.2s cubic-bezier(0.16, 1, 0.3, 1),
-      border-color 1.2s cubic-bezier(0.16, 1, 0.3, 1);
-  }
-
-  /* Every time the site loads, expand the title bar in height and draw two-way pointed arrows in & out */
-  .persistent-header.is-load-expanding {
-    animation: header-neutral-height-expand 3.1s cubic-bezier(0.22, 1, 0.36, 1) 0.15s 1 both;
-    --animation-reduced: none;
-  }
-
-  @keyframes header-neutral-height-expand {
-    0% {
-      block-size: var(--header-height);
-      border-block-end-color: var(--border-subtle);
-      box-shadow: 0 0 0 rgba(218, 195, 142, 0);
-    }
-    24% {
-      block-size: calc(var(--header-height) + 1.65rem);
-      border-block-end-color: rgba(218, 195, 142, 0.55);
-      box-shadow:
-        0 14px 36px -10px rgba(0, 0, 0, 0.72),
-        inset 0 -1px 0 rgba(218, 195, 142, 0.35);
-    }
-    66% {
-      block-size: calc(var(--header-height) + 1.65rem);
-      border-block-end-color: rgba(218, 195, 142, 0.45);
-      box-shadow:
-        0 14px 36px -10px rgba(0, 0, 0, 0.72),
-        inset 0 -1px 0 rgba(218, 195, 142, 0.25);
-    }
-    100% {
-      block-size: var(--header-height);
-      border-block-end-color: var(--border-subtle);
-      box-shadow: 0 0 0 rgba(218, 195, 142, 0);
-    }
-  }
-
-  .header-neutral-cue {
-    position: absolute;
-    inset-block: 0;
-    inset-inline-start: calc(50% + 3.2rem);
-    display: flex;
-    align-items: center;
-    gap: 0.45rem;
-    pointer-events: none;
-    opacity: 0;
-  }
-
-  .persistent-header.is-load-expanding .header-neutral-cue {
-    animation: neutral-cue-visibility 3.4s cubic-bezier(0.22, 1, 0.36, 1) 0.15s 1 both;
-    --animation-reduced: none;
-  }
-
-  .neutral-arrow-svg {
-    width: 22px;
-    height: 38px;
-    flex-shrink: 0;
     overflow: visible;
+    transition:
+      background 0.8s cubic-bezier(0.16, 1, 0.3, 1),
+      border-color 0.8s cubic-bezier(0.16, 1, 0.3, 1);
   }
 
-  .neutral-draw-line,
-  .neutral-draw-head {
-    stroke: var(--accent);
-    stroke-width: 1.45;
-    stroke-linecap: round;
-    stroke-linejoin: round;
-    stroke-dasharray: 100;
-    stroke-dashoffset: 100;
-    filter: drop-shadow(0 0 6px rgba(218, 195, 142, 0.45));
-  }
 
-  .persistent-header.is-load-expanding .neutral-draw-line {
-    animation: neutral-arrow-stroke-draw 3.4s cubic-bezier(0.22, 1, 0.36, 1) 0.15s 1 both;
-    --animation-reduced: none;
-  }
-
-  .persistent-header.is-load-expanding .neutral-draw-head {
-    animation: neutral-arrow-head-draw 3.4s cubic-bezier(0.22, 1, 0.36, 1) 0.15s 1 both;
-    --animation-reduced: none;
-  }
-
-  .neutral-zone-copy {
-    display: flex;
-    flex-direction: column;
-    gap: 0.08rem;
-    line-height: 1.2;
-    white-space: nowrap;
-  }
-
-  .neutral-zone-title {
-    font-family: var(--font-mono);
-    font-size: 0.56rem;
-    font-weight: 600;
-    letter-spacing: 0.2em;
-    color: var(--accent);
-    text-transform: uppercase;
-  }
-
-  .neutral-zone-sub {
-    font-family: var(--font-mono);
-    font-size: 0.54rem;
-    letter-spacing: 0.06em;
-    color: var(--text-secondary);
-  }
-
-  @keyframes neutral-cue-visibility {
-    0%, 5% {
-      opacity: 0;
-      transform: translateY(-2px);
-    }
-    20%, 74% {
-      opacity: 0.92;
-      transform: translateY(0);
-    }
-    96%, 100% {
-      opacity: 0;
-      transform: translateY(-2px);
-    }
-  }
-
-  @keyframes neutral-arrow-stroke-draw {
-    0%, 6% {
-      stroke-dashoffset: 100;
-    }
-    30%, 62% {
-      stroke-dashoffset: 0;
-    }
-    92%, 100% {
-      stroke-dashoffset: 100;
-    }
-  }
-
-  @keyframes neutral-arrow-head-draw {
-    0%, 16% {
-      stroke-dashoffset: 100;
-    }
-    36%, 58% {
-      stroke-dashoffset: 0;
-    }
-    84%, 100% {
-      stroke-dashoffset: 100;
-    }
-  }
 
   /* =====================================================================
-     DEAD-CENTER "DRC" -> SLOW GLIDE LEFT TO SERIF "Duncan R. Cordry"
+     DUAL FIXED STATIONS: IN-SITU INK-DISSOLVE CHOREOGRAPHY (OPTION B)
+     - Station 1: Viewport Dead-Center Monogram "DRC" (Stage 1 Zenith)
+     - Station 2: Left-Docked Classical Serif "Duncan R. Cordry" (Stage 2/3 Folio)
+     Both remain strictly stationary in their respective coordinate positions.
+     Transition occurs via symmetrical capillary ink dispersion and soak-in.
      ===================================================================== */
+
+  /* Common Brand Lockup Base */
   .brand-lockup {
     position: absolute;
     inset-block: 0;
-    inset-inline-start: 50%;
-    transform: translate3d(-50%, 0, 0);
     display: inline-flex;
     align-items: center;
-    justify-content: center;
     text-decoration: none;
     color: var(--text-primary);
-    transition:
-      inset-inline-start 1.65s cubic-bezier(0.16, 1, 0.3, 1),
-      transform 1.65s cubic-bezier(0.16, 1, 0.3, 1);
-    will-change: inset-inline-start, transform;
+    will-change: opacity, filter;
+    backface-visibility: hidden;
+    transform: translateZ(0);
   }
 
-  /* When scrolled into Stage 2 or Stage 3, glide slowly from center (50%) to left edge */
-  body[data-stage="stage-2"] .brand-lockup,
-  body[data-stage="stage-3"] .brand-lockup {
-    inset-inline-start: clamp(1.25rem, 3vw, 2.25rem);
-    transform: translate3d(0, 0, 0);
-  }
-
-  .brand-text-stage {
-    position: relative;
-    display: inline-flex;
-    align-items: center;
+  /* ---------------------------------------------------------------------
+     Station 1 (Center Station): Monogram "DRC" at 50vw
+     --------------------------------------------------------------------- */
+  .brand-station-center {
+    inset-inline-start: 50%;
+    transform: translate3d(-50%, 0, 0);
     justify-content: center;
+    opacity: 1;
+    filter: blur(0px) contrast(1) brightness(1);
+    pointer-events: auto;
+    transition:
+      opacity var(--ink-dissolve-duration, 0.52s) var(--ink-dissolve-ease, cubic-bezier(0.18, 0.85, 0.25, 1)),
+      filter var(--ink-dissolve-duration, 0.52s) var(--ink-dissolve-ease, cubic-bezier(0.18, 0.85, 0.25, 1));
   }
 
-  /* Stage 1 (Dead-Center): "DRC" in engraved Classical Serif */
   .header-title-drc {
     display: inline-block;
-    font-family: var(--font-serif);
+    font-family: var(--font-display);
     font-size: clamp(1.3rem, 2.2vw, 1.62rem);
     font-weight: 500;
     letter-spacing: 0.26em;
     /* Offset trailing letter-spacing so D-R-C is optically dead-center at 50vw */
     padding-inline-start: 0.26em;
-    color: var(--accent);
-    text-shadow: 0 0 22px color-mix(in oklab, var(--accent) 42%, transparent);
-    opacity: 1;
-    transform: translate3d(0, 0, 0) scale(1);
+    color: var(--ink-brand);
+    animation: drc-ink-drying 3.4s cubic-bezier(0.2, 0.8, 0.25, 1) both;
+    transform: translateZ(0);
     transition:
-      opacity 1.15s cubic-bezier(0.16, 1, 0.3, 1),
-      transform 1.35s cubic-bezier(0.16, 1, 0.3, 1);
+      letter-spacing var(--ink-dissolve-duration, 0.52s) var(--ink-dissolve-ease, cubic-bezier(0.18, 0.85, 0.25, 1)),
+      color 1.6s ease;
   }
 
-  /* Stage 2 & 3 (Slid Left): "Duncan R. Cordry" in Classical Serif */
+  @keyframes drc-ink-drying {
+    0% {
+      color: var(--accent-gold);
+      text-shadow: 0 0 16px color-mix(in oklch, var(--accent-gold) 65%, transparent);
+      filter: drop-shadow(0 0 6px rgba(220, 185, 110, 0.45));
+    }
+    45% {
+      color: var(--accent-gold);
+      text-shadow: 0 0 8px color-mix(in oklch, var(--accent-gold) 35%, transparent);
+    }
+    100% {
+      color: var(--text-primary);
+      text-shadow: none;
+      filter: none;
+    }
+  }
+
+  :root:has(> head > meta[name="color-scheme"][content="light"]) .header-title-drc {
+    animation-name: drc-ink-drying-light;
+  }
+
+  @keyframes drc-ink-drying-light {
+    0% {
+      color: var(--ink-wet-light);
+      filter: blur(0.4px);
+    }
+    50% {
+      color: var(--ink-wet-light);
+      filter: blur(0.1px);
+    }
+    100% {
+      color: var(--text-primary-light);
+      filter: none;
+    }
+  }
+
+  /* ---------------------------------------------------------------------
+     Station 2 (Left Station): Full Title "Duncan R. Cordry" at Left Margin
+     --------------------------------------------------------------------- */
+  .brand-station-left {
+    inset-inline-start: clamp(1.25rem, 3vw, 2.25rem);
+    transform: translate3d(0, 0, 0);
+    justify-content: flex-start;
+    opacity: 0;
+    filter: blur(var(--ink-dissolve-blur, 3.5px)) contrast(var(--ink-dissolve-contrast, 1.42)) brightness(var(--ink-dissolve-brightness, 1.12));
+    pointer-events: none;
+    transition:
+      opacity var(--ink-dissolve-duration, 0.52s) var(--ink-dissolve-ease, cubic-bezier(0.18, 0.85, 0.25, 1)),
+      filter var(--ink-dissolve-duration, 0.52s) var(--ink-dissolve-ease, cubic-bezier(0.18, 0.85, 0.25, 1));
+  }
+
   .header-title-full {
-    position: absolute;
-    inset-inline-start: 0;
-    top: 50%;
+    display: inline-block;
     font-family: var(--font-serif);
     font-size: clamp(1.22rem, 2vw, 1.52rem);
     font-weight: 400;
-    letter-spacing: 0.03em;
+    letter-spacing: 0.05em;
     white-space: nowrap;
     color: var(--text-primary);
-    opacity: 0;
-    pointer-events: none;
-    clip-path: inset(-15% 100% -15% 0);
-    transform: translate3d(0.75rem, -50%, 0);
+    transform: translateZ(0);
     transition:
-      opacity 1.45s cubic-bezier(0.16, 1, 0.3, 1) 0.12s,
-      clip-path 1.65s cubic-bezier(0.16, 1, 0.3, 1) 0.08s,
-      transform 1.65s cubic-bezier(0.16, 1, 0.3, 1) 0.08s;
+      letter-spacing var(--ink-dissolve-duration, 0.52s) var(--ink-dissolve-ease, cubic-bezier(0.18, 0.85, 0.25, 1));
   }
 
-  body[data-stage="stage-2"] .header-title-drc,
-  body[data-stage="stage-3"] .header-title-drc {
+  /* ---------------------------------------------------------------------
+     Stage 2 & Stage 3: Symmetrical In-Situ Ink Dissolve Transitions
+     - Center Station dissolves OUT in-situ (without sliding)
+     - Left Station dissolves IN in-situ (without sliding)
+     --------------------------------------------------------------------- */
+  body[data-stage="stage-2"] .brand-station-center,
+  body[data-stage="stage-3"] .brand-station-center {
     opacity: 0;
-    transform: translate3d(-0.5rem, 0, 0) scale(0.92);
+    filter: blur(var(--ink-dissolve-blur, 3.5px)) contrast(var(--ink-dissolve-contrast, 1.42)) brightness(var(--ink-dissolve-brightness, 1.12));
     pointer-events: none;
   }
 
-  body[data-stage="stage-2"] .header-title-full,
-  body[data-stage="stage-3"] .header-title-full {
-    opacity: 1;
-    pointer-events: auto;
-    clip-path: inset(-15% 0% -15% 0);
-    transform: translate3d(0, -50%, 0);
+  body[data-stage="stage-2"] .brand-station-center .header-title-drc,
+  body[data-stage="stage-3"] .brand-station-center .header-title-drc {
+    letter-spacing: 0.29em;
   }
 
-  /* Right-side Hardware Actions & LED Socket */
+  body[data-stage="stage-2"] .brand-station-left,
+  body[data-stage="stage-3"] .brand-station-left {
+    opacity: 1;
+    filter: blur(0px) contrast(1) brightness(1);
+    pointer-events: auto;
+  }
+
+  body[data-stage="stage-2"] .brand-station-left .header-title-full,
+  body[data-stage="stage-3"] .brand-station-left .header-title-full {
+    letter-spacing: 0.03em;
+  }
+
+  /* Right-side Scriptorium Study Controls */
   .header-actions {
     display: flex;
     align-items: center;
@@ -304,48 +234,39 @@
     z-index: 2;
   }
 
-  .header-telemetry-pill {
+  .header-folio-seal {
     display: none;
     align-items: center;
     gap: 0.45rem;
-    padding: 0.28rem 0.65rem;
-    border-radius: 99px;
+    padding: 0.22rem 0.65rem;
+    border-radius: 2px;
     border: 1px solid var(--border-subtle);
-    background: color-mix(in oklab, var(--bg-canvas) 75%, transparent);
+    background: color-mix(in oklab, var(--bg-surface) 88%, var(--paper-vellum, #f4efe6) 12%);
     font-family: var(--font-mono);
     font-size: 0.65rem;
     letter-spacing: 0.14em;
-    color: var(--text-muted);
+    color: var(--text-secondary);
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.05);
+  }
+
+  .header-folio-seal .seal-mark {
+    font-family: var(--font-serif);
+    font-size: 0.85rem;
+    color: var(--accent);
+    line-height: 1;
+    user-select: none;
+  }
+
+  .header-folio-seal .seal-text {
+    font-size: 0.62rem;
+    letter-spacing: 0.16em;
+    font-weight: 500;
   }
 
   @media (min-width: 900px) {
-    .header-telemetry-pill {
+    .header-folio-seal {
       display: inline-flex;
     }
-  }
-
-  /* Physical Glass/Epoxy LED Socket (from portyxb InstrumentPanel.css) */
-  .led-socket {
-    width: 11px;
-    height: 11px;
-    border-radius: 50%;
-    background: linear-gradient(135deg, #3a4656 0%, #11151c 50%, #293240 100%);
-    position: relative;
-    display: inline-block;
-    box-shadow:
-      0 1px 1px rgba(255, 255, 255, 0.15),
-      inset 0 1px 2px rgba(0, 0, 0, 0.85);
-  }
-
-  .led-socket::before {
-    content: '';
-    position: absolute;
-    inset: 2px;
-    border-radius: 50%;
-    background: radial-gradient(circle at 35% 35%, #ffffff 0%, #5effa4 25%, #0ea5e9 70%, #064e3b 100%);
-    box-shadow:
-      0 0 6px rgba(94, 255, 164, 0.85),
-      0 0 12px rgba(94, 255, 164, 0.35);
   }
 
   /* Scroll-Linked Horizontal Navigation Strip */
@@ -362,8 +283,8 @@
     opacity: 0;
     transform: translate3d(0, -0.35rem, 0);
     transition:
-      opacity 0.34s cubic-bezier(0.22, 1, 0.36, 1),
-      transform 0.34s cubic-bezier(0.22, 1, 0.36, 1);
+      opacity 0.65s cubic-bezier(0.16, 1, 0.3, 1),
+      transform 0.65s cubic-bezier(0.16, 1, 0.3, 1);
   }
 
   body[data-stage="stage-2"] .nav-strip-wrapper,
@@ -384,21 +305,177 @@
     transition: transform 0.36s cubic-bezier(0.22, 1, 0.36, 1);
   }
 
-  @media (prefers-reduced-motion: reduce) {
-    .persistent-header.is-load-expanding,
-    .persistent-header.is-load-expanding .header-neutral-cue,
-    .persistent-header.is-load-expanding .neutral-draw-line,
-    .persistent-header.is-load-expanding .neutral-draw-head {
-      animation: var(--animation-reduced) !important;
-    }
+  /* =====================================================================
+     MONOGRAM CENTERING, GOLDEN GLOW, AND SNAP-TO-TOP LOADING CHOREOGRAPHY
+     ===================================================================== */
 
+  /* Stage: Centering & Guiding (Viewport Dead-Center Staging) */
+  html[data-drc-state="centering"] .brand-lockup,
+  html[data-drc-state="guiding"] .brand-lockup {
+    opacity: 0 !important;
+    pointer-events: none !important;
+  }
+
+  /* Radiant golden glowing text tint for "DRC" during centering & guiding */
+  html[data-drc-state="centering"] .header-title-drc,
+  html[data-drc-state="guiding"] .header-title-drc {
+    color: var(--accent-gold) !important;
+    text-shadow:
+      0 0 16px color-mix(in oklch, var(--accent-gold) 75%, transparent),
+      0 0 32px color-mix(in oklch, var(--accent-gold) 45%, transparent);
+    filter: drop-shadow(0 0 8px rgba(220, 185, 110, 0.55));
+    animation: drc-intro-gold-pulse 1.1s ease-in-out infinite alternate !important;
+  }
+
+  @keyframes drc-intro-gold-pulse {
+    0% {
+      text-shadow:
+        0 0 12px color-mix(in oklch, var(--accent-gold) 60%, transparent),
+        0 0 24px color-mix(in oklch, var(--accent-gold) 30%, transparent);
+      filter: drop-shadow(0 0 5px rgba(220, 185, 110, 0.35));
+    }
+    100% {
+      text-shadow:
+        0 0 24px color-mix(in oklch, var(--accent-gold) 90%, transparent),
+        0 0 44px color-mix(in oklch, var(--accent-gold) 55%, transparent);
+      filter: drop-shadow(0 0 12px rgba(220, 185, 110, 0.7));
+    }
+  }
+
+  /* Header chrome background & border hold transparent during centering */
+  html[data-drc-state="centering"] .persistent-header {
+    background: transparent !important;
+    border-block-end-color: transparent !important;
+    backdrop-filter: blur(0px) !important;
+    -webkit-backdrop-filter: blur(0px) !important;
+  }
+
+  html[data-drc-state="centering"] .header-actions {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  /* Guiding state: header actions illuminate with the 3 controls */
+  html[data-drc-state="guiding"] .persistent-header {
+    background: color-mix(in oklab, var(--bg-surface) 60%, transparent);
+    border-block-end-color: var(--border-subtle);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    transition: background 0.6s ease, border-color 0.6s ease;
+  }
+
+  html[data-drc-state="guiding"] .header-actions {
+    opacity: 1;
+    pointer-events: auto;
+    transition: opacity 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  /* Illuminated aura highlights on the 3 top bar buttons during onboarding */
+  html[data-drc-state="guiding"] #contact-trigger-btn,
+  html[data-drc-state="guiding"] #accessibility-toggle-btn,
+  html[data-drc-state="guiding"] #theme-toggle-btn {
+    box-shadow: 0 0 0 1.5px var(--accent-gold), 0 0 14px color-mix(in oklch, var(--accent-gold) 65%, transparent);
+    animation: drc-icon-highlight 1.6s ease-in-out infinite alternate;
+  }
+
+  @keyframes drc-icon-highlight {
+    0% {
+      box-shadow: 0 0 0 1.5px var(--accent-gold), 0 0 6px color-mix(in oklch, var(--accent-gold) 45%, transparent);
+    }
+    100% {
+      box-shadow: 0 0 0 2px var(--accent-gold), 0 0 18px color-mix(in oklch, var(--accent-gold) 85%, transparent);
+    }
+  }
+
+  /* Celestial sky and HUD hold lower and dissolved during centering & guiding */
+  html[data-drc-state="centering"] .sky-backdrop,
+  html[data-drc-state="guiding"] .sky-backdrop {
+    opacity: 0 !important;
+    transform: translate3d(0, 36px, 0);
+    pointer-events: none;
+  }
+
+  html[data-drc-state="centering"] .stage-sky-hud,
+  html[data-drc-state="guiding"] .stage-sky-hud {
+    opacity: 0 !important;
+    transform: translate3d(0, 24px, 0);
+    pointer-events: none;
+  }
+
+  /* =====================================================================
+     SNAPPED STATE TRANSITIONS (Universal for every visit)
+     ===================================================================== */
+
+  html[data-drc-state="snapped"] body[data-stage="stage-1"] .brand-station-center {
+    opacity: 1;
+    pointer-events: auto;
+    transition: opacity 0.35s ease 0.32s;
+  }
+
+  html[data-drc-state="snapped"] body[data-stage="stage-1"] .brand-station-left {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  html[data-drc-state="snapped"] body[data-stage="stage-1"] .sky-backdrop {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+    transition:
+      opacity 0.85s cubic-bezier(0.16, 1, 0.3, 1),
+      transform 0.95s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  html[data-drc-state="snapped"] body[data-stage="stage-1"] .stage-sky-hud {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+    pointer-events: auto;
+    transition:
+      opacity 0.85s cubic-bezier(0.16, 1, 0.3, 1) 0.1s,
+      transform 0.95s cubic-bezier(0.16, 1, 0.3, 1) 0.1s;
+  }
+
+  /* Once snapped, the monogram smoothly transitions into normal ink drying */
+  html[data-drc-state="snapped"] .header-title-drc {
+    transition:
+      color 1.6s ease,
+      text-shadow 1.6s ease,
+      filter 1.6s ease;
+  }
+
+  html[data-drc-state="snapped"] .persistent-header {
+    transition:
+      background 0.6s cubic-bezier(0.16, 1, 0.3, 1),
+      border-color 0.6s cubic-bezier(0.16, 1, 0.3, 1),
+      backdrop-filter 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  html[data-drc-state="snapped"] .header-actions {
+    opacity: 1;
+    pointer-events: auto;
+    transition: opacity 0.4s ease;
+  }
+
+  /* Info modal dialog only shows on first visit; hidden on subsequent visits */
+  html[data-drc-visit="subsequent"] #site-intro-guide {
+    display: none !important;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
     .sky-backdrop,
+    .stage-sky-hud,
     .brand-lockup,
+    .brand-station-center,
+    .brand-station-left,
     .header-title-full,
     .header-title-drc,
-    .nav-strip-track {
+    .nav-strip-track,
+    .site-intro-guide {
       animation: none !important;
-      transition: none !important;
+      transition: opacity 0.15s ease !important;
+      transform: none !important;
+      filter: none !important;
+      letter-spacing: normal !important;
     }
   }
 }
+

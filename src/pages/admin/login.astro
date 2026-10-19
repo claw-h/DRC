@@ -8,16 +8,16 @@ const hasError = Astro.url.searchParams.get('error') === 'invalid';
 ---
 
 <BaseLayout
-  title="Sovereign Authentication — DRC Observatory"
-  description="Restricted administrative sign-in for Professor Duncan R. Cordry."
+  title="Sovereign Authentication — The Study"
+  description="Restricted academic archive and study console for Professor Duncan R. Cordry."
 >
   <main class="login-shell">
     <section class="login-card" aria-labelledby="login-heading">
       <div class="login-header">
-        <span class="login-eyebrow">RESTRICTED TELEMETRY TERMINAL</span>
-        <h1 id="login-heading">DRC Sovereign Control Panel</h1>
+        <span class="login-eyebrow scholarly-caps">ACADEMIC ARCHIVE · THE STUDY</span>
+        <h1 id="login-heading">The Study — Sovereign Console</h1>
         <p class="login-sub">
-          Authenticate to manage publications, seminars, constellation shards, and server lifecycle.
+          Authenticate to manage publications, seminars, celestial plates, and archive lifecycle.
         </p>
       </div>
 
@@ -65,13 +65,13 @@ const hasError = Astro.url.searchParams.get('error') === 'invalid';
           />
         </div>
 
-        <button type="submit" class="login-submit">
-          Unlock Observatory Terminal →
+        <button type="submit" class="login-submit scholarly-caps">
+          Enter The Study →
         </button>
       </form>
 
       <footer class="login-footer">
-        <a href="/">← Return to Public Sky Stage</a>
+        <a href="/">← Return to Celestial Atlas</a>
       </footer>
     </section>
   </main>

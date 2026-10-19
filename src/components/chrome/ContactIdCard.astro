@@ -8,19 +8,22 @@ interface Props {
 const { profile } = Astro.props;
 ---
 
-<dialog id="contact-id-card" class="id-card-dialog" closedby="any" aria-labelledby="id-card-name">
+<dialog id="contact-id-card" class="id-card-dialog bookplate-card" closedby="any" aria-labelledby="id-card-name">
   <div class="id-card-surface">
-    <div class="chassis-bolt chassis-bolt--tl"></div>
-    <div class="chassis-bolt chassis-bolt--tr"></div>
-    <div class="chassis-bolt chassis-bolt--bl"></div>
-    <div class="chassis-bolt chassis-bolt--br"></div>
+    <div class="bookplate-corner bookplate-corner--tl" aria-hidden="true">❦</div>
+    <div class="bookplate-corner bookplate-corner--tr" aria-hidden="true">❦</div>
+    <div class="bookplate-corner bookplate-corner--bl" aria-hidden="true">❦</div>
+    <div class="bookplate-corner bookplate-corner--br" aria-hidden="true">❦</div>
 
     <header class="id-card-strip">
       <span style="display: inline-flex; align-items: center; gap: 0.45rem;">
-        <span class="led-socket is-on" aria-hidden="true"></span>
-        <span>{profile.institution.toUpperCase()}</span>
+        <span class="seal-mark" aria-hidden="true">❧</span>
+        <span class="scholarly-caps">{profile.institution}</span>
       </span>
-      <span>ID // {profile.credentialId}</span>
+      <div style="display: inline-flex; align-items: center; gap: 0.65rem;">
+        <span class="scholarly-caps">FOLIO · {profile.credentialId}</span>
+        <button type="button" id="id-card-close-btn" class="id-card-close-btn" aria-label="Close visiting card">✕</button>
+      </div>
     </header>
 
     <div class="id-card-body">
@@ -33,13 +36,9 @@ const { profile } = Astro.props;
           class="id-card-photo"
           onerror="this.onerror=null;this.src='/images/duncan-cordry-portrait.svg';"
         />
-        <span class="photo-reticle photo-reticle--tl" aria-hidden="true"></span>
-        <span class="photo-reticle photo-reticle--tr" aria-hidden="true"></span>
-        <span class="photo-reticle photo-reticle--bl" aria-hidden="true"></span>
-        <span class="photo-reticle photo-reticle--br" aria-hidden="true"></span>
       </div>
       <div class="id-card-identity">
-        <span class="id-card-clearance tabular">VISITING FACULTY // PHILOSOPHY</span>
+        <span class="id-card-clearance scholarly-caps">FACULTY CARTE DE VISITE</span>
         <h2 id="id-card-name" class="id-card-name" style="font-family: var(--font-serif);">{profile.name}</h2>
         <p class="id-card-title">{profile.title}</p>
         <p class="id-card-dept">
@@ -48,13 +47,13 @@ const { profile } = Astro.props;
       </div>
     </div>
 
-    <dl class="id-card-telemetry">
+    <dl class="id-card-telemetry id-card-credentials">
       <div>
-        <dt>ELECTRONIC MAIL</dt>
+        <dt class="scholarly-caps">SCHOLARLY INQUIRY</dt>
         <dd><a href={`mailto:${profile.email}`} style="color: inherit;">{profile.email}</a></dd>
       </div>
       <div>
-        <dt>OFFICE HOURS</dt>
+        <dt class="scholarly-caps">OFFICE &amp; CONSULTATION</dt>
         <dd>{profile.officeHours}</dd>
       </div>
     </dl>
@@ -101,25 +100,58 @@ const { profile } = Astro.props;
     object-position: center top;
   }
 
-  .photo-reticle {
-    position: absolute;
-    width: 8px;
-    height: 8px;
-    border-color: rgba(232, 222, 181, 0.65);
-    pointer-events: none;
+  .bookplate-card {
+    position: relative;
   }
-  .photo-reticle--tl { top: 4px; left: 4px; border-top: 1px solid; border-left: 1px solid; }
-  .photo-reticle--tr { top: 4px; right: 4px; border-top: 1px solid; border-right: 1px solid; }
-  .photo-reticle--bl { bottom: 4px; left: 4px; border-bottom: 1px solid; border-left: 1px solid; }
-  .photo-reticle--br { bottom: 4px; right: 4px; border-bottom: 1px solid; border-right: 1px solid; }
+
+  .bookplate-corner {
+    position: absolute;
+    font-family: var(--font-serif);
+    font-size: 0.95rem;
+    color: color-mix(in oklab, var(--accent) 60%, transparent);
+    user-select: none;
+    line-height: 1;
+    pointer-events: none;
+    z-index: 2;
+  }
+
+  .bookplate-corner--tl { inset-block-start: 0.55rem; inset-inline-start: 0.65rem; }
+  .bookplate-corner--tr { inset-block-start: 0.55rem; inset-inline-end: 0.65rem; }
+  .bookplate-corner--bl { inset-block-end: 0.55rem; inset-inline-start: 0.65rem; }
+  .bookplate-corner--br { inset-block-end: 0.55rem; inset-inline-end: 0.65rem; }
 
   .id-card-clearance {
     font-family: var(--font-mono);
     font-size: 0.58rem;
     letter-spacing: 0.16em;
-    color: #5effa4;
+    color: var(--accent);
     margin-block-end: 0.15rem;
     display: block;
+  }
+
+  .seal-mark {
+    font-family: var(--font-serif);
+    font-size: 0.85rem;
+    color: var(--accent);
+    line-height: 1;
+    user-select: none;
+  }
+
+  .id-card-close-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    font-size: 0.82rem;
+    cursor: pointer;
+    line-height: 1;
+    padding: 0.2rem 0.35rem;
+    border-radius: 4px;
+    transition: color 0.15s, background 0.15s;
+  }
+
+  .id-card-close-btn:hover {
+    color: var(--accent);
+    background: var(--bg-elevated);
   }
 </style>
 
@@ -127,6 +159,7 @@ const { profile } = Astro.props;
   const triggerBtn = document.getElementById('contact-trigger-btn');
   const dialog = document.getElementById('contact-id-card') as HTMLDialogElement | null;
   const copyBtn = document.getElementById('btn-copy-faculty-email') as HTMLButtonElement | null;
+  const closeBtn = document.getElementById('id-card-close-btn');
 
   let supportsDisplayTransition: boolean | undefined;
   function canTransitionDisplay(): boolean {
@@ -165,11 +198,19 @@ const { profile } = Astro.props;
     dialog.close();
   }
 
-  if (!('commandForElement' in HTMLButtonElement.prototype)) {
-    triggerBtn?.addEventListener('click', () => {
-      if (dialog && !dialog.open) dialog.showModal();
-    });
-  }
+  closeBtn?.addEventListener('click', () => {
+    closeIdCard();
+  });
+
+  triggerBtn?.addEventListener('click', (e) => {
+    e.preventDefault();
+    if (!dialog) return;
+    if (dialog.open) {
+      closeIdCard();
+    } else {
+      dialog.showModal();
+    }
+  });
 
   dialog?.addEventListener('cancel', (event) => {
     event.preventDefault();
@@ -197,4 +238,38 @@ const { profile } = Astro.props;
     copyBtn.textContent = '✓ Copied';
     setTimeout(() => (copyBtn.textContent = orig), 1600);
   });
+
+  // 3D Pointer-Tracking Tilt and Specular Highlight for Visiting Card
+  const surface = dialog?.querySelector('.id-card-surface') as HTMLElement | null;
+  const isReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  if (dialog && surface && !isReducedMotion && window.matchMedia('(min-width: 768px)').matches) {
+    let tiltRaf: number | null = null;
+
+    dialog.addEventListener('pointermove', (event) => {
+      if (tiltRaf) cancelAnimationFrame(tiltRaf);
+      tiltRaf = requestAnimationFrame(() => {
+        const rect = surface.getBoundingClientRect();
+        const px = (event.clientX - rect.left) / rect.width;
+        const py = (event.clientY - rect.top) / rect.height;
+
+        if (px >= 0 && px <= 1 && py >= 0 && py <= 1) {
+          const tiltX = (py - 0.5) * -12;
+          const tiltY = (px - 0.5) * 12;
+          surface.style.setProperty('--card-tilt-x', `${tiltX.toFixed(2)}deg`);
+          surface.style.setProperty('--card-tilt-y', `${tiltY.toFixed(2)}deg`);
+          surface.style.setProperty('--card-light-x', `${(px * 100).toFixed(1)}%`);
+          surface.style.setProperty('--card-light-y', `${(py * 100).toFixed(1)}%`);
+        }
+      });
+    });
+
+    dialog.addEventListener('pointerleave', () => {
+      if (tiltRaf) cancelAnimationFrame(tiltRaf);
+      surface.style.setProperty('--card-tilt-x', '0deg');
+      surface.style.setProperty('--card-tilt-y', '0deg');
+      surface.style.setProperty('--card-light-x', '85%');
+      surface.style.setProperty('--card-light-y', '15%');
+    });
+  }
 </script>

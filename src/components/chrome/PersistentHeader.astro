@@ -1,7 +1,9 @@
 ---
 import ThemeToggle from './ThemeToggle.astro';
+import AccessibilityToggle from './AccessibilityToggle.astro';
 import ContactIdCard from './ContactIdCard.astro';
 import NavStrip from './NavStrip.astro';
+import SiteIntroGuide from './SiteIntroGuide.astro';
 import type { FacultyProfile } from '../../lib/system-state';
 
 interface Props {
@@ -15,52 +17,48 @@ const { profile, pubCount, bookCount, classCount } = Astro.props;
 ---
 
 <div class="persistent-chrome">
-  <header class="persistent-header is-load-expanding" id="persistent-header">
-    <!-- Neutral Area Load-Time Calibration Cue: Vertical Two-Way Pointed Arrow + Text -->
-    <div class="header-neutral-cue" aria-hidden="true">
-      <svg class="neutral-arrow-svg" viewBox="0 0 28 48" fill="none">
-        <!-- Vertical two-way shaft drawing outward from center -->
-        <line x1="14" y1="24" x2="14" y2="5" pathLength="100" class="neutral-draw-line" />
-        <line x1="14" y1="24" x2="14" y2="43" pathLength="100" class="neutral-draw-line" />
-        <!-- Top & Bottom Pointed Arrowheads -->
-        <polyline points="9,11 14,4 19,11" pathLength="100" class="neutral-draw-head" />
-        <polyline points="9,37 14,44 19,37" pathLength="100" class="neutral-draw-head" />
-      </svg>
-      <div class="neutral-zone-copy">
-        <span class="neutral-zone-title tabular">NEUTRAL AREA</span>
-        <span class="neutral-zone-sub">(Scroll here to come back up top)</span>
-      </div>
-    </div>
-
-    <!-- Left-docking / Center-origin Brand Lockup: DRC (Dead-Center) -> Glides Left -> Duncan R. Cordry (Serif) -->
+  <header class="persistent-header" id="persistent-header">
+    <!-- Dual Fixed Stations (Option B):
+         1. Center Station: Monogram (Stage 1 Constellation Sky)
+         2. Left Station: Full Classical Serif Name (Stage 2 & 3 Pullup & Folio)
+    -->
     <a
       href="#stage-1"
-      class="brand-lockup"
-      id="header-brand-lockup"
+      class="brand-lockup brand-station-center"
+      id="header-brand-center"
       aria-label={`${profile.name} — Return to Constellation Sky`}
     >
-      <span class="brand-text-stage">
-        <span class="header-title-drc">{profile.monogram}</span>
-        <span class="header-title-full" aria-hidden="true">{profile.name}</span>
-      </span>
+      <span class="header-title-drc">{profile.monogram}</span>
     </a>
 
-    <!-- Right-Docked Persistent Hardware Controls -->
+    <a
+      href="#stage-1"
+      class="brand-lockup brand-station-left"
+      id="header-brand-left"
+      aria-label={`${profile.name} — Return to Constellation Sky`}
+      tabindex="-1"
+      aria-hidden="true"
+    >
+      <span class="header-title-full">{profile.name}</span>
+    </a>
+
+    <!-- Right-Docked Study Controls -->
     <div class="header-actions">
-      <div class="header-telemetry-pill" aria-hidden="true">
-        <span class="led-socket is-on"></span>
-        <span class="telemetry-pill-text tabular" id="header-epoch-readout">OBS // J2000.0</span>
+      <!-- Classical Bookplate / Folio Seal -->
+      <div class="header-folio-seal" aria-hidden="true">
+        <span class="seal-mark">❧</span>
+        <span class="seal-text scholarly-caps" id="header-epoch-readout">FOLIO · J2000.0</span>
       </div>
 
-      <!-- Vintage Telephone Trigger -> Expands into Faculty ID Card -->
+      <!-- Scholarly Visiting Card Trigger -> Expands into Faculty Credentials Card -->
       <button
         type="button"
         id="contact-trigger-btn"
         class="chrome-icon-btn"
         commandfor="contact-id-card"
         command="show-modal"
-        aria-label="Open Faculty Contact ID Card"
-        title="Faculty Contact & Credentials Card"
+        aria-label="Open Faculty Credentials Card"
+        title="Faculty Visiting & Credentials Card"
       >
         <svg
           aria-hidden="true"
@@ -77,9 +75,15 @@ const { profile, pubCount, bookCount, classCount } = Astro.props;
         </svg>
       </button>
 
-      <!-- Day / Night Observatory Mode Toggle -->
+      <!-- Accessibility High-Contrast & Font Mode Toggle -->
+      <AccessibilityToggle />
+
+      <!-- Day / Night Study Mode Toggle -->
       <ThemeToggle />
     </div>
+
+    <!-- First-visit Top Bar Controls Tour -->
+    <SiteIntroGuide />
   </header>
 
   <NavStrip pubCount={pubCount} bookCount={bookCount} classCount={classCount} />
@@ -88,19 +92,29 @@ const { profile, pubCount, bookCount, classCount } = Astro.props;
 <ContactIdCard profile={profile} />
 
 <script>
-  const replayNeutralHeaderIntro = () => {
-    const header = document.getElementById('persistent-header');
-    if (!header) return;
-    header.classList.remove('is-load-expanding');
-    // Force reflow so the height expansion + two-way arrow draw-in/out plays on every page load
-    void header.offsetWidth;
-    header.classList.add('is-load-expanding');
+  const centerStation = document.getElementById('header-brand-center');
+  const leftStation = document.getElementById('header-brand-left');
+
+  const updateStationA11y = (stage?: string) => {
+    const isStage1 = !stage || stage === 'stage-1';
+    if (centerStation) {
+      centerStation.setAttribute('aria-hidden', String(!isStage1));
+      centerStation.setAttribute('tabindex', isStage1 ? '0' : '-1');
+    }
+    if (leftStation) {
+      leftStation.setAttribute('aria-hidden', String(isStage1));
+      leftStation.setAttribute('tabindex', isStage1 ? '-1' : '0');
+    }
   };
 
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', replayNeutralHeaderIntro, { once: true });
-  } else {
-    replayNeutralHeaderIntro();
-  }
-  window.addEventListener('pageshow', replayNeutralHeaderIntro);
+  const observer = new MutationObserver((mutations) => {
+    for (const m of mutations) {
+      if (m.type === 'attributes' && m.attributeName === 'data-stage') {
+        updateStationA11y(document.body.dataset.stage);
+      }
+    }
+  });
+
+  observer.observe(document.body, { attributes: true, attributeFilter: ['data-stage'] });
+  updateStationA11y(document.body.dataset.stage);
 </script>

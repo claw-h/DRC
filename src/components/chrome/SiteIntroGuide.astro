@@ -1,0 +1,608 @@
+---
+// SiteIntroGuide.astro — Archival onboarding tour & loading sequence controller
+---
+
+<!-- Full-viewport solid background curtain (completely covers canvas and page behind) -->
+<div id="intro-curtain" class="intro-curtain" aria-hidden="true"></div>
+
+<!-- Viewport dead-center screen stage for the golden glowing DRC monogram -->
+<div id="intro-center-stage" class="intro-center-stage" aria-hidden="true">
+  <div id="intro-center-monogram" class="intro-center-monogram">
+    DRC
+  </div>
+</div>
+
+<!-- Info Modal Dialog: Explaining the three top bar icons (first visit only) -->
+<div
+  id="site-intro-guide"
+  class="site-intro-modal"
+  role="dialog"
+  aria-label="Observatory Controls Tour"
+  aria-modal="false"
+  style="display: none;"
+>
+  <div class="guide-bookplate-frame">
+    <!-- Intaglio Corner Flourishes -->
+    <div class="guide-corner guide-corner--tl" aria-hidden="true">❦</div>
+    <div class="guide-corner guide-corner--tr" aria-hidden="true">❦</div>
+    <div class="guide-corner guide-corner--bl" aria-hidden="true">❦</div>
+    <div class="guide-corner guide-corner--br" aria-hidden="true">❦</div>
+
+    <div class="guide-pointer-strip" aria-hidden="true">
+      <span class="guide-pointer-cue">▲ OBSERVATORY STUDY CONTROLS</span>
+    </div>
+
+    <div class="guide-header">
+      <span class="guide-rubric scholarly-caps">TOP BAR STUDY CONTROLS</span>
+      <span class="guide-epoch tabular">FOLIO · J2000.0</span>
+    </div>
+
+    <p class="guide-lead">
+      Three essential study instruments stationed in the observatory header:
+    </p>
+
+    <ul class="guide-list" role="list">
+      <li class="guide-item" data-target="contact">
+        <div class="guide-icon-badge" aria-hidden="true">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"></path>
+          </svg>
+        </div>
+        <div class="guide-text">
+          <div class="guide-item-title-row">
+            <span class="guide-item-num tabular">I.</span>
+            <span class="guide-item-title">Visiting Card</span>
+          </div>
+          <span class="guide-item-desc">Faculty credentials, Ashoka University office &amp; research inquiries.</span>
+        </div>
+      </li>
+
+      <li class="guide-item" data-target="a11y">
+        <div class="guide-icon-badge" aria-hidden="true">
+          <span class="guide-badge-aa">Aa</span>
+        </div>
+        <div class="guide-text">
+          <div class="guide-item-title-row">
+            <span class="guide-item-num tabular">II.</span>
+            <span class="guide-item-title">Legibility &amp; Contrast</span>
+          </div>
+          <span class="guide-item-desc">High-contrast monochrome mode and enlarged bold typography.</span>
+        </div>
+      </li>
+
+      <li class="guide-item" data-target="theme">
+        <div class="guide-icon-badge" aria-hidden="true">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <circle cx="12" cy="12" r="4.5"></circle>
+            <path d="M12 2v2.5M12 19.5V22M4.93 4.93l1.77 1.77M17.3 17.3l1.77 1.77M2 12h2.5M19.5 12H22M4.93 19.07l1.77-1.77M17.3 6.7l1.77-1.77"></path>
+          </svg>
+        </div>
+        <div class="guide-text">
+          <div class="guide-item-title-row">
+            <span class="guide-item-num tabular">III.</span>
+            <span class="guide-item-title">Day / Night Atlas</span>
+          </div>
+          <span class="guide-item-desc">Toggle between sunlight vellum atlas and night celestial dark sky.</span>
+        </div>
+      </li>
+    </ul>
+
+    <div class="guide-footer">
+      <span class="guide-dismiss-hint">Click anywhere or press <kbd>Space</kbd></span>
+      <button type="button" class="guide-enter-btn scholarly-caps" id="guide-enter-btn">
+        Enter Folio ↓
+      </button>
+    </div>
+
+    <!-- Auto-advance progress meter -->
+    <div class="guide-progress-bar" aria-hidden="true">
+      <div class="guide-progress-fill" id="guide-progress-fill"></div>
+    </div>
+  </div>
+</div>
+
+<style>
+  /* =====================================================================
+     1. SOLID BACKGROUND CURTAIN (Opaque shield covering the entire screen)
+     ===================================================================== */
+  .intro-curtain {
+    position: fixed;
+    inset: 0;
+    inline-size: 100vw;
+    block-size: 100vh;
+    block-size: 100dvh;
+    background: var(--bg-canvas);
+    z-index: 44;
+    pointer-events: auto;
+    opacity: 1;
+    transition: opacity var(--drc-curtain-fade, 0.65s) cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .intro-curtain.is-dissolved {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  /* =====================================================================
+     2. VIEWPORT DEAD-CENTER MONOGRAM STAGE
+     ===================================================================== */
+  .intro-center-stage {
+    position: fixed;
+    inset: 0;
+    inline-size: 100vw;
+    block-size: 100vh;
+    block-size: 100dvh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 46;
+    pointer-events: none;
+  }
+
+  .intro-center-monogram {
+    display: inline-block;
+    font-family: var(--font-display);
+    font-size: clamp(3.2rem, 7.5vw, 5.5rem);
+    font-weight: 500;
+    letter-spacing: 0.28em;
+    padding-inline-start: 0.28em;
+    color: var(--accent-gold);
+    text-shadow:
+      0 0 20px color-mix(in oklch, var(--accent-gold) 85%, transparent),
+      0 0 45px color-mix(in oklch, var(--accent-gold) 45%, transparent);
+    filter: drop-shadow(0 0 14px rgba(220, 185, 110, 0.7));
+    transform-origin: center center;
+    transform: translate3d(0, 0, 0) scale(1);
+    transition:
+      transform var(--drc-snap-speed, 0.65s) cubic-bezier(0.16, 1, 0.3, 1),
+      opacity var(--drc-snap-speed, 0.65s) ease,
+      filter var(--drc-snap-speed, 0.65s) ease;
+    will-change: transform, opacity;
+    animation: drc-intro-gold-pulse 1.1s ease-in-out infinite alternate;
+  }
+
+  /* Snap to top header position */
+  .intro-center-monogram.is-snapped {
+    transform: translate3d(0, calc(-50dvh + var(--header-height) / 2), 0) scale(0.32);
+    opacity: 0;
+    animation: none;
+  }
+
+  /* =====================================================================
+     3. INFO MODAL DIALOG (First visit only)
+     ===================================================================== */
+  .site-intro-modal {
+    position: fixed;
+    top: calc(var(--header-height) + 0.65rem);
+    inset-inline-end: clamp(1rem, 2.5vw, 2.25rem);
+    width: min(400px, calc(100vw - 2rem));
+    z-index: 70;
+    pointer-events: none;
+    opacity: 0;
+    transform: translate3d(0, -12px, 0);
+    transition:
+      opacity 0.45s cubic-bezier(0.16, 1, 0.3, 1),
+      transform 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .site-intro-modal.is-visible {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+    pointer-events: auto;
+  }
+
+  .guide-bookplate-frame {
+    position: relative;
+    padding: 1.15rem 1.35rem 1rem;
+    border-radius: 0.45rem;
+    border: 1px solid var(--border-subtle);
+    background: color-mix(in oklab, var(--bg-surface) 94%, transparent);
+    backdrop-filter: blur(22px);
+    -webkit-backdrop-filter: blur(22px);
+    box-shadow:
+      0 24px 60px -12px rgba(0, 0, 0, 0.75),
+      inset 0 1px 0 rgba(255, 255, 255, 0.12);
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+  }
+
+  .guide-pointer-strip {
+    font-family: var(--font-mono);
+    font-size: 0.6rem;
+    letter-spacing: 0.16em;
+    color: var(--accent-gold);
+    text-align: right;
+    padding-bottom: 0.15rem;
+  }
+
+  .guide-corner {
+    position: absolute;
+    font-family: var(--font-serif);
+    font-size: 0.85rem;
+    color: color-mix(in oklab, var(--accent) 65%, transparent);
+    user-select: none;
+    line-height: 1;
+    pointer-events: none;
+  }
+
+  .guide-corner--tl { inset-block-start: 0.45rem; inset-inline-start: 0.55rem; }
+  .guide-corner--tr { inset-block-start: 0.45rem; inset-inline-end: 0.55rem; }
+  .guide-corner--bl { inset-block-end: 0.45rem; inset-inline-start: 0.55rem; }
+  .guide-corner--br { inset-block-end: 0.45rem; inset-inline-end: 0.55rem; }
+
+  .guide-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-bottom: 0.35rem;
+    border-bottom: 1px solid var(--border-subtle);
+  }
+
+  .guide-rubric {
+    font-family: var(--font-mono);
+    font-size: 0.64rem;
+    letter-spacing: 0.14em;
+    color: var(--accent);
+    font-weight: 600;
+  }
+
+  .guide-epoch {
+    font-family: var(--font-mono);
+    font-size: 0.62rem;
+    color: var(--text-muted);
+    letter-spacing: 0.08em;
+  }
+
+  .guide-lead {
+    margin: 0;
+    font-family: var(--font-serif);
+    font-size: 0.84rem;
+    font-style: italic;
+    color: var(--text-secondary);
+    line-height: 1.35;
+  }
+
+  .guide-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.55rem;
+  }
+
+  .guide-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.65rem;
+    padding: 0.4rem 0.5rem;
+    border-radius: 4px;
+    border: 1px solid transparent;
+    transition: background 0.2s, border-color 0.2s;
+  }
+
+  .guide-item:hover {
+    background: rgba(255, 255, 255, 0.04);
+    border-color: var(--border-subtle);
+  }
+
+  .guide-icon-badge {
+    inline-size: 26px;
+    block-size: 26px;
+    border-radius: 4px;
+    border: 1px solid var(--border-subtle);
+    background: color-mix(in oklab, var(--bg-surface) 80%, var(--paper-vellum, #f4efe6) 20%);
+    color: var(--accent);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    margin-top: 0.1rem;
+  }
+
+  .guide-badge-aa {
+    font-family: var(--font-serif);
+    font-weight: 600;
+    font-size: 0.8rem;
+    line-height: 1;
+  }
+
+  .guide-text {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+  }
+
+  .guide-item-title-row {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+  }
+
+  .guide-item-num {
+    font-family: var(--font-mono);
+    font-size: 0.64rem;
+    color: var(--accent);
+    font-weight: 600;
+  }
+
+  .guide-item-title {
+    font-family: var(--font-serif);
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    line-height: 1.2;
+  }
+
+  .guide-item-desc {
+    font-family: var(--font-serif);
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    line-height: 1.35;
+  }
+
+  .guide-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    padding-top: 0.45rem;
+    border-top: 1px solid var(--border-subtle);
+    margin-top: 0.1rem;
+  }
+
+  .guide-dismiss-hint {
+    font-family: var(--font-mono);
+    font-size: 0.62rem;
+    color: var(--text-muted);
+    letter-spacing: 0.04em;
+  }
+
+  .guide-dismiss-hint kbd {
+    font-family: var(--font-mono);
+    font-size: 0.58rem;
+    padding: 0.1rem 0.3rem;
+    border-radius: 2px;
+    border: 1px solid var(--border-subtle);
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--accent);
+  }
+
+  .guide-enter-btn {
+    appearance: none;
+    background: color-mix(in oklab, var(--accent) 18%, transparent);
+    border: 1px solid var(--accent);
+    color: var(--text-primary);
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    letter-spacing: 0.1em;
+    padding: 0.32rem 0.72rem;
+    border-radius: 3px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.2s, color 0.2s, transform 0.15s;
+  }
+
+  .guide-enter-btn:hover {
+    background: var(--accent);
+    color: var(--bg-canvas);
+    transform: translateY(-1px);
+  }
+
+  /* Thin Auto-Advance Progress Line */
+  .guide-progress-bar {
+    position: absolute;
+    inset-block-end: 0;
+    inset-inline: 0.45rem;
+    block-size: 2px;
+    border-radius: 1px;
+    overflow: hidden;
+    background: rgba(255, 255, 255, 0.06);
+  }
+
+  .guide-progress-fill {
+    block-size: 100%;
+    inline-size: 0%;
+    background: var(--accent-gold, var(--accent));
+    transform-origin: left;
+  }
+
+  .guide-progress-fill.is-running {
+    inline-size: 100%;
+    transition: inline-size 3.8s linear;
+  }
+
+  @media (max-width: 600px) {
+    .site-intro-modal {
+      inset-inline-end: 1rem;
+      width: calc(100vw - 2rem);
+    }
+    .guide-bookplate-frame {
+      padding: 0.95rem 1rem 0.85rem;
+    }
+  }
+</style>
+
+<script>
+  // Unconditionally register reset helper immediately
+  (window as any).__drcResetIntro = () => {
+    try {
+      localStorage.removeItem('drc-has-visited');
+      sessionStorage.clear();
+    } catch {}
+    window.location.reload();
+  };
+
+  (() => {
+    // Disable automatic history scroll restoration on load so intro starts clean at top
+    if ('scrollRestoration' in history) {
+      history.scrollRestoration = 'manual';
+    }
+    window.scrollTo(0, 0);
+
+    const root = document.documentElement;
+    const curtainEl = document.getElementById('intro-curtain');
+    const stageEl = document.getElementById('intro-center-stage');
+    const monogramEl = document.getElementById('intro-center-monogram');
+    const guideEl = document.getElementById('site-intro-guide');
+    const enterBtn = document.getElementById('guide-enter-btn');
+    const progressFill = document.getElementById('guide-progress-fill');
+
+    let isSnapTriggered = false;
+    let autoAdvanceTimer: number | null = null;
+
+    // Check reduced motion
+    const isReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (isReducedMotion) {
+      if (curtainEl) curtainEl.style.display = 'none';
+      if (stageEl) stageEl.style.display = 'none';
+      if (guideEl) guideEl.style.display = 'none';
+      root.setAttribute('data-drc-state', 'snapped');
+      return;
+    }
+
+    // Set initial centering state
+    root.setAttribute('data-drc-state', 'centering');
+
+    // Determine if this is the first visit or a subsequent visit
+    const isFirstVisit =
+      root.getAttribute('data-drc-visit') !== 'subsequent' &&
+      localStorage.getItem('drc-has-visited') !== 'true';
+
+    if (isFirstVisit) {
+      // =================================================================
+      // FIRST VISIT:
+      // 1. Center monogram glows on solid background for 1.0s
+      // 2. Info modal dialog reveals, explaining the 3 top bar icons
+      // 3. User dismisses or timer finishes -> snaps to top, constellation rises
+      // =================================================================
+      window.setTimeout(() => {
+        if (isSnapTriggered) return;
+
+        root.setAttribute('data-drc-state', 'guiding');
+
+        if (guideEl) {
+          guideEl.style.display = 'block';
+          void guideEl.offsetWidth;
+          guideEl.classList.add('is-visible');
+        }
+
+        if (progressFill) {
+          void progressFill.offsetWidth;
+          progressFill.classList.add('is-running');
+        }
+
+        // Auto-advance after 3.8s if user is idle
+        autoAdvanceTimer = window.setTimeout(() => {
+          snap('first');
+        }, 3800);
+
+        bindDismissListeners();
+      }, 1000);
+    } else {
+      // =================================================================
+      // SUBSEQUENT VISITS:
+      // 1. Center monogram on solid background with golden shimmer (~220ms)
+      // 2. MODAL DIALOG DOES NOT SHOW UP
+      // 3. Snaps to top quicker and smoother (~420ms)
+      // =================================================================
+      if (guideEl) {
+        guideEl.style.display = 'none';
+      }
+
+      window.setTimeout(() => {
+        snap('subsequent');
+      }, 220);
+    }
+
+    function snap(mode: 'first' | 'subsequent' = 'first') {
+      if (isSnapTriggered) return;
+      isSnapTriggered = true;
+
+      if (autoAdvanceTimer) {
+        window.clearTimeout(autoAdvanceTimer);
+        autoAdvanceTimer = null;
+      }
+
+      const snapDuration = mode === 'subsequent' ? 420 : 650;
+      if (stageEl) {
+        stageEl.style.setProperty('--drc-snap-speed', `${snapDuration}ms`);
+      }
+      if (curtainEl) {
+        curtainEl.style.setProperty('--drc-curtain-fade', `${snapDuration + 40}ms`);
+      }
+
+      // 1. Hide info modal dialog
+      if (guideEl) {
+        guideEl.classList.remove('is-visible');
+        setTimeout(() => {
+          guideEl.style.display = 'none';
+        }, 300);
+      }
+
+      // 2. Animate center monogram gliding up to top header
+      if (monogramEl) {
+        monogramEl.classList.add('is-snapped');
+      }
+
+      // 3. Dissolve solid background curtain
+      if (curtainEl) {
+        curtainEl.classList.add('is-dissolved');
+      }
+
+      // 4. Switch global state to snapped
+      root.setAttribute('data-drc-state', 'snapped');
+
+      // 5. Dispatch event for canvas star-line inking
+      window.dispatchEvent(new CustomEvent('drc:sky-rise', { detail: { mode } }));
+
+      // 6. Record visit in localStorage so subsequent visits don't show the modal
+      try {
+        localStorage.setItem('drc-has-visited', 'true');
+      } catch {}
+
+      // 7. Clean up curtain & stage after snap transition completes
+      window.setTimeout(() => {
+        if (curtainEl) curtainEl.style.display = 'none';
+        if (stageEl) stageEl.style.display = 'none';
+      }, snapDuration + 80);
+
+      cleanupDismissListeners();
+    }
+
+    function handlePointerDismiss(e: MouseEvent | TouchEvent) {
+      if (enterBtn && enterBtn.contains(e.target as Node)) {
+        e.preventDefault();
+        snap('first');
+        return;
+      }
+      snap('first');
+    }
+
+    function handleKeyDismiss(e: KeyboardEvent) {
+      if (e.key === ' ' || e.key === 'Enter' || e.key === 'Escape') {
+        e.preventDefault();
+        snap('first');
+      }
+    }
+
+    function bindDismissListeners() {
+      setTimeout(() => {
+        window.addEventListener('pointerdown', handlePointerDismiss, { once: true });
+        window.addEventListener('keydown', handleKeyDismiss);
+        if (enterBtn) {
+          enterBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            snap('first');
+          });
+        }
+      }, 180);
+    }
+
+    function cleanupDismissListeners() {
+      window.removeEventListener('pointerdown', handlePointerDismiss);
+      window.removeEventListener('keydown', handleKeyDismiss);
+    }
+  })();
+</script>

@@ -18,7 +18,7 @@ const { pubCount, bookCount, classCount } = Astro.props;
         data-view-index="0"
         aria-current="page"
       >
-        <span class="nav-strip-idx tabular">01</span>
+        <span class="nav-strip-idx tabular">I</span>
         <span class="nav-strip-label">PUBLICATIONS</span>
         <span class="nav-strip-count tabular">[{String(pubCount).padStart(2, '0')}]</span>
       </button>
@@ -32,7 +32,7 @@ const { pubCount, bookCount, classCount } = Astro.props;
         data-view-index="1"
         aria-current="false"
       >
-        <span class="nav-strip-idx tabular">02</span>
+        <span class="nav-strip-idx tabular">II</span>
         <span class="nav-strip-label">BOOKS</span>
         <span class="nav-strip-count tabular">[{String(bookCount).padStart(2, '0')}]</span>
       </button>
@@ -46,7 +46,7 @@ const { pubCount, bookCount, classCount } = Astro.props;
         data-view-index="2"
         aria-current="false"
       >
-        <span class="nav-strip-idx tabular">03</span>
+        <span class="nav-strip-idx tabular">III</span>
         <span class="nav-strip-label">CLASSES</span>
         <span class="nav-strip-count tabular">[{String(classCount).padStart(2, '0')}]</span>
       </button>
@@ -54,12 +54,12 @@ const { pubCount, bookCount, classCount } = Astro.props;
   </ul>
 
   <div class="nav-strip-right">
-    <div class="cathode-readout" aria-live="polite">
-      <span class="cathode-label">CHANNEL</span>
-      <span class="cathode-value tabular" id="nav-cathode-status">01 // PUBLICATIONS</span>
+    <div class="fascicle-locator" aria-live="polite">
+      <span class="locator-icon">§</span>
+      <span class="locator-value scholarly-caps" id="nav-cathode-status">FASCICLE I · PUBLICATIONS</span>
     </div>
-    <div class="scroll-flow-meter" title="Continuous scroll progression across sections">
-      <div class="scroll-flow-fill" id="nav-scroll-flow-fill" style="width: 33.3%;"></div>
+    <div class="folio-ribbon-meter" title="Folio fascicle progression">
+      <div class="folio-ribbon-fill" id="nav-scroll-flow-fill" style="width: 33.3%;"></div>
     </div>
   </div>
 </nav>
@@ -120,51 +120,46 @@ const { pubCount, bookCount, classCount } = Astro.props;
     gap: 0.75rem;
   }
 
-  /* Recessed Cathode Readout Badge (from portyxb InstrumentPanel.css) */
-  .cathode-readout {
+  /* Scriptorium Fascicle Locator & Silk Ribbon Bookmark Progression */
+  .fascicle-locator {
     display: inline-flex;
     align-items: center;
-    gap: 0.5rem;
-    padding: 0.22rem 0.6rem;
-    border-radius: 3px;
-    background: #020806;
-    border: 1px solid rgba(94, 255, 164, 0.2);
-    box-shadow:
-      inset 0 3px 8px rgba(0, 0, 0, 0.92),
-      0 1px 0 rgba(255, 255, 255, 0.04);
+    gap: 0.35rem;
+    padding: 0.22rem 0.55rem;
+    border-radius: 2px;
+    background: color-mix(in oklab, var(--bg-surface) 92%, var(--paper-vellum, #f4efe6) 8%);
+    border: 1px solid var(--border-subtle);
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.05);
   }
 
-  .cathode-label {
+  .locator-icon {
+    font-family: var(--font-serif);
+    font-size: 0.75rem;
+    color: var(--accent);
+    user-select: none;
+    line-height: 1;
+  }
+
+  .locator-value {
     font-family: var(--font-mono);
-    font-size: 0.58rem;
-    letter-spacing: 0.16em;
-    color: rgba(255, 255, 255, 0.4);
+    font-size: 0.64rem;
+    font-weight: 500;
+    letter-spacing: 0.14em;
+    color: var(--text-primary);
   }
 
-  .cathode-value {
-    font-family: var(--font-mono);
-    font-size: 0.66rem;
-    font-weight: 600;
-    letter-spacing: 0.12em;
-    color: #5effa4;
-    text-shadow:
-      -1px 0 1px rgba(255, 0, 0, 0.45),
-      1px 0 1px rgba(0, 80, 255, 0.45),
-      0 0 6px rgba(94, 255, 164, 0.5);
-  }
-
-  .scroll-flow-meter {
-    width: 72px;
+  .folio-ribbon-meter {
+    width: 68px;
     height: 4px;
-    border-radius: 99px;
+    border-radius: 1px;
     background: var(--border-subtle);
     overflow: hidden;
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.15);
   }
 
-  .scroll-flow-fill {
+  .folio-ribbon-fill {
     height: 100%;
-    background: var(--accent);
-    box-shadow: 0 0 8px var(--accent);
+    background: var(--ribbon-silk, oklch(48% 0.17 28));
     transition: width 0.35s cubic-bezier(0.22, 1, 0.36, 1);
   }
 

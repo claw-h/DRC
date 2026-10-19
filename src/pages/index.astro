@@ -39,15 +39,15 @@ const systemState = await getSystemState();
     class="snap-stage stage-pullup"
     aria-label="Observatory Transition Horizon"
   >
-    <div class="pullup-card">
-      <div class="chassis-bolt chassis-bolt--tl"></div>
-      <div class="chassis-bolt chassis-bolt--tr"></div>
-      <div class="chassis-bolt chassis-bolt--bl"></div>
-      <div class="chassis-bolt chassis-bolt--br"></div>
+    <div class="pullup-card bookplate-frame">
+      <div class="bookplate-corner bookplate-corner--tl" aria-hidden="true">❦</div>
+      <div class="bookplate-corner bookplate-corner--tr" aria-hidden="true">❦</div>
+      <div class="bookplate-corner bookplate-corner--bl" aria-hidden="true">❦</div>
+      <div class="bookplate-corner bookplate-corner--br" aria-hidden="true">❦</div>
 
       <div class="pullup-header-strip">
         <span class="pullup-eyebrow">{profile.institution} · {profile.department}</span>
-        <span class="pullup-model-badge tabular">ORGANOLOGY // TECHNICS &amp; TIME</span>
+        <span class="pullup-rubric-badge scholarly-caps">RUBRIC · PHILOSOPHY OF TECHNICS, ORGANOLOGY &amp; TIME</span>
       </div>
 
       <h2 class="pullup-headline">{profile.name}</h2>
@@ -71,23 +71,23 @@ const systemState = await getSystemState();
         </div>
       )}
 
-      <!-- Galvanic Telemetry Readout Strip (portyxb homage) -->
-      <div class="pullup-telemetry-row tabular">
-        <div class="pullup-cell">
-          <span class="cell-label">MONOGRAPHS</span>
-          <span class="cell-val">{String(books.length).padStart(2, '0')} VOLS</span>
+      <!-- Scholarly Colophon Grid -->
+      <div class="pullup-colophon-grid tabular">
+        <div class="colophon-cell">
+          <span class="colophon-label">MONOGRAPHS</span>
+          <span class="colophon-val">{String(books.length).padStart(2, '0')} VOLS</span>
         </div>
-        <div class="pullup-cell">
-          <span class="cell-label">PAPERS &amp; ESSAYS</span>
-          <span class="cell-val">{String(publications.length).padStart(2, '0')} ARCHIVED</span>
+        <div class="colophon-cell">
+          <span class="colophon-label">PAPERS &amp; ESSAYS</span>
+          <span class="colophon-val">{String(publications.length).padStart(2, '0')} ARCHIVED</span>
         </div>
-        <div class="pullup-cell">
-          <span class="cell-label">SEMINARS</span>
-          <span class="cell-val">{String(classes.length).padStart(2, '0')} ASHOKA</span>
+        <div class="colophon-cell">
+          <span class="colophon-label">SEMINARS</span>
+          <span class="colophon-val">{String(classes.length).padStart(2, '0')} ASHOKA</span>
         </div>
-        <div class="pullup-cell">
-          <span class="cell-label">FELLOWSHIP</span>
-          <span class="cell-val">CLAUDIA JONES</span>
+        <div class="colophon-cell">
+          <span class="colophon-label">FELLOWSHIP</span>
+          <span class="colophon-val">CLAUDIA JONES</span>
         </div>
       </div>
 
@@ -110,7 +110,7 @@ const systemState = await getSystemState();
         )}
         <a href="/cv" class="pullup-cv-link">Curriculum Vitae (Print / LaTeX) ↗</a>
         <span aria-hidden="true">·</span>
-        <a href="#stage-3" class="pullup-cv-link">Enter Bipartite Archive ↓</a>
+        <a href="#stage-3" class="pullup-cv-link">Examine Scholarly Folios ↓</a>
       </div>
     </div>
   </section>
@@ -141,7 +141,7 @@ const systemState = await getSystemState();
       document.body.dataset.stage = targetId;
 
       if (targetEl) {
-        window.scrollTo({ top: targetEl.offsetTop, behavior: 'instant' as ScrollBehavior });
+        window.scrollTo({ top: targetEl.offsetTop, behavior: 'smooth' as ScrollBehavior });
       }
 
       window.dispatchEvent(new CustomEvent('drc:stage-snap', { detail: { stage: stageNum } }));
@@ -150,7 +150,7 @@ const systemState = await getSystemState();
       stageLockTimer = window.setTimeout(() => {
         isStageLocked = false;
         stageWheelAccum = 0;
-      }, 360);
+      }, 680);
     };
 
     (window as any).__drcSnapToStage = snapToStage;
@@ -254,44 +254,53 @@ const systemState = await getSystemState();
 <style>
   .stage-pullup {
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: 2rem;
+    min-block-size: 100vh;
+    min-block-size: 100dvh;
+    block-size: auto;
+    padding-block-start: calc(var(--chrome-height) + 0.65rem);
+    padding-block-end: clamp(1rem, 2.5vh, 1.75rem);
+    padding-inline: clamp(1rem, 4vw, 2.5rem);
+    box-sizing: border-box;
     z-index: 5;
   }
 
   .pullup-card {
     position: relative;
     max-width: 720px;
-    padding: 2.25rem 2.5rem;
+    inline-size: 100%;
+    box-sizing: border-box;
+    padding: clamp(1.2rem, 2.2vh, 1.75rem) clamp(1.25rem, 3vw, 2.25rem);
     border-radius: 0.65rem;
     border: 1px solid var(--border-subtle);
     background: color-mix(in oklab, var(--bg-surface) 88%, transparent);
     backdrop-filter: blur(18px);
     box-shadow:
-      0 35px 80px -20px rgba(0, 0, 0, 0.85),
+      0 20px 50px -15px rgba(0, 0, 0, 0.75),
       inset 0 1px 0 rgba(255, 255, 255, 0.08);
     display: flex;
     flex-direction: column;
-    gap: 0.85rem;
+    gap: clamp(0.45rem, 1.2vh, 0.7rem);
     opacity: 0;
-    transform: translate3d(0, 14px, 0) scale(0.985);
+    transform: translate3d(0, 20px, 0);
     transition:
-      opacity 0.32s cubic-bezier(0.22, 1, 0.36, 1),
-      transform 0.32s cubic-bezier(0.22, 1, 0.36, 1);
+      opacity 0.65s cubic-bezier(0.16, 1, 0.3, 1),
+      transform 0.65s cubic-bezier(0.16, 1, 0.3, 1);
   }
 
   :global(body[data-stage="stage-2"]) .pullup-card {
     opacity: 1;
-    transform: translate3d(0, 0, 0) scale(1);
+    transform: translate3d(0, 0, 0);
   }
 
   #stage-3 {
     opacity: 0;
     transform: scale(0.992);
     transition:
-      opacity 0.32s cubic-bezier(0.22, 1, 0.36, 1),
-      transform 0.32s cubic-bezier(0.22, 1, 0.36, 1);
+      opacity 0.65s cubic-bezier(0.16, 1, 0.3, 1),
+      transform 0.65s cubic-bezier(0.16, 1, 0.3, 1);
   }
 
   :global(body[data-stage="stage-3"]) #stage-3 {
@@ -304,8 +313,8 @@ const systemState = await getSystemState();
     flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
-    gap: 0.5rem;
-    padding-bottom: 0.65rem;
+    gap: 0.4rem;
+    padding-bottom: 0.45rem;
     border-bottom: 1px solid var(--border-subtle);
   }
 
@@ -318,55 +327,72 @@ const systemState = await getSystemState();
     color: var(--accent);
   }
 
-  .pullup-model-badge {
+  .bookplate-corner {
+    position: absolute;
+    font-family: var(--font-serif);
+    font-size: 0.95rem;
+    color: color-mix(in oklab, var(--accent) 60%, transparent);
+    user-select: none;
+    line-height: 1;
+    pointer-events: none;
+  }
+
+  .bookplate-corner--tl { inset-block-start: 0.65rem; inset-inline-start: 0.75rem; }
+  .bookplate-corner--tr { inset-block-start: 0.65rem; inset-inline-end: 0.75rem; }
+  .bookplate-corner--bl { inset-block-end: 0.65rem; inset-inline-start: 0.75rem; }
+  .bookplate-corner--br { inset-block-end: 0.65rem; inset-inline-end: 0.75rem; }
+
+  .pullup-rubric-badge {
     font-family: var(--font-mono);
     font-size: 0.62rem;
     letter-spacing: 0.14em;
-    color: #7fd4ff;
-    padding: 0.15rem 0.5rem;
+    color: var(--accent);
+    padding: 0.18rem 0.55rem;
     border-radius: 2px;
-    border: 1px solid rgba(127, 212, 255, 0.22);
-    background: rgba(0, 0, 0, 0.35);
+    border: 1px solid color-mix(in oklab, var(--accent) 35%, transparent);
+    background: color-mix(in oklab, var(--bg-surface) 90%, var(--paper-vellum, #f4efe6) 10%);
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.05);
   }
 
   .pullup-headline {
-    margin: 0.15rem 0 0;
+    margin: 0.1rem 0 0;
     font-family: var(--font-serif);
-    font-size: clamp(1.75rem, 3.2vw, 2.45rem);
+    font-size: clamp(1.45rem, 2.8vw, 2.15rem);
     font-weight: 400;
     letter-spacing: 0.01em;
+    line-height: 1.15;
     color: var(--text-primary);
   }
 
   .pullup-subheadline {
-    margin: -0.35rem 0 0.2rem;
+    margin: -0.2rem 0 0;
     font-family: var(--font-serif);
     font-style: italic;
-    font-size: 1.06rem;
+    font-size: clamp(0.88rem, 1.2vw, 0.98rem);
     color: var(--accent);
   }
 
   .pullup-bio {
     margin: 0;
     font-family: var(--font-serif);
-    font-size: 1.02rem;
-    line-height: 1.68;
+    font-size: clamp(0.88rem, 1.15vw, 0.98rem);
+    line-height: 1.55;
     color: var(--text-secondary);
   }
 
   .pullup-specialization-tags {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.4rem;
-    margin-top: 0.1rem;
+    gap: 0.35rem;
+    margin-top: 0.05rem;
   }
 
   .spec-chip {
     font-family: var(--font-mono);
-    font-size: 0.62rem;
-    letter-spacing: 0.09em;
+    font-size: 0.58rem;
+    letter-spacing: 0.08em;
     text-transform: uppercase;
-    padding: 0.22rem 0.55rem;
+    padding: 0.18rem 0.5rem;
     border-radius: 3px;
     border: 1px solid rgba(232, 222, 181, 0.32);
     background: rgba(232, 222, 181, 0.08);
@@ -379,51 +405,48 @@ const systemState = await getSystemState();
     color: var(--text-muted);
   }
 
-  .pullup-telemetry-row {
+  .pullup-colophon-grid {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
-    gap: 0.6rem;
-    margin-top: 0.25rem;
-    padding: 0.75rem;
-    border-radius: 4px;
-    background: #030706;
-    border: 1px solid rgba(94, 255, 164, 0.16);
-    box-shadow: inset 0 4px 10px rgba(0, 0, 0, 0.9);
+    gap: 0.45rem;
+    margin-top: 0.1rem;
+    padding: 0.5rem 0.75rem;
+    border-radius: 3px;
+    background: color-mix(in oklab, var(--bg-surface) 88%, var(--paper-vellum, #f4efe6) 12%);
+    border: 1px solid var(--border-subtle);
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.06);
   }
 
-  .pullup-cell {
+  .colophon-cell {
     display: flex;
     flex-direction: column;
-    gap: 0.18rem;
+    gap: 0.1rem;
   }
 
-  .cell-label {
+  .colophon-label {
     font-family: var(--font-mono);
-    font-size: 0.56rem;
-    letter-spacing: 0.15em;
-    color: rgba(255, 255, 255, 0.42);
+    font-size: 0.52rem;
+    letter-spacing: 0.14em;
+    color: var(--text-muted);
   }
 
-  .cell-val {
+  .colophon-val {
     font-family: var(--font-mono);
-    font-size: 0.74rem;
-    font-weight: 700;
-    color: #5effa4;
-    text-shadow:
-      -1px 0 1px rgba(255, 0, 0, 0.45),
-      1px 0 1px rgba(0, 60, 255, 0.45),
-      0 0 6px rgba(94, 255, 164, 0.45);
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    color: var(--text-primary);
   }
 
   .pullup-coords {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 0.65rem;
-    padding-top: 0.75rem;
+    gap: 0.5rem;
+    padding-top: 0.45rem;
     border-top: 1px solid var(--border-subtle);
     font-family: var(--font-mono);
-    font-size: 0.74rem;
+    font-size: 0.7rem;
     color: var(--text-muted);
   }
 
@@ -438,8 +461,32 @@ const systemState = await getSystemState();
     border-color: var(--accent);
   }
 
+  @media (max-height: 760px) {
+    .pullup-card {
+      padding: 0.95rem 1.35rem;
+      gap: 0.35rem;
+    }
+    .pullup-headline {
+      font-size: 1.45rem;
+    }
+    .pullup-subheadline {
+      font-size: 0.88rem;
+    }
+    .pullup-bio {
+      font-size: 0.88rem;
+      line-height: 1.45;
+    }
+    .pullup-colophon-grid {
+      padding: 0.35rem 0.6rem;
+    }
+    .pullup-coords {
+      padding-top: 0.35rem;
+      font-size: 0.66rem;
+    }
+  }
+
   @media (max-width: 600px) {
-    .pullup-telemetry-row {
+    .pullup-colophon-grid {
       grid-template-columns: repeat(2, 1fr);
     }
   }

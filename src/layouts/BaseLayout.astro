@@ -3,6 +3,7 @@ import '../styles/tokens.css';
 import '../styles/scroll-choreography.css';
 import '../styles/workspace-responsive.css';
 import '../styles/contact-id-card.css';
+import '../styles/artefact-modals.css';
 
 interface Props {
   title?: string;
@@ -38,10 +39,50 @@ const {
     <meta name="color-scheme" content="light dark" />
     <script is:inline>
       try {
-        document.querySelector('meta[name="color-scheme"]').content =
-          localStorage.getItem('color-scheme') ?? 'light dark';
+        const stored = localStorage.getItem('color-scheme');
+        if (stored === 'light' || stored === 'dark') {
+          document.querySelector('meta[name="color-scheme"]').content = stored;
+          document.documentElement.setAttribute('data-theme', stored);
+        } else {
+          const sysDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+          document.documentElement.setAttribute('data-theme', sysDark ? 'dark' : 'light');
+        }
+
+        if (localStorage.getItem('drc-a11y-mode') === 'true') {
+          document.documentElement.setAttribute('data-a11y-mode', 'true');
+        }
+
+        // Synchronous pre-hydration: Set intro state to prevent FOUC
+        if (document.documentElement.classList.contains('portfolio-scroller')) {
+          const hasVisited = localStorage.getItem('drc-has-visited') === 'true';
+          const isReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+          document.documentElement.setAttribute('data-drc-visit', hasVisited ? 'subsequent' : 'first');
+          if (isReduced) {
+            document.documentElement.setAttribute('data-drc-state', 'snapped');
+          } else {
+            document.documentElement.setAttribute('data-drc-state', 'centering');
+          }
+        }
+
+        // Global console helper: unconditionally available in global window scope
+        window.__drcResetIntro = () => {
+          try {
+            localStorage.clear();
+            sessionStorage.clear();
+          } catch {}
+          window.location.reload();
+        };
       } catch {}
     </script>
+
+    <!-- Scholar typography: Newsreader & IM Fell English -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=IM+Fell+English:ital@0;1&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..700&display=swap"
+      rel="stylesheet"
+    />
 
     {citationMeta && (
       <>

@@ -21,30 +21,34 @@
     /* MANDATORY: Apply color-scheme to :root for viewport-wide theming */
     color-scheme: light dark;
 
-    /* Raw palette tokens */
-    --bg-canvas-light: oklch(96.5% 0.012 82);
-    --bg-canvas-dark: oklch(10.5% 0.014 265);
+    /* Raw palette tokens: Academic Ink & Folio Archetype */
 
-    --bg-surface-light: oklch(98.2% 0.008 82);
-    --bg-surface-dark: oklch(13.8% 0.016 265);
+    /* Light Mode: Iron-gall ink on warm, laid rag paper */
+    --bg-canvas-light: oklch(95% 0.018 85);
+    --bg-surface-light: oklch(97% 0.012 85);
+    --bg-elevated-light: oklch(92.5% 0.022 85);
 
-    --bg-elevated-light: oklch(94.2% 0.015 80);
-    --bg-elevated-dark: oklch(17.5% 0.018 265);
+    --text-primary-light: oklch(24% 0.025 55);      /* Oxidized iron-gall brown-black */
+    --text-secondary-light: oklch(42% 0.035 55);    /* Diluted walnut ink */
+    --text-muted-light: oklch(56% 0.025 60);        /* Pencil / dry graphite */
 
-    --text-primary-light: oklch(18% 0.02 265);
-    --text-primary-dark: oklch(93.5% 0.012 85);
+    --accent-light: oklch(52% 0.17 32);             /* Illumination vermilion red */
+    --border-subtle-light: oklch(86% 0.02 85);      /* Pale vellum border */
+    --ink-wet-light: oklch(42% 0.05 250);           /* Wet fresh iron-gall (slate blue-grey) */
 
-    --text-secondary-light: oklch(40% 0.02 260);
-    --text-secondary-dark: oklch(72% 0.015 85);
+    /* Dark Mode: Bone-white gouache & shell gold on indigo-black dyed paper */
+    --bg-canvas-dark: oklch(17% 0.02 262);          /* Deep indigo-black rag paper (never pure 0% black) */
+    --bg-surface-dark: oklch(19.5% 0.022 262);      /* Indigo wash paper surface */
+    --bg-elevated-dark: oklch(23.5% 0.025 262);     /* Elevated folio deckle */
 
-    --text-muted-light: oklch(52% 0.018 260);
-    --text-muted-dark: oklch(56% 0.015 260);
+    --text-primary-dark: oklch(91% 0.02 85);        /* Aged bone-white gouache (never pure 100% white) */
+    --text-secondary-dark: oklch(75% 0.02 85);      /* Silverpoint / pale chalk */
+    --text-muted-dark: oklch(58% 0.02 262);         /* Indigo-grey wash */
 
-    --accent-light: oklch(40% 0.11 55);
-    --accent-dark: oklch(83% 0.065 80);
-
-    --border-subtle-light: oklch(84% 0.015 80);
-    --border-subtle-dark: oklch(24% 0.018 265);
+    --accent-dark: oklch(70% 0.13 38);              /* Warm illuminated vermilion */
+    --accent-gold: oklch(80% 0.09 85);              /* Shell gold pigment for DRC monogram */
+    --border-subtle-dark: oklch(28% 0.022 262);     /* Burnished dark border */
+    --ink-wet-dark: oklch(85% 0.08 85);             /* Wet metallic gold sheen */
 
     /* Default fallback + @media (prefers-color-scheme: dark) */
     --bg-canvas: var(--bg-canvas-light);
@@ -55,6 +59,9 @@
     --text-muted: var(--text-muted-light);
     --accent: var(--accent-light);
     --border-subtle: var(--border-subtle-light);
+    --ink-brand: var(--text-primary-light);
+    --ribbon-silk: oklch(48% 0.17 28);
+    --paper-vellum: oklch(93% 0.025 85);
 
     @media (prefers-color-scheme: dark) {
       --bg-canvas: var(--bg-canvas-dark);
@@ -65,6 +72,7 @@
       --text-muted: var(--text-muted-dark);
       --accent: var(--accent-dark);
       --border-subtle: var(--border-subtle-dark);
+      --ink-brand: var(--text-primary-dark);
     }
 
     @supports (color: light-dark(white, black)) {
@@ -76,10 +84,12 @@
       --text-muted: light-dark(var(--text-muted-light), var(--text-muted-dark));
       --accent: light-dark(var(--accent-light), var(--accent-dark));
       --border-subtle: light-dark(var(--border-subtle-light), var(--border-subtle-dark));
+      --ink-brand: light-dark(var(--text-primary-light), var(--text-primary-dark));
     }
 
-    /* Reflect <meta name="color-scheme"> override back onto :root */
-    &:has(> head > meta[name="color-scheme"][content="dark"]) {
+    /* Reflect <meta name="color-scheme"> and [data-theme] override back onto :root */
+    &:has(> head > meta[name="color-scheme"][content="dark"]),
+    &[data-theme="dark"] {
       color-scheme: dark;
       --bg-canvas: var(--bg-canvas-dark);
       --bg-surface: var(--bg-surface-dark);
@@ -89,9 +99,11 @@
       --text-muted: var(--text-muted-dark);
       --accent: var(--accent-dark);
       --border-subtle: var(--border-subtle-dark);
+      --ink-brand: var(--text-primary-dark);
     }
 
-    &:has(> head > meta[name="color-scheme"][content="light"]) {
+    &:has(> head > meta[name="color-scheme"][content="light"]),
+    &[data-theme="light"] {
       color-scheme: light;
       --bg-canvas: var(--bg-canvas-light);
       --bg-surface: var(--bg-surface-light);
@@ -101,16 +113,145 @@
       --text-muted: var(--text-muted-light);
       --accent: var(--accent-light);
       --border-subtle: var(--border-subtle-light);
+      --ink-brand: var(--text-primary-light);
+      --ink-dissolve-brightness: 0.94;
     }
 
-    /* Typography & Layout Tokens */
-    --font-sans: "Space Grotesk", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-    --font-serif: "Instrument Serif", "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+    /* Accessibility High-Contrast Monochrome Mode Token Overrides */
+    /* Dark Mode: Pure Black and White */
+    &[data-a11y-mode="true"][data-theme="dark"],
+    &:has(> head > meta[name="color-scheme"][content="dark"])[data-a11y-mode="true"] {
+      --bg-canvas: #000000;
+      --bg-surface: #080808;
+      --bg-elevated: #141414;
+      --text-primary: #ffffff;
+      --text-secondary: #e6e6e6;
+      --text-muted: #cccccc;
+      --accent: #ffffff;
+      --border-subtle: #ffffff;
+      --ink-brand: #ffffff;
+      --ribbon-silk: #ffffff;
+      --paper-vellum: #000000;
+      --gilt-foil-grad: none;
+      --brass-base: #ffffff;
+      --brass-rim: #ffffff;
+      --text-intaglio-shadow: none;
+    }
+
+    /* Light Mode: Pure White and Black */
+    &[data-a11y-mode="true"][data-theme="light"],
+    &:has(> head > meta[name="color-scheme"][content="light"])[data-a11y-mode="true"] {
+      --bg-canvas: #ffffff;
+      --bg-surface: #fafafa;
+      --bg-elevated: #f0f0f0;
+      --text-primary: #000000;
+      --text-secondary: #1a1a1a;
+      --text-muted: #333333;
+      --accent: #000000;
+      --border-subtle: #000000;
+      --ink-brand: #000000;
+      --ribbon-silk: #000000;
+      --paper-vellum: #ffffff;
+      --gilt-foil-grad: none;
+      --brass-base: #000000;
+      --brass-rim: #000000;
+      --text-intaglio-shadow: none;
+    }
+
+    /* System Media Queries when no manual data-theme override is pinned */
+    @media (prefers-color-scheme: dark) {
+      &[data-a11y-mode="true"]:not([data-theme="light"]) {
+        --bg-canvas: #000000;
+        --bg-surface: #080808;
+        --bg-elevated: #141414;
+        --text-primary: #ffffff;
+        --text-secondary: #e6e6e6;
+        --text-muted: #cccccc;
+        --accent: #ffffff;
+        --border-subtle: #ffffff;
+        --ink-brand: #ffffff;
+        --ribbon-silk: #ffffff;
+        --paper-vellum: #000000;
+        --gilt-foil-grad: none;
+        --brass-base: #ffffff;
+        --brass-rim: #ffffff;
+        --text-intaglio-shadow: none;
+      }
+    }
+
+    @media (prefers-color-scheme: light) {
+      &[data-a11y-mode="true"]:not([data-theme="dark"]) {
+        --bg-canvas: #ffffff;
+        --bg-surface: #fafafa;
+        --bg-elevated: #f0f0f0;
+        --text-primary: #000000;
+        --text-secondary: #1a1a1a;
+        --text-muted: #333333;
+        --accent: #000000;
+        --border-subtle: #000000;
+        --ink-brand: #000000;
+        --ribbon-silk: #000000;
+        --paper-vellum: #ffffff;
+        --gilt-foil-grad: none;
+        --brass-base: #000000;
+        --brass-rim: #000000;
+        --text-intaglio-shadow: none;
+      }
+    }
+
+    /* Typography & Academic Layout Tokens */
+    --font-serif: "Newsreader", "Iowan Old Style", "Palatino Linotype", "Baskerville", Georgia, serif;
+    --font-display: "IM Fell English", "Cormorant Garamond", "Newsreader", serif;
+    --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     --font-mono: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
 
     --header-height: 3.5rem;
     --nav-strip-height: 2.75rem;
     --chrome-height: calc(var(--header-height) + var(--nav-strip-height));
+
+    /* Tactile Scholarly Material, 3D Depth & Lighting Tokens */
+    --gilt-foil-grad: linear-gradient(135deg, oklch(84% 0.09 85) 0%, oklch(65% 0.09 72) 40%, oklch(92% 0.07 90) 65%, oklch(58% 0.08 65) 100%);
+    --brass-base: oklch(68% 0.08 78);
+    --brass-rim: oklch(86% 0.07 88);
+    --brass-patina: oklch(38% 0.04 150);
+
+    --shadow-slab-shallow: 0 2px 4px -1px oklch(0% 0 0 / 0.18), 0 0 0 1px var(--border-subtle);
+    --shadow-slab-depth: 
+      0 4px 14px -2px oklch(0% 0 0 / 0.32), 
+      0 16px 36px -6px oklch(0% 0 0 / 0.42), 
+      inset 0 1px 0 oklch(100% 0 0 / 0.09);
+    --shadow-modal-3d: 
+      0 26px 68px -14px oklch(0% 0 0 / 0.72), 
+      0 10px 28px -6px oklch(0% 0 0 / 0.45), 
+      inset 0 1px 1px oklch(100% 0 0 / 0.14);
+
+    --text-intaglio-shadow-dark: 0 1px 0 oklch(100% 0 0 / 0.08), 0 -1px 2px oklch(0% 0 0 / 0.65);
+    --text-intaglio-shadow-light: 0 1px 0 oklch(100% 0 0 / 0.85);
+    --text-intaglio-shadow: var(--text-intaglio-shadow-light);
+
+    /* Archival Ink-Dissolve Choreography Tokens */
+    --ink-dissolve-duration: 0.52s;
+    --ink-dissolve-ease: cubic-bezier(0.18, 0.85, 0.25, 1);
+    --ink-dissolve-blur: 3.5px;
+    --ink-dissolve-contrast: 1.42;
+    --ink-dissolve-brightness: 1.12;
+
+    @media (prefers-color-scheme: dark) {
+      --text-intaglio-shadow: var(--text-intaglio-shadow-dark);
+    }
+
+    @supports (color: light-dark(white, black)) {
+      --text-intaglio-shadow: light-dark(var(--text-intaglio-shadow-light), var(--text-intaglio-shadow-dark));
+    }
+
+    &:has(> head > meta[name="color-scheme"][content="dark"]),
+    &[data-theme="dark"] {
+      --text-intaglio-shadow: var(--text-intaglio-shadow-dark);
+    }
+    &:has(> head > meta[name="color-scheme"][content="light"]),
+    &[data-theme="light"] {
+      --text-intaglio-shadow: var(--text-intaglio-shadow-light);
+    }
 
     accent-color: var(--accent);
   }
@@ -120,21 +261,23 @@
   body {
     background-color: var(--bg-canvas);
     color: var(--text-primary);
-    font-family: var(--font-sans);
-    font-size: 1rem;
-    line-height: 1.55;
+    font-family: var(--font-serif);
+    font-size: 1.05rem;
+    line-height: 1.6;
     text-align: start;
     overflow-wrap: break-word;
     font-size-adjust: from-font;
     -webkit-font-smoothing: antialiased;
   }
 
+  /* Academic headings: Bookman/Newsreader serif with balanced wrapping */
   h1, h2, h3, h4 {
+    font-family: var(--font-display);
     font-size-adjust: cap-height from-font;
     text-wrap: balance;
-    line-height: 1.2;
-    font-weight: 500;
-    letter-spacing: -0.02em;
+    line-height: 1.25;
+    font-weight: 400;
+    letter-spacing: -0.01em;
   }
 
   p, blockquote, li {
@@ -142,12 +285,24 @@
   }
 
   article {
-    max-inline-size: 80ch;
+    max-inline-size: 72ch;
   }
 
   code, pre, .tabular {
     font-family: var(--font-mono);
     font-variant-numeric: tabular-nums;
+  }
+
+  /* Small-caps scholarly labels */
+  .scholarly-caps {
+    font-variant-caps: all-small-caps;
+    letter-spacing: 0.08em;
+  }
+
+  /* Text selection like an ink wash */
+  ::selection {
+    background: oklch(52% 0.17 32 / 0.18);
+    color: inherit;
   }
 
   :focus-visible {
@@ -171,5 +326,96 @@
     opacity: 0.5;
     cursor: default;
     user-select: none;
+  }
+
+  /* Accessibility Mode: Global Typography Scaling & Boldness */
+  html[data-a11y-mode="true"] {
+    font-size: 120%;
+    font-synthesis: weight;
+  }
+
+  html[data-a11y-mode="true"] body,
+  html[data-a11y-mode="true"] body * {
+    font-weight: 600 !important;
+  }
+
+  html[data-a11y-mode="true"] h1,
+  html[data-a11y-mode="true"] h2,
+  html[data-a11y-mode="true"] h3,
+  html[data-a11y-mode="true"] h4,
+  html[data-a11y-mode="true"] strong,
+  html[data-a11y-mode="true"] b,
+  html[data-a11y-mode="true"] th,
+  html[data-a11y-mode="true"] .scholarly-caps {
+    font-weight: 700 !important;
+  }
+
+  /* Accessibility Mode: Complete Desaturation & High-Contrast Visual Elements */
+  html[data-a11y-mode="true"] canvas,
+  html[data-a11y-mode="true"] img,
+  html[data-a11y-mode="true"] .header-folio-seal,
+  html[data-a11y-mode="true"] .bookplate-corner,
+  html[data-a11y-mode="true"] .brand-lockup,
+  html[data-a11y-mode="true"] svg:not(.icon-sun):not(.icon-a11y) {
+    filter: grayscale(100%) contrast(1.15);
+  }
+
+  html[data-a11y-mode="true"] ::selection {
+    background: var(--text-primary);
+    color: var(--bg-canvas);
+  }
+}
+
+@layer components {
+  /* Active state for accessibility toggle button */
+  .chrome-icon-btn[aria-pressed="true"] {
+    border-color: var(--accent);
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+    background: color-mix(in oklab, var(--accent) 18%, var(--bg-elevated));
+    color: var(--accent);
+  }
+  /* Classical Bookplate Frame & Intaglio Corner Flourishes */
+  .bookplate-card,
+  .bookplate-frame {
+    position: relative;
+  }
+
+  .bookplate-corner {
+    position: absolute;
+    font-family: var(--font-serif);
+    font-size: 0.95rem;
+    color: color-mix(in oklab, var(--accent) 60%, transparent);
+    user-select: none;
+    line-height: 1;
+    pointer-events: none;
+    z-index: 2;
+  }
+
+  .bookplate-corner--tl { inset-block-start: 0.55rem; inset-inline-start: 0.65rem; }
+  .bookplate-corner--tr { inset-block-start: 0.55rem; inset-inline-end: 0.65rem; }
+  .bookplate-corner--bl { inset-block-end: 0.55rem; inset-inline-start: 0.65rem; }
+  .bookplate-corner--br { inset-block-end: 0.55rem; inset-inline-end: 0.65rem; }
+
+  /* Physical Ink Soak-In Transition Effect */
+  @keyframes ink-soak-in {
+    0% {
+      opacity: 0;
+      filter: blur(4px) contrast(1.35);
+      transform: translateY(-2px) scale(0.992);
+    }
+    45% {
+      opacity: 0.88;
+      filter: blur(0.9px) contrast(1.15);
+    }
+    100% {
+      opacity: 1;
+      filter: blur(0px) contrast(1);
+      transform: translateY(0) scale(1);
+    }
+  }
+
+  .ink-transition-active {
+    animation: ink-soak-in 0.62s cubic-bezier(0.18, 0.85, 0.25, 1) both;
   }
 }

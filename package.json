@@ -9,8 +9,9 @@
   },
   "scripts": {
     "generate:sky": "node scripts/generate-constellations.mjs",
+    "test:sky": "node scripts/verify-sky-data.mjs",
     "dev": "ASTRO_TELEMETRY_DISABLED=1 astro dev",
-    "build": "node scripts/generate-constellations.mjs && ASTRO_TELEMETRY_DISABLED=1 astro build",
+    "build": "node scripts/generate-constellations.mjs && node scripts/verify-sky-data.mjs && ASTRO_TELEMETRY_DISABLED=1 astro build",
     "preview": "ASTRO_TELEMETRY_DISABLED=1 astro preview",
     "start": "node ./dist/server/entry.mjs"
   },

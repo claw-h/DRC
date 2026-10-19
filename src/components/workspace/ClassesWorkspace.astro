@@ -18,7 +18,7 @@ const { classes } = Astro.props;
     <div class="pane-inner-scroll" data-scrollable-pane>
       <header class="pane-toolbar">
         <div class="pane-toolbar-title">
-          <span class="led-socket is-on" aria-hidden="true"></span>
+          <span class="section-fleuron" aria-hidden="true">§</span>
           <h2 class="pane-heading">
             Course Archive <span class="count-badge tabular">[{String(classes.length).padStart(2, '0')}]</span>
           </h2>
@@ -42,7 +42,7 @@ const { classes } = Astro.props;
           placeholder="Filter by course code or topic..."
           spellcheck="false"
           autocomplete="off"
-          class="telemetry-input"
+          class="manuscript-search-input"
         />
         <div class="level-pill-group" role="group" aria-label="Filter by course level">
           <button type="button" class="pill" data-level-filter="all" aria-pressed="true">All</button>
@@ -101,7 +101,7 @@ const { classes } = Astro.props;
 
       <!-- Top Return Horizon Cue: Classes -> Books -->
       <div class="scroll-horizon-top-cue" data-jump-view="view-books">
-        <span class="tabular">↑ Scroll up at top boundary to return to 02 // BOOKS &amp; MONOGRAPHS</span>
+        <span class="scholarly-caps">↑ Advance scroll upwards to return to II · BOOKS</span>
       </div>
 
       {classes.map((cls, idx) => {
@@ -114,16 +114,16 @@ const { classes } = Astro.props;
           >
             <header style="border-block-end: 1px solid var(--border-subtle); padding-block-end: 1.5rem; margin-block-end: 1.75rem;">
               <div class="reader-eyebrow-row">
-                <span class="cathode-tag tabular" data-scramble-eyebrow>
-                  COURSE BRIEFING // {c.courseCode}
+                <span class="fascicle-tag tabular">
+                  CURRICULUM · {c.courseCode}
                 </span>
-                <span class="telemetry-stamp tabular">{c.level.toUpperCase()} SEMINAR</span>
+                <span class="colophon-stamp scholarly-caps">{c.level.toUpperCase()} SEMINAR</span>
               </div>
               <h3 class="reader-main-title" data-scramble-title>
                 {c.title}
               </h3>
 
-              <dl class="tabular telemetry-specs-grid">
+              <dl class="tabular colophon-specs-grid">
                 <div>
                   <dt>TERM</dt>
                   <dd>{c.term} ({c.academicYear})</dd>
@@ -143,13 +143,13 @@ const { classes } = Astro.props;
               </dl>
             </header>
 
-            <section class="recessed-abstract-box" style="margin-block-end: 2rem;">
-              <div class="chassis-bolt chassis-bolt--tl"></div>
-              <div class="chassis-bolt chassis-bolt--tr"></div>
-              <div class="chassis-bolt chassis-bolt--bl"></div>
-              <div class="chassis-bolt chassis-bolt--br"></div>
-              <h4 class="tabular" style="font-size: 0.74rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--accent); margin-block-end: 0.5rem;">
-                Course Description // Seminar Prospectus
+            <section class="manuscript-abstract-vellum bookplate-frame" style="margin-block-end: 2rem;">
+              <div class="bookplate-corner bookplate-corner--tl" aria-hidden="true">❦</div>
+              <div class="bookplate-corner bookplate-corner--tr" aria-hidden="true">❦</div>
+              <div class="bookplate-corner bookplate-corner--bl" aria-hidden="true">❦</div>
+              <div class="bookplate-corner bookplate-corner--br" aria-hidden="true">❦</div>
+              <h4 class="scholarly-caps" style="font-size: 0.74rem; letter-spacing: 0.14em; color: var(--accent); margin-block-end: 0.5rem;">
+                SYNOPSIS · SEMINAR PROSPECTUS
               </h4>
               <p style="font-size: 0.98rem; color: var(--text-primary); line-height: 1.68; font-family: var(--font-serif);">
                 {c.summary}
@@ -185,8 +185,8 @@ const { classes } = Astro.props;
             <section class="course-reviews-section" data-course-reviews={c.id}>
               <div class="reviews-header-row">
                 <div>
-                  <span class="cathode-tag tabular" style="display: block; margin-block-end: 0.2rem;">
-                    SEMINAR EVALUATION LEDGER // {c.courseCode}
+                  <span class="fascicle-tag tabular" style="display: block; margin-block-end: 0.2rem;">
+                    SEMINAR EVALUATION LEDGER · {c.courseCode}
                   </span>
                   <h4 class="reviews-section-title">
                     Student &amp; Peer Seminar Reviews
@@ -203,83 +203,23 @@ const { classes } = Astro.props;
                   >
                     + Add Seminar Review
                   </button>
+                  <button
+                    type="button"
+                    class="pill btn-open-class-ledger tabular"
+                    data-open-class-ledger={c.id}
+                    style="color: var(--accent); border-color: color-mix(in oklab, var(--accent) 45%, var(--border-subtle));"
+                  >
+                    📜 Curriculum &amp; Evaluation Ledger
+                  </button>
                 </div>
               </div>
 
-              <!-- Collapsible Interactive Review Submission Form -->
-              <form
-                class="review-form-drawer entry-hidden"
-                data-review-form={c.id}
-                aria-label={`Submit a seminar review for ${c.title}`}
-              >
-                <div class="review-form-grid">
-                  <div>
-                    <label class="review-label tabular" for={`rev-author-${c.id}`}>NAME / INITIALS</label>
-                    <input
-                      id={`rev-author-${c.id}`}
-                      name="author"
-                      type="text"
-                      required
-                      placeholder="e.g. Ananya S."
-                      class="telemetry-input"
-                    />
-                  </div>
-                  <div>
-                    <label class="review-label tabular" for={`rev-role-${c.id}`}>PROGRAMME / COHORT</label>
-                    <input
-                      id={`rev-role-${c.id}`}
-                      name="role"
-                      type="text"
-                      required
-                      placeholder="e.g. BA (Hons.) Philosophy · ASP"
-                      class="telemetry-input"
-                    />
-                  </div>
-                  <div>
-                    <label class="review-label tabular" for={`rev-term-${c.id}`}>SEMESTER</label>
-                    <input
-                      id={`rev-term-${c.id}`}
-                      name="term"
-                      type="text"
-                      value={`${c.term} 2025`}
-                      required
-                      class="telemetry-input"
-                    />
-                  </div>
-                </div>
-                <div style="margin-block-start: 0.65rem;">
-                  <label class="review-label tabular" for={`rev-highlight-${c.id}`}>KEY TAKEAWAY / HIGHLIGHT</label>
-                  <input
-                    id={`rev-highlight-${c.id}`}
-                    name="highlight"
-                    type="text"
-                    placeholder="Brief headline summary of your seminar experience..."
-                    class="telemetry-input"
-                  />
-                </div>
-                <div style="margin-block-start: 0.65rem;">
-                  <label class="review-label tabular" for={`rev-quote-${c.id}`}>SEMINAR EVALUATION</label>
-                  <textarea
-                    id={`rev-quote-${c.id}`}
-                    name="quote"
-                    rows="3"
-                    required
-                    placeholder="Share your reflection on the readings, seminar discussions, and intellectual arc..."
-                    class="telemetry-input"
-                  ></textarea>
-                </div>
-                <div class="review-form-footer">
-                  <button type="submit" class="pill review-submit-btn tabular">
-                    ✓ Record Seminar Review
-                  </button>
-                </div>
-              </form>
 
               <div class="course-reviews-list" data-reviews-list={c.id}>
                 {reviews.map((rev: any, rIdx: number) => (
-                  <article class="review-card">
-                    <div class="chassis-bolt chassis-bolt--tl"></div>
-                    <div class="chassis-bolt chassis-bolt--tr"></div>
+                  <article class="review-card bookplate-card">
+                    <div class="bookplate-corner bookplate-corner--tl" aria-hidden="true">❦</div>
+                    <div class="bookplate-corner bookplate-corner--tr" aria-hidden="true">❦</div>
                     <div class="review-card-top">
                       <div>
                         <strong class="review-author">{rev.author}</strong>
@@ -320,131 +260,6 @@ const { classes } = Astro.props;
   </div>
 </section>
 
-<script>
-  // Interactive Seminar Review Drawer & Local Persistence per Course
-  const STORAGE_PREFIX = 'drc_course_reviews_';
-
-  function createReviewCardElement(rev: {
-    author: string;
-    role: string;
-    term: string;
-    rating?: string;
-    highlight?: string;
-    quote: string;
-    num: number;
-  }) {
-    const card = document.createElement('article');
-    card.className = 'review-card';
-
-    const top = document.createElement('div');
-    top.className = 'review-card-top';
-
-    const left = document.createElement('div');
-    const strong = document.createElement('strong');
-    strong.className = 'review-author';
-    strong.textContent = rev.author;
-    const roleSpan = document.createElement('span');
-    roleSpan.className = 'review-role';
-    roleSpan.textContent = rev.role;
-    left.append(strong, roleSpan);
-
-    const badges = document.createElement('div');
-    badges.className = 'review-badges tabular';
-    const termTag = document.createElement('span');
-    termTag.className = 'review-term-tag';
-    termTag.textContent = rev.term;
-    const ratingTag = document.createElement('span');
-    ratingTag.className = 'review-rating-tag';
-    ratingTag.textContent = `★ ${rev.rating || '5.0 / 5.0'}`;
-    badges.append(termTag, ratingTag);
-
-    top.append(left, badges);
-    card.appendChild(top);
-
-    if (rev.highlight) {
-      const hl = document.createElement('p');
-      hl.className = 'review-highlight';
-      hl.textContent = `“${rev.highlight}”`;
-      card.appendChild(hl);
-    }
-
-    const bq = document.createElement('blockquote');
-    bq.className = 'review-quote';
-    const p = document.createElement('p');
-    p.textContent = rev.quote;
-    bq.appendChild(p);
-    card.appendChild(bq);
-
-    const foot = document.createElement('footer');
-    foot.className = 'review-card-foot tabular';
-    const s1 = document.createElement('span');
-    s1.textContent = `EVALUATION RECORD #${String(rev.num).padStart(2, '0')}`;
-    const s2 = document.createElement('span');
-    s2.textContent = 'VERIFIED SEMINAR PARTICIPANT';
-    foot.append(s1, s2);
-    card.appendChild(foot);
-
-    return card;
-  }
-
-  document.querySelectorAll<HTMLButtonElement>('[data-toggle-review-form]').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      const courseId = btn.dataset.toggleReviewForm;
-      const form = document.querySelector<HTMLFormElement>(`[data-review-form="${courseId}"]`);
-      if (!form) return;
-      const isHidden = form.classList.toggle('entry-hidden');
-      btn.textContent = isHidden ? '+ Add Seminar Review' : '✕ Close Review Form';
-    });
-  });
-
-  document.querySelectorAll<HTMLFormElement>('[data-review-form]').forEach((form) => {
-    const courseId = form.dataset.reviewForm || '';
-    const listEl = document.querySelector<HTMLElement>(`[data-reviews-list="${courseId}"]`);
-
-    // Hydrate any locally saved reviews for this course
-    try {
-      const saved = JSON.parse(localStorage.getItem(STORAGE_PREFIX + courseId) || '[]');
-      if (Array.isArray(saved) && listEl) {
-        saved.forEach((item, idx) => {
-          const count = listEl.children.length + idx + 1;
-          listEl.prepend(createReviewCardElement({ ...item, num: count }));
-        });
-      }
-    } catch {}
-
-    form.addEventListener('submit', (e) => {
-      e.preventDefault();
-      if (!listEl) return;
-      const fd = new FormData(form);
-      const newRev = {
-        author: String(fd.get('author') || 'Seminar Participant').trim(),
-        role: String(fd.get('role') || 'Ashoka University').trim(),
-        term: String(fd.get('term') || '2025–2026').trim(),
-        rating: '5.0 / 5.0',
-        highlight: String(fd.get('highlight') || '').trim(),
-        quote: String(fd.get('quote') || '').trim(),
-      };
-      if (!newRev.quote) return;
-
-      const nextNum = listEl.children.length + 1;
-      listEl.prepend(createReviewCardElement({ ...newRev, num: nextNum }));
-
-      try {
-        const existing = JSON.parse(localStorage.getItem(STORAGE_PREFIX + courseId) || '[]');
-        existing.push(newRev);
-        localStorage.setItem(STORAGE_PREFIX + courseId, JSON.stringify(existing));
-      } catch {}
-
-      form.reset();
-      form.classList.add('entry-hidden');
-      const toggleBtn = document.querySelector<HTMLButtonElement>(`[data-toggle-review-form="${courseId}"]`);
-      if (toggleBtn) toggleBtn.textContent = '✓ Review Recorded';
-      setTimeout(() => {
-        if (toggleBtn) toggleBtn.textContent = '+ Add Seminar Review';
-      }, 1800);
-    });
-  });
-</script>
 
 <style>
   .entry-hidden {

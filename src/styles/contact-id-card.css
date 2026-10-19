@@ -35,12 +35,14 @@
     inset-inline-end: clamp(0.75rem, 3vw, 2.25rem);
     margin: 0;
     padding: 0;
-    border: 1px solid var(--accent);
+    border: 1px solid color-mix(in oklab, var(--accent) 65%, transparent);
     border-radius: 12px;
     inline-size: min(375px, calc(100dvw - 1.5rem));
     background: var(--bg-surface);
     color: var(--text-primary);
-    box-shadow: 0 24px 56px -12px oklch(0% 0 0 / 0.55);
+    box-shadow: 
+      0 0 0 1px oklch(76% 0.08 85 / 0.35),
+      var(--shadow-modal-3d);
 
     @supports (anchor-name: --contact-btn) {
       position-anchor: --contact-btn;
@@ -71,8 +73,8 @@
     }
 
     &::backdrop {
-      background-color: oklch(0% 0 0 / 0.32);
-      backdrop-filter: blur(2px);
+      background-color: oklch(0% 0 0 / 0.42);
+      backdrop-filter: blur(3px);
 
       @starting-style {
         background-color: transparent;
@@ -90,11 +92,41 @@
   }
 
   .id-card-surface {
-    padding: 1.15rem;
+    position: relative;
+    padding: 1.35rem 1.45rem 1.25rem;
     display: flex;
     flex-direction: column;
     gap: 1rem;
+    border-radius: 12px;
+    background: 
+      radial-gradient(
+        360px circle at var(--card-light-x, 85%) var(--card-light-y, 15%),
+        color-mix(in oklab, var(--bg-surface) 86%, var(--paper-vellum, #f4efe6) 14%),
+        var(--bg-surface) 65%
+      );
+    box-shadow: 
+      inset 0 1px 1px oklch(100% 0 0 / 0.18),
+      inset 0 -1px 2px oklch(0% 0 0 / 0.35);
+    transform-style: preserve-3d;
+    transform: perspective(900px) rotateX(var(--card-tilt-x, 0deg)) rotateY(var(--card-tilt-y, 0deg));
+    transition: transform 0.12s ease-out;
   }
+
+  .bookplate-corner {
+    position: absolute;
+    font-family: var(--font-serif);
+    font-size: 0.95rem;
+    color: color-mix(in oklab, var(--accent) 60%, transparent);
+    user-select: none;
+    line-height: 1;
+    pointer-events: none;
+    z-index: 2;
+  }
+
+  .bookplate-corner--tl { inset-block-start: 0.55rem; inset-inline-start: 0.65rem; }
+  .bookplate-corner--tr { inset-block-start: 0.55rem; inset-inline-end: 0.65rem; }
+  .bookplate-corner--bl { inset-block-end: 0.55rem; inset-inline-start: 0.65rem; }
+  .bookplate-corner--br { inset-block-end: 0.55rem; inset-inline-end: 0.65rem; }
 
   .id-card-strip {
     display: flex;
@@ -106,6 +138,7 @@
     font-size: 0.68rem;
     letter-spacing: 0.14em;
     color: var(--accent);
+    text-shadow: var(--text-intaglio-shadow);
   }
 
   .id-card-body {
@@ -115,19 +148,33 @@
     align-items: center;
   }
 
+  .id-card-photo-frame {
+    position: relative;
+    display: inline-block;
+    border-radius: 6px;
+    padding: 3px;
+    background: color-mix(in oklab, var(--bg-canvas) 85%, transparent);
+    box-shadow: 
+      inset 0 2px 4px oklch(0% 0 0 / 0.55),
+      inset 0 0 0 1px oklch(0% 0 0 / 0.35),
+      0 1px 0 oklch(100% 0 0 / 0.12);
+    overflow: hidden;
+  }
+
   .id-card-photo {
     inline-size: 96px;
     block-size: 120px;
     aspect-ratio: 4 / 5;
     object-fit: cover;
-    border-radius: 6px;
-    border: 1px solid var(--border-subtle);
+    border-radius: 4px;
+    display: block;
   }
 
   .id-card-name {
     font-size: 1.15rem;
     font-weight: 600;
     margin-block-end: 0.25rem;
+    text-shadow: var(--text-intaglio-shadow);
   }
 
   .id-card-title {
@@ -143,26 +190,30 @@
     color: var(--text-muted);
   }
 
-  .id-card-telemetry {
+  .id-card-telemetry,
+  .id-card-credentials {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 0.75rem;
     padding: 0.75rem;
-    border-radius: 6px;
-    background: var(--bg-elevated);
+    border-radius: 4px;
+    background: color-mix(in oklab, var(--bg-surface) 90%, var(--paper-vellum, #f4efe6) 10%);
     border: 1px solid var(--border-subtle);
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.05);
     font-size: 0.75rem;
   }
 
-  .id-card-telemetry dt {
+  .id-card-telemetry dt,
+  .id-card-credentials dt {
     font-family: var(--font-mono);
-    font-size: 0.64rem;
+    font-size: 0.62rem;
     color: var(--text-muted);
-    letter-spacing: 0.08em;
+    letter-spacing: 0.12em;
     margin-block-end: 0.15rem;
   }
 
-  .id-card-telemetry dd {
+  .id-card-telemetry dd,
+  .id-card-credentials dd {
     font-weight: 500;
     color: var(--text-primary);
   }

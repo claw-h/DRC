@@ -19,7 +19,7 @@ const sortedBooks = [...books].sort((a, b) => b.data.year - a.data.year);
     <div class="pane-inner-scroll" data-scrollable-pane>
       <header class="pane-toolbar">
         <div class="pane-toolbar-title">
-          <span class="led-socket is-on" aria-hidden="true"></span>
+          <span class="section-fleuron" aria-hidden="true">§</span>
           <h2 class="pane-heading">
             Monographs <span class="count-badge tabular">[{String(sortedBooks.length).padStart(2, '0')}]</span>
           </h2>
@@ -90,7 +90,7 @@ const sortedBooks = [...books].sort((a, b) => b.data.year - a.data.year);
 
       <!-- Top Return Horizon Cue: Books -> Publications -->
       <div class="scroll-horizon-top-cue" data-jump-view="view-publications">
-        <span class="tabular">↑ Scroll up at top boundary to return to 01 // PUBLICATIONS</span>
+        <span class="scholarly-caps">↑ Advance scroll upwards to return to I · PUBLICATIONS</span>
       </div>
 
       {sortedBooks.map((book, idx) => {
@@ -101,21 +101,22 @@ const sortedBooks = [...books].sort((a, b) => b.data.year - a.data.year);
             data-book-entry={b.id}
           >
             <header class="dossier-hero">
-              <div class="dossier-cover-showcase">
+              <div class="dossier-cover-showcase" data-open-book-tome={b.id} role="button" tabindex="0" title="Inspect Monograph Colophon & Chapters" style="cursor: pointer;">
                 <img
                   src={b.coverImage}
                   alt={`Cover of ${b.title}`}
                   width="240"
                   height="360"
-                  style="border-radius: 6px; border: 1px solid var(--border-subtle); box-shadow: 0 22px 44px -12px oklch(0% 0 0 / 0.65); aspect-ratio: 2 / 3; object-fit: cover;"
+                  style="border-radius: 6px; border: 1px solid var(--border-subtle); box-shadow: 0 22px 44px -12px oklch(0% 0 0 / 0.65); aspect-ratio: 2 / 3; object-fit: cover; transition: transform 0.2s ease, box-shadow 0.2s ease;"
                 />
               </div>
 
               <div class="dossier-meta-lockup">
                 <div class="reader-eyebrow-row">
-                  <span class="cathode-tag tabular" data-scramble-eyebrow>
-                    MONOGRAPH // {b.year} · {b.id.toUpperCase()}
+                  <span class="fascicle-tag tabular">
+                    FOLIO {b.id.toUpperCase()} · {b.year}
                   </span>
+                  <span class="colophon-stamp scholarly-caps">PUBLISHED MONOGRAPH</span>
                 </div>
                 <h3 class="reader-main-title" data-scramble-title>
                   {b.title}
@@ -126,7 +127,7 @@ const sortedBooks = [...books].sort((a, b) => b.data.year - a.data.year);
                   </p>
                 )}
 
-                <dl class="tabular telemetry-specs-grid">
+                <dl class="tabular colophon-specs-grid">
                   <div>
                     <dt>PUBLISHER</dt>
                     <dd>{b.publisher}</dd>
@@ -153,17 +154,25 @@ const sortedBooks = [...books].sort((a, b) => b.data.year - a.data.year);
                       {link.label} ↗
                     </a>
                   ))}
+                  <button
+                    type="button"
+                    class="pill btn-open-book-tome"
+                    data-open-book-tome={b.id}
+                    style="color: var(--accent); border-color: color-mix(in oklab, var(--accent) 45%, var(--border-subtle)); padding: 0.45rem 0.85rem;"
+                  >
+                    📖 Monograph Colophon &amp; Chapters
+                  </button>
                 </div>
               </div>
             </header>
 
-            <section class="recessed-abstract-box" style="margin-block-end: 2rem;">
-              <div class="chassis-bolt chassis-bolt--tl"></div>
-              <div class="chassis-bolt chassis-bolt--tr"></div>
-              <div class="chassis-bolt chassis-bolt--bl"></div>
-              <div class="chassis-bolt chassis-bolt--br"></div>
-              <h4 class="tabular" style="font-size: 0.74rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--accent); margin-block-end: 0.5rem;">
-                Synopsis // Editorial Dossier
+            <section class="manuscript-abstract-vellum bookplate-frame" style="margin-block-end: 2rem;">
+              <div class="bookplate-corner bookplate-corner--tl" aria-hidden="true">❦</div>
+              <div class="bookplate-corner bookplate-corner--tr" aria-hidden="true">❦</div>
+              <div class="bookplate-corner bookplate-corner--bl" aria-hidden="true">❦</div>
+              <div class="bookplate-corner bookplate-corner--br" aria-hidden="true">❦</div>
+              <h4 class="scholarly-caps" style="font-size: 0.74rem; letter-spacing: 0.14em; color: var(--accent); margin-block-end: 0.5rem;">
+                SYNOPSIS · EDITORIAL DOSSIER
               </h4>
               <p style="font-size: 0.98rem; color: var(--text-primary); line-height: 1.68; font-family: var(--font-serif);">
                 {b.synopsis}
@@ -216,20 +225,21 @@ const sortedBooks = [...books].sort((a, b) => b.data.year - a.data.year);
         );
       })}
 
-      <!-- Seamless Scroll Horizon Cue: Books -> Classes -->
-      <div class="scroll-horizon-bridge" data-jump-view="view-classes">
+      <!-- Folio Turn Progression: Books -> Classes -->
+      <div class="folio-turn-bridge" data-jump-view="view-classes">
         <div class="horizon-bridge-meta">
-          <span class="horizon-kicker tabular">CONTINUOUS SCROLL HORIZON // NEXT CHANNEL</span>
-          <strong class="horizon-title">03 · UNIVERSITY SEMINARS &amp; SYLLABI →</strong>
+          <span class="horizon-kicker scholarly-caps">FOLIO TURN · ADVANCE TO NEXT FASCICLE</span>
+          <strong class="horizon-title">III · CLASSES →</strong>
         </div>
         <div class="horizon-charge-track">
           <div class="horizon-charge-fill" data-scroll-charge-fill></div>
         </div>
-        <span class="horizon-hint tabular">Keep scrolling down to transition seamlessly into Classes</span>
+        <span class="horizon-hint scholarly-caps">Advance scroll to turn folio into Classes</span>
       </div>
     </div>
   </div>
 </section>
+
 
 <style>
   .entry-hidden {

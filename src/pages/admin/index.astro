@@ -22,20 +22,20 @@ const sampleCatalog = skyIndex.catalog.slice(0, 60);
 ---
 
 <BaseLayout
-  title="Sovereign Control Panel — DRC Observatory"
-  description="Total administrative control panel for Professor Duncan R. Cordry."
+  title="The Study — DRC Sovereign Folio & Archive"
+  description="Academic archive, folio control, and study console for Professor Duncan R. Cordry."
 >
   <div class="admin-shell" data-csrf={csrfToken}>
     <header class="admin-topbar">
       <div>
-        <span class="admin-badge">SOVEREIGN CONTROL PANEL · EPOCH J2000.0</span>
-        <h1>{profile.name} — Observatory Command</h1>
+        <span class="admin-badge">SOVEREIGN ARCHIVE · THE STUDY · EPOCH J2000.0</span>
+        <h1>{profile.name} — The Study</h1>
       </div>
       <div class="admin-top-actions">
-        <a href="/" class="admin-btn-outline">View Live Observatory ↗</a>
+        <a href="/" class="admin-btn-outline">View Live Folio ↗</a>
         <form method="POST" action="/api/admin/auth">
           <input type="hidden" name="action" value="logout" />
-          <button type="submit" class="admin-btn-outline">Lock Terminal</button>
+          <button type="submit" class="admin-btn-outline">Lock Study</button>
         </form>
       </div>
     </header>
@@ -137,10 +137,11 @@ const sampleCatalog = skyIndex.catalog.slice(0, 60);
       </section>
 
       <!-- Module 3: Faculty ID Portrait 4:5 Cropper & Office Hours -->
+      <!-- Module 3: Scholar's Visiting Card Portrait & Office Consultation -->
       <section class="admin-panel" aria-labelledby="panel-media">
         <div class="panel-head">
-          <span class="panel-kicker">03 · CREDENTIAL & PORTRAIT STUDIO</span>
-          <h2 id="panel-media">Faculty ID Card Portrait & Telemetry</h2>
+          <span class="panel-kicker">03 · VISITING CARD & PORTRAIT ATELIER</span>
+          <h2 id="panel-media">Scholar's Visiting Card Portrait & Credentials</h2>
         </div>
 
         <form id="media-form" class="admin-form">
@@ -170,7 +171,7 @@ const sampleCatalog = skyIndex.catalog.slice(0, 60);
                 />
               </label>
               <button type="submit" class="admin-btn-primary">
-                Save Portrait & ID Card Telemetry
+                Save Portrait & Visiting Card Credentials
               </button>
             </div>
           </div>
@@ -190,7 +191,7 @@ const sampleCatalog = skyIndex.catalog.slice(0, 60);
           <input
             type="search"
             id="constellation-filter"
-            placeholder="Filter by ID or Latin designation (e.g. DRC-0001)…"
+            placeholder="Filter by IAU code or Latin designation (e.g. ORI, UMA, Orion)…"
           />
         </div>
 

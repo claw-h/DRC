@@ -35,12 +35,14 @@
           try {
             localStorage.removeItem('color-scheme');
           } catch {}
-          meta.content = 'light dark';
+          meta.content = targetScheme;
+          document.documentElement.setAttribute('data-theme', targetScheme);
         } else {
           try {
             localStorage.setItem('color-scheme', targetScheme);
           } catch {}
           meta.content = targetScheme;
+          document.documentElement.setAttribute('data-theme', targetScheme);
         }
 
         window.dispatchEvent(new CustomEvent('drc-theme-changed', { detail: { scheme: targetScheme } }));

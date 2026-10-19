@@ -10,6 +10,8 @@ interface Props {
 }
 
 const { publications, books, classes } = Astro.props;
+const sortedPubs = [...publications].sort((a, b) => b.data.year - a.data.year);
+const sortedBooks = [...books].sort((a, b) => b.data.year - a.data.year);
 ---
 
 <drc-workspace class="academic-shell">
@@ -17,35 +19,350 @@ const { publications, books, classes } = Astro.props;
   <PublicationsWorkspace publications={publications} />
   <BooksWorkspace books={books} />
   <ClassesWorkspace classes={classes} />
+
+  <!-- 1. ARCHIVAL CITATION & BIBTEX CODEX MODAL -->
+  <dialog id="publication-codex-dialog" class="artefact-modal codex-dialog" closedby="any" aria-labelledby="codex-dialog-title">
+    <div class="artefact-slab-shell" id="codex-slab-shell">
+      <div class="bookplate-corner bookplate-corner--tl" aria-hidden="true">❦</div>
+      <div class="bookplate-corner bookplate-corner--tr" aria-hidden="true">❦</div>
+      <div class="bookplate-corner bookplate-corner--bl" aria-hidden="true">❦</div>
+      <div class="bookplate-corner bookplate-corner--br" aria-hidden="true">❦</div>
+
+      <header class="artefact-modal-header">
+        <div class="artefact-modal-header-tag">
+          <span class="seal-mark" aria-hidden="true">❧</span>
+          <span id="codex-folio-tag">FOLIO ARCHIVE · SCHOLARLY CITATION CODEX</span>
+        </div>
+        <button type="button" class="artefact-close-btn" id="btn-close-codex" aria-label="Close Archival Dossier">✕</button>
+      </header>
+
+      <div class="artefact-modal-body">
+        <p class="codex-eyebrow tabular" id="codex-dialog-venue">VENUE · YEAR</p>
+        <h3 id="codex-dialog-title" class="codex-title">Publication Title</h3>
+        <p id="codex-dialog-subtitle" style="font-family: var(--font-serif); font-style: italic; color: var(--text-secondary); margin-block-end: 0.85rem; display: none;"></p>
+        
+        <dl class="codex-meta-specs tabular">
+          <div>
+            <dt>AUTHORS</dt>
+            <dd id="codex-dialog-authors">Duncan R. Cordry</dd>
+          </div>
+          <div>
+            <dt>JOURNAL / VOLUME</dt>
+            <dd id="codex-dialog-vol">Volume &amp; Issue</dd>
+          </div>
+          <div>
+            <dt>SCHOLARLY REGISTRATION</dt>
+            <dd id="codex-dialog-id">ID</dd>
+          </div>
+        </dl>
+
+        <section class="codex-cartouche">
+          <div class="cartouche-header">
+            <span class="cartouche-title">BIBTEX ARCHIVAL RECORD</span>
+            <button type="button" class="pill" id="btn-codex-copy-bibtex" style="font-size: 0.7rem; padding: 0.25rem 0.65rem;">
+              ⎘ Copy BibTeX
+            </button>
+          </div>
+          <pre><code id="codex-dialog-bibtex" class="codex-bibtex-block"></code></pre>
+        </section>
+
+        <section style="margin-block-end: 1.5rem;">
+          <div class="cartouche-header" style="margin-block-end: 0.45rem;">
+            <span class="cartouche-title">FORMATTED SCHOLARLY CITATION (APA)</span>
+            <button type="button" class="pill" id="btn-codex-copy-apa" style="font-size: 0.7rem; padding: 0.25rem 0.65rem;">
+              ⎘ Copy Citation
+            </button>
+          </div>
+          <p id="codex-dialog-apa" class="codex-apa-box"></p>
+        </section>
+
+        <div class="codex-actions-row">
+          <a id="codex-link-permalink" href="#" class="pill" style="text-decoration: none; color: var(--text-primary);">
+            ⌖ Standalone Folio Permalink ↗
+          </a>
+          <a id="codex-link-doi" href="#" target="_blank" rel="noopener noreferrer" class="pill" style="text-decoration: none; color: var(--text-primary); display: none;">
+            DOI Record ↗
+          </a>
+        </div>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- 2. MONOGRAPH COLOPHON & CHAPTER DOSSIER TOME MODAL -->
+  <dialog id="book-tome-dialog" class="artefact-modal tome-dialog" closedby="any" aria-labelledby="tome-dialog-title">
+    <div class="artefact-slab-shell" id="tome-slab-shell">
+      <div class="bookplate-corner bookplate-corner--tl" aria-hidden="true">❦</div>
+      <div class="bookplate-corner bookplate-corner--tr" aria-hidden="true">❦</div>
+      <div class="bookplate-corner bookplate-corner--bl" aria-hidden="true">❦</div>
+      <div class="bookplate-corner bookplate-corner--br" aria-hidden="true">❦</div>
+
+      <header class="artefact-modal-header">
+        <div class="artefact-modal-header-tag">
+          <span class="seal-mark" aria-hidden="true">❧</span>
+          <span id="tome-folio-tag">MONOGRAPH DOSSIER · EDITORIAL COLOPHON &amp; PROSPECTUS</span>
+        </div>
+        <button type="button" class="artefact-close-btn" id="btn-close-tome" aria-label="Close Monograph Dossier">✕</button>
+      </header>
+
+      <div class="artefact-modal-body">
+        <div class="tome-spread-grid">
+          <!-- VERSO: Cover & Ex Libris Colophon -->
+          <aside class="tome-verso-colophon">
+            <div class="tome-cover-wrap">
+              <img
+                id="tome-dialog-cover"
+                src=""
+                alt="Monograph Cover"
+                width="190"
+                height="285"
+                class="tome-cover-img"
+              />
+            </div>
+
+            <div class="tome-ex-libris-plate">
+              <div class="ex-libris-header">EX LIBRIS · DUNCAN R. CORDRY</div>
+              <dl class="colophon-specs-grid tabular" style="margin-block-end: 0; background: transparent; border: none; box-shadow: none; padding: 0;">
+                <div>
+                  <dt>PUBLISHER</dt>
+                  <dd id="tome-dialog-publisher"></dd>
+                </div>
+                <div>
+                  <dt>ISBN-13</dt>
+                  <dd><code id="tome-dialog-isbn"></code></dd>
+                </div>
+                <div>
+                  <dt>EXTENT</dt>
+                  <dd id="tome-dialog-pages"></dd>
+                </div>
+                <div>
+                  <dt>YEAR</dt>
+                  <dd id="tome-dialog-year"></dd>
+                </div>
+              </dl>
+            </div>
+
+            <div id="tome-purchase-links" style="display: flex; flex-direction: column; gap: 0.45rem;"></div>
+          </aside>
+
+          <!-- RECTO: Prospectus, Table of Contents & Critical Reception -->
+          <div class="tome-recto-content">
+            <div>
+              <span class="fascicle-tag tabular" id="tome-dialog-eyebrow">FOLIO RECORD</span>
+              <h3 id="tome-dialog-title" class="tome-heading">Book Title</h3>
+              <p id="tome-dialog-subtitle" class="tome-subtitle" style="display: none;"></p>
+            </div>
+
+            <section class="manuscript-abstract-vellum bookplate-frame" style="margin-block-end: 0;">
+              <div class="bookplate-corner bookplate-corner--tl" aria-hidden="true">❦</div>
+              <div class="bookplate-corner bookplate-corner--tr" aria-hidden="true">❦</div>
+              <h4 class="scholarly-caps" style="font-size: 0.72rem; letter-spacing: 0.14em; color: var(--accent); margin-block-end: 0.5rem;">
+                EDITORIAL SYNOPSIS
+              </h4>
+              <p id="tome-dialog-synopsis" style="font-size: 0.94rem; color: var(--text-primary); line-height: 1.65; font-family: var(--font-serif);"></p>
+            </section>
+
+            <section>
+              <h4 class="scholarly-caps" style="font-size: 0.72rem; letter-spacing: 0.14em; color: var(--accent); margin-block-end: 0.65rem;">
+                TABLE OF CONTENTS &amp; CHAPTER SUMMARIES
+              </h4>
+              <div id="tome-chapters-list" class="tome-chapter-list"></div>
+            </section>
+
+            <section id="tome-endorsements-wrap">
+              <h4 class="scholarly-caps" style="font-size: 0.72rem; letter-spacing: 0.14em; color: var(--accent); margin-block-end: 0.65rem;">
+                CRITICAL RECEPTION &amp; SCHOLARLY ENDORSEMENTS
+              </h4>
+              <div id="tome-endorsements-list" style="display: flex; flex-direction: column; gap: 0.75rem;"></div>
+            </section>
+          </div>
+        </div>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- 3. SEMINAR LEDGER & EVALUATION CODEX MODAL -->
+  <dialog id="class-ledger-dialog" class="artefact-modal ledger-dialog" closedby="any" aria-labelledby="ledger-dialog-title">
+    <div class="artefact-slab-shell" id="ledger-slab-shell">
+      <div class="ledger-brass-bar"></div>
+      <div class="bookplate-corner bookplate-corner--tl" aria-hidden="true">❦</div>
+      <div class="bookplate-corner bookplate-corner--tr" aria-hidden="true">❦</div>
+      <div class="bookplate-corner bookplate-corner--bl" aria-hidden="true">❦</div>
+      <div class="bookplate-corner bookplate-corner--br" aria-hidden="true">❦</div>
+
+      <header class="artefact-modal-header">
+        <div class="artefact-modal-header-tag">
+          <span class="seal-mark" aria-hidden="true">❧</span>
+          <span id="ledger-folio-tag">ACADEMIC LEDGER · COURSE SYLLABUS &amp; EVALUATION CODEX</span>
+        </div>
+        <button type="button" class="artefact-close-btn" id="btn-close-ledger" aria-label="Close Seminar Ledger">✕</button>
+      </header>
+
+      <div class="artefact-modal-body">
+        <div style="margin-block-end: 1.25rem;">
+          <span class="fascicle-tag tabular" id="ledger-dialog-eyebrow">CURRICULUM</span>
+          <h3 id="ledger-dialog-title" class="tome-heading" style="margin-block-end: 0.5rem;">Course Title</h3>
+          <dl class="colophon-specs-grid tabular" style="margin-block-end: 0;">
+            <div>
+              <dt>COURSE CODE</dt>
+              <dd id="ledger-dialog-code"></dd>
+            </div>
+            <div>
+              <dt>TERM &amp; YEAR</dt>
+              <dd id="ledger-dialog-term"></dd>
+            </div>
+            <div>
+              <dt>LEVEL</dt>
+              <dd id="ledger-dialog-level"></dd>
+            </div>
+            <div>
+              <dt>MEETING &amp; LOCATION</dt>
+              <dd id="ledger-dialog-sched"></dd>
+            </div>
+          </dl>
+        </div>
+
+        <!-- Dual Ledger Tabs: Evaluation vs Curriculum -->
+        <div class="ledger-tabs-row" role="tablist">
+          <button type="button" class="ledger-tab-btn" id="btn-ledger-tab-eval" role="tab" aria-selected="true" aria-controls="panel-ledger-eval">
+            ✍ Record Seminar Evaluation
+          </button>
+          <button type="button" class="ledger-tab-btn" id="btn-ledger-tab-curr" role="tab" aria-selected="false" aria-controls="panel-ledger-curr">
+            📜 14-Week Curriculum &amp; Required Readings
+          </button>
+        </div>
+
+        <!-- Tab Panel 1: Record Seminar Evaluation -->
+        <div id="panel-ledger-eval" role="tabpanel" aria-labelledby="btn-ledger-tab-eval">
+          <form id="ledger-review-form" class="ledger-form">
+            <input type="hidden" id="ledger-form-course-id" name="courseId" value="" />
+            <input type="hidden" id="ledger-form-rating" name="rating" value="5.0 / 5.0" />
+
+            <div class="ledger-form-grid">
+              <div class="ledger-field-wrap">
+                <label class="ledger-label" for="ledger-input-author">NAME / SCHOLAR INITIALS</label>
+                <input type="text" id="ledger-input-author" name="author" required placeholder="e.g. Ananya S." class="ledger-feint-input" />
+              </div>
+              <div class="ledger-field-wrap">
+                <label class="ledger-label" for="ledger-input-role">PROGRAMME / COHORT</label>
+                <input type="text" id="ledger-input-role" name="role" required placeholder="e.g. BA (Hons.) Philosophy · ASP" class="ledger-feint-input" />
+              </div>
+              <div class="ledger-field-wrap">
+                <label class="ledger-label" for="ledger-input-term">SEMESTER</label>
+                <input type="text" id="ledger-input-term" name="term" required class="ledger-feint-input" />
+              </div>
+            </div>
+
+            <div class="ledger-field-wrap">
+              <label class="ledger-label" for="ledger-input-highlight">SEMINAR HIGHLIGHT / TAKEAWAY</label>
+              <input type="text" id="ledger-input-highlight" name="highlight" placeholder="Brief headline summary of your seminar experience..." class="ledger-feint-input" />
+            </div>
+
+            <div class="ledger-field-wrap">
+              <label class="ledger-label" for="ledger-input-quote">SCHOLARLY EVALUATION &amp; REFLECTION</label>
+              <textarea id="ledger-input-quote" name="quote" rows="3" required placeholder="Share your reflection on the readings, seminar discussions, and intellectual arc..." class="ledger-feint-textarea"></textarea>
+            </div>
+
+            <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 1rem; margin-block-start: 0.5rem;">
+              <div class="ledger-rating-row">
+                <span class="ledger-label" style="margin: 0;">SEMINAR RATING:</span>
+                <div class="rating-stars-group" id="ledger-stars-group" role="group" aria-label="Seminar Rating">
+                  <button type="button" class="star-select-btn active" data-val="1">★</button>
+                  <button type="button" class="star-select-btn active" data-val="2">★</button>
+                  <button type="button" class="star-select-btn active" data-val="3">★</button>
+                  <button type="button" class="star-select-btn active" data-val="4">★</button>
+                  <button type="button" class="star-select-btn active" data-val="5">★</button>
+                </div>
+                <span class="tabular" id="ledger-rating-readout" style="font-size: 0.72rem; color: var(--accent); font-weight: 600;">5.0 / 5.0</span>
+              </div>
+
+              <button type="submit" class="ledger-submit-btn tabular" id="btn-ledger-submit">
+                ✓ Record into Seminar Ledger
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <!-- Tab Panel 2: Curriculum & Required Readings -->
+        <div id="panel-ledger-curr" role="tabpanel" aria-labelledby="btn-ledger-tab-curr" style="display: none;">
+          <div id="ledger-weeks-container" style="display: flex; flex-direction: column; gap: 0.65rem;"></div>
+        </div>
+      </div>
+      <div class="ledger-brass-bar"></div>
+    </div>
+  </dialog>
+
+  <!-- UNIFIED MANIFEST FOR CLIENT SCRIPT -->
+  <div
+    id="drc-artefact-manifest"
+    data-publications={JSON.stringify(sortedPubs.map(p => ({
+      id: p.data.id,
+      title: p.data.title,
+      subtitle: p.data.subtitle || '',
+      year: p.data.year,
+      venue: p.data.venue,
+      volumeIssue: p.data.volumeIssue || '',
+      coAuthors: p.data.coAuthors || [],
+      doi: p.data.doi || '',
+      bibtex: p.data.citationBibtex || ''
+    })))}
+    data-books={JSON.stringify(sortedBooks.map(b => ({
+      id: b.data.id,
+      title: b.data.title,
+      subtitle: b.data.subtitle || '',
+      year: b.data.year,
+      publisher: b.data.publisher,
+      isbn: b.data.isbn,
+      pages: b.data.pages,
+      coverImage: b.data.coverImage,
+      synopsis: b.data.synopsis,
+      purchaseLinks: b.data.purchaseLinks || [],
+      chapters: b.data.chapters || [],
+      endorsements: b.data.endorsements || []
+    })))}
+    data-classes={JSON.stringify(classes.map(cls => ({
+      id: cls.data.id,
+      courseCode: cls.data.courseCode,
+      title: cls.data.title,
+      academicYear: cls.data.academicYear,
+      term: cls.data.term,
+      level: cls.data.level,
+      schedule: cls.data.schedule,
+      summary: cls.data.summary,
+      weeks: cls.data.weeks || []
+    })))}
+    hidden
+  ></div>
 </drc-workspace>
 
 <script>
   const VIEW_ORDER = ['view-publications', 'view-books', 'view-classes'] as const;
-  const CHANNEL_LABELS = [
-    '01 // PUBLICATIONS',
-    '02 // BOOKS',
-    '03 // CLASSES',
+  const FASCICLE_LABELS = [
+    'FASCICLE I · PUBLICATIONS',
+    'FASCICLE II · BOOKS',
+    'FASCICLE III · CLASSES',
   ];
 
-  function scrambleElementText(el: HTMLElement | null, target: string) {
+  function applyInkTransition(el: HTMLElement | null) {
     if (!el) return;
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789//·';
-    let iter = 0;
-    const interval = window.setInterval(() => {
-      el.textContent = target
-        .split('')
-        .map((ch, idx) => {
-          if (ch === ' ') return ' ';
-          if (idx < iter) return target[idx];
-          return chars[Math.floor(Math.random() * chars.length)];
-        })
-        .join('');
-      if (iter >= target.length) {
-        clearInterval(interval);
-        el.textContent = target;
-      }
-      iter += 0.65;
-    }, 36);
+    el.classList.remove('ink-transition-active');
+    void el.offsetWidth;
+    el.classList.add('ink-transition-active');
+    window.setTimeout(() => {
+      el.classList.remove('ink-transition-active');
+    }, 650);
+  }
+
+  function updateManuscriptLabel(el: HTMLElement | null, target: string) {
+    if (!el || el.textContent === target) return;
+    el.style.opacity = '0.35';
+    el.style.filter = 'blur(2px)';
+    el.style.transition = 'opacity 0.16s ease, filter 0.16s ease';
+    window.setTimeout(() => {
+      el.textContent = target;
+      el.style.opacity = '1';
+      el.style.filter = 'none';
+      applyInkTransition(el);
+    }, 160);
   }
 
   class DrcWorkspace extends HTMLElement {
@@ -64,6 +381,7 @@ const { publications, books, classes } = Astro.props;
       this.initMobileStackDrillDown();
       this.initScrollspyFallback();
       this.initAmbientLightSpill();
+      this.initArtefactModals();
     }
 
     // Switch active workspace view (0 = Publications, 1 = Books, 2 = Classes)
@@ -84,7 +402,7 @@ const { publications, books, classes } = Astro.props;
         b.setAttribute('aria-current', b.dataset.targetView === targetId ? 'page' : 'false');
       });
 
-      // Update NavStrip horizontal scrub & cathode channel readout
+      // Update NavStrip horizontal scrub & fascicle locator readout
       const navTrack = document.getElementById('nav-strip-track');
       if (navTrack) {
         const scrubPx = -nextIndex * 24;
@@ -96,8 +414,8 @@ const { publications, books, classes } = Astro.props;
         flowFill.style.width = `${((nextIndex + 1) / VIEW_ORDER.length) * 100}%`;
       }
 
-      const cathodeEl = document.getElementById('nav-cathode-status');
-      scrambleElementText(cathodeEl, CHANNEL_LABELS[nextIndex]);
+      const locatorEl = document.getElementById('nav-cathode-status');
+      updateManuscriptLabel(locatorEl, FASCICLE_LABELS[nextIndex]);
 
       views.forEach((view) => {
         const isTarget = view.id === targetId;
@@ -379,8 +697,7 @@ const { publications, books, classes } = Astro.props;
             const isMatch = entry.dataset.pubEntry === id;
             entry.classList.toggle('entry-hidden', !isMatch);
             if (isMatch) {
-              const eyebrow = entry.querySelector<HTMLElement>('[data-scramble-eyebrow]');
-              if (eyebrow?.textContent) scrambleElementText(eyebrow, eyebrow.textContent.trim());
+              applyInkTransition(entry);
             }
           });
           drillToRightPane(btn.closest('.workspace-split'));
@@ -398,8 +715,7 @@ const { publications, books, classes } = Astro.props;
             const isMatch = entry.dataset.bookEntry === id;
             entry.classList.toggle('entry-hidden', !isMatch);
             if (isMatch) {
-              const eyebrow = entry.querySelector<HTMLElement>('[data-scramble-eyebrow]');
-              if (eyebrow?.textContent) scrambleElementText(eyebrow, eyebrow.textContent.trim());
+              applyInkTransition(entry);
             }
           });
           drillToRightPane(btn.closest('.workspace-split'));
@@ -417,8 +733,7 @@ const { publications, books, classes } = Astro.props;
             const isMatch = entry.dataset.classEntry === id;
             entry.classList.toggle('entry-hidden', !isMatch);
             if (isMatch) {
-              const eyebrow = entry.querySelector<HTMLElement>('[data-scramble-eyebrow]');
-              if (eyebrow?.textContent) scrambleElementText(eyebrow, eyebrow.textContent.trim());
+              applyInkTransition(entry);
             }
           });
           drillToRightPane(btn.closest('.workspace-split'));
@@ -568,6 +883,594 @@ const { publications, books, classes } = Astro.props;
         },
         { passive: true }
       );
+    }
+
+    // 9. Tactile 3D Artefact Modals Controller (Codex, Tome, Ledger)
+    private initArtefactModals() {
+      const STORAGE_PREFIX = 'drc_course_reviews_';
+
+      // 1. Parse unified manifest catalogs
+      const manifest = document.getElementById('drc-artefact-manifest');
+      const parseJsonDataset = (raw: string | null | undefined): any[] => {
+        if (!raw) return [];
+        try {
+          return JSON.parse(raw);
+        } catch {
+          try {
+            const decoded = raw
+              .replace(/&#34;/g, '"')
+              .replace(/&#38;/g, '&')
+              .replace(/&#39;/g, "'")
+              .replace(/&quot;/g, '"')
+              .replace(/&amp;/g, '&');
+            return JSON.parse(decoded);
+          } catch (e) {
+            console.error('[DRC Artefacts] Failed to parse JSON dataset', e);
+            return [];
+          }
+        }
+      };
+
+      const pubList = parseJsonDataset(manifest?.dataset?.publications || manifest?.getAttribute('data-publications'));
+      const bookList = parseJsonDataset(manifest?.dataset?.books || manifest?.getAttribute('data-books'));
+      const classList = parseJsonDataset(manifest?.dataset?.classes || manifest?.getAttribute('data-classes'));
+
+      const pubMap = new Map(pubList.map((p) => [p.id, p]));
+      const bookMap = new Map(bookList.map((b) => [b.id, b]));
+      const classMap = new Map(classList.map((c) => [c.id, c]));
+
+      // 2. Helper to construct archival review cards
+      const createReviewCardElement = (rev: {
+        author: string;
+        role: string;
+        term: string;
+        rating?: string;
+        highlight?: string;
+        quote: string;
+        num: number;
+      }) => {
+        const card = document.createElement('article');
+        card.className = 'review-card bookplate-card';
+
+        const cornerTl = document.createElement('div');
+        cornerTl.className = 'bookplate-corner bookplate-corner--tl';
+        cornerTl.setAttribute('aria-hidden', 'true');
+        cornerTl.textContent = '❦';
+
+        const cornerTr = document.createElement('div');
+        cornerTr.className = 'bookplate-corner bookplate-corner--tr';
+        cornerTr.setAttribute('aria-hidden', 'true');
+        cornerTr.textContent = '❦';
+
+        const top = document.createElement('div');
+        top.className = 'review-card-top';
+
+        const left = document.createElement('div');
+        const strong = document.createElement('strong');
+        strong.className = 'review-author';
+        strong.textContent = rev.author;
+        const roleSpan = document.createElement('span');
+        roleSpan.className = 'review-role';
+        roleSpan.textContent = rev.role;
+        left.append(strong, roleSpan);
+
+        const badges = document.createElement('div');
+        badges.className = 'review-badges tabular';
+        const termTag = document.createElement('span');
+        termTag.className = 'review-term-tag';
+        termTag.textContent = rev.term;
+        const ratingTag = document.createElement('span');
+        ratingTag.className = 'review-rating-tag';
+        ratingTag.textContent = `★ ${rev.rating || '5.0 / 5.0'}`;
+        badges.append(termTag, ratingTag);
+
+        top.append(left, badges);
+        card.append(cornerTl, cornerTr, top);
+
+        if (rev.highlight) {
+          const hl = document.createElement('p');
+          hl.className = 'review-highlight';
+          hl.textContent = `“${rev.highlight}”`;
+          card.appendChild(hl);
+        }
+
+        const bq = document.createElement('blockquote');
+        bq.className = 'review-quote';
+        const p = document.createElement('p');
+        p.textContent = rev.quote;
+        bq.appendChild(p);
+        card.appendChild(bq);
+
+        const foot = document.createElement('footer');
+        foot.className = 'review-card-foot tabular';
+        const s1 = document.createElement('span');
+        s1.textContent = `EVALUATION RECORD #${String(rev.num).padStart(2, '0')}`;
+        const s2 = document.createElement('span');
+        s2.textContent = 'VERIFIED SEMINAR PARTICIPANT';
+        foot.append(s1, s2);
+        card.appendChild(foot);
+
+        return card;
+      };
+
+      // 3. Hydrate saved reviews from localStorage on load
+      classList.forEach((cls) => {
+        const listEl = this.querySelector<HTMLElement>(`[data-reviews-list="${cls.id}"]`);
+        if (!listEl) return;
+        try {
+          const saved = JSON.parse(localStorage.getItem(STORAGE_PREFIX + cls.id) || '[]');
+          if (Array.isArray(saved)) {
+            saved.forEach((item, idx) => {
+              const count = listEl.children.length + idx + 1;
+              listEl.prepend(createReviewCardElement({ ...item, num: count }));
+            });
+          }
+        } catch {}
+      });
+
+      // 4. Modal references
+      const codexDialog = document.getElementById('publication-codex-dialog') as HTMLDialogElement | null;
+      const tomeDialog = document.getElementById('book-tome-dialog') as HTMLDialogElement | null;
+      const ledgerDialog = document.getElementById('class-ledger-dialog') as HTMLDialogElement | null;
+
+      const codexSlab = document.getElementById('codex-slab-shell');
+      const tomeSlab = document.getElementById('tome-slab-shell');
+      const ledgerSlab = document.getElementById('ledger-slab-shell');
+
+      // Setup 3D tilt tracking helper
+      const setup3DTilt = (dialog: HTMLDialogElement | null, slab: HTMLElement | null) => {
+        if (!dialog || !slab) return;
+        const isReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        if (isReducedMotion || !window.matchMedia('(min-width: 768px)').matches) return;
+
+        let tiltRaf: number | null = null;
+        dialog.addEventListener('pointermove', (event) => {
+          if (tiltRaf) cancelAnimationFrame(tiltRaf);
+          tiltRaf = requestAnimationFrame(() => {
+            const rect = slab.getBoundingClientRect();
+            const px = (event.clientX - rect.left) / rect.width;
+            const py = (event.clientY - rect.top) / rect.height;
+            if (px >= 0 && px <= 1 && py >= 0 && py <= 1) {
+              const tiltX = (py - 0.5) * -7;
+              const tiltY = (px - 0.5) * 7;
+              slab.style.setProperty('--modal-tilt-x', `${tiltX.toFixed(2)}deg`);
+              slab.style.setProperty('--modal-tilt-y', `${tiltY.toFixed(2)}deg`);
+              slab.style.setProperty('--modal-light-x', `${(px * 100).toFixed(1)}%`);
+              slab.style.setProperty('--modal-light-y', `${(py * 100).toFixed(1)}%`);
+            }
+          });
+        });
+
+        dialog.addEventListener('pointerleave', () => {
+          if (tiltRaf) cancelAnimationFrame(tiltRaf);
+          slab.style.setProperty('--modal-tilt-x', '0deg');
+          slab.style.setProperty('--modal-tilt-y', '0deg');
+          slab.style.setProperty('--modal-light-x', '75%');
+          slab.style.setProperty('--modal-light-y', '15%');
+        });
+      };
+
+      setup3DTilt(codexDialog, codexSlab);
+      setup3DTilt(tomeDialog, tomeSlab);
+      setup3DTilt(ledgerDialog, ledgerSlab);
+
+      // Smooth Ink-Blotting Close Helper
+      const smoothCloseModal = async (dialog: HTMLDialogElement | null) => {
+        if (!dialog || !dialog.open || dialog.hasAttribute('data-closing')) return;
+        dialog.setAttribute('data-closing', '');
+
+        const isReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        if (isReducedMotion) {
+          dialog.removeAttribute('data-closing');
+          dialog.close();
+          return;
+        }
+
+        const animations = dialog.getAnimations({ subtree: true });
+        if (animations.length > 0) {
+          await Promise.race([
+            Promise.allSettled(animations.map((a) => a.finished)),
+            new Promise((r) => setTimeout(r, 380)),
+          ]);
+        } else {
+          await new Promise((r) => setTimeout(r, 340));
+        }
+
+        if (dialog.hasAttribute('data-closing')) {
+          dialog.removeAttribute('data-closing');
+          dialog.close();
+        }
+      };
+
+      // Intercept native Escape key on all 3 dialogs so the ink-blot exit plays
+      [codexDialog, tomeDialog, ledgerDialog].forEach((dlg) => {
+        dlg?.addEventListener('cancel', (e) => {
+          e.preventDefault();
+          smoothCloseModal(dlg);
+        });
+      });
+
+      // Setup click-outside-to-dismiss helper
+      const setupClickOutside = (dialog: HTMLDialogElement | null) => {
+        if (!dialog) return;
+        dialog.addEventListener('click', (event) => {
+          if (event.target !== dialog) return;
+          const rect = dialog.getBoundingClientRect();
+          const isInside =
+            rect.top <= event.clientY &&
+            event.clientY <= rect.top + rect.height &&
+            rect.left <= event.clientX &&
+            event.clientX <= rect.left + rect.width;
+          if (!isInside) smoothCloseModal(dialog);
+        });
+      };
+
+      setupClickOutside(codexDialog);
+      setupClickOutside(tomeDialog);
+      setupClickOutside(ledgerDialog);
+
+      // Close buttons
+      document.getElementById('btn-close-codex')?.addEventListener('click', () => smoothCloseModal(codexDialog));
+      document.getElementById('btn-close-tome')?.addEventListener('click', () => smoothCloseModal(tomeDialog));
+      document.getElementById('btn-close-ledger')?.addEventListener('click', () => smoothCloseModal(ledgerDialog));
+
+      // 5. Open Codex Modal
+      const openCodex = (id: string) => {
+        const pub = pubMap.get(id);
+        if (!pub || !codexDialog) return;
+
+        const folioTag = document.getElementById('codex-folio-tag');
+        const venueEl = document.getElementById('codex-dialog-venue');
+        const titleEl = document.getElementById('codex-dialog-title');
+        const subEl = document.getElementById('codex-dialog-subtitle');
+        const authEl = document.getElementById('codex-dialog-authors');
+        const volEl = document.getElementById('codex-dialog-vol');
+        const idEl = document.getElementById('codex-dialog-id');
+        const bibEl = document.getElementById('codex-dialog-bibtex');
+        const apaEl = document.getElementById('codex-dialog-apa');
+        const permalinkEl = document.getElementById('codex-link-permalink') as HTMLAnchorElement | null;
+        const doiEl = document.getElementById('codex-link-doi') as HTMLAnchorElement | null;
+
+        if (folioTag) folioTag.textContent = `FOLIO ${pub.id.toUpperCase()} · CITATION ARCHIVE`;
+        if (venueEl) venueEl.textContent = `${pub.venue.toUpperCase()} · ${pub.year}`;
+        if (titleEl) titleEl.textContent = pub.title;
+
+        if (subEl) {
+          if (pub.subtitle) {
+            subEl.textContent = pub.subtitle;
+            subEl.style.display = 'block';
+          } else {
+            subEl.style.display = 'none';
+          }
+        }
+
+        const allAuthors = ['Duncan R. Cordry', ...(pub.coAuthors || [])].join(', ');
+        if (authEl) authEl.textContent = allAuthors;
+        if (volEl) volEl.textContent = pub.volumeIssue || 'Archival Monograph / Record';
+        if (idEl) idEl.textContent = pub.id.toUpperCase();
+        if (bibEl) bibEl.textContent = pub.bibtex;
+
+        const apaText = `${allAuthors} (${pub.year}). ${pub.title}. ${pub.venue}${pub.volumeIssue ? ', ' + pub.volumeIssue : ''}.${pub.doi ? ' ' + pub.doi : ''}`;
+        if (apaEl) apaEl.textContent = apaText;
+
+        if (permalinkEl) permalinkEl.href = `/publications/${pub.id}`;
+        if (doiEl) {
+          if (pub.doi) {
+            doiEl.href = pub.doi;
+            doiEl.style.display = 'inline-flex';
+          } else {
+            doiEl.style.display = 'none';
+          }
+        }
+
+        codexDialog.removeAttribute('data-closing');
+        codexDialog.showModal();
+        applyInkTransition(codexDialog.querySelector('.artefact-modal-body'));
+      };
+
+      // Codex Copy buttons
+      const copyBibBtn = document.getElementById('btn-codex-copy-bibtex');
+      copyBibBtn?.addEventListener('click', () => {
+        const text = document.getElementById('codex-dialog-bibtex')?.textContent || '';
+        navigator.clipboard?.writeText(text);
+        const orig = copyBibBtn.textContent;
+        copyBibBtn.textContent = '✓ BibTeX Copied';
+        setTimeout(() => (copyBibBtn.textContent = orig), 1600);
+      });
+
+      const copyApaBtn = document.getElementById('btn-codex-copy-apa');
+      copyApaBtn?.addEventListener('click', () => {
+        const text = document.getElementById('codex-dialog-apa')?.textContent || '';
+        navigator.clipboard?.writeText(text);
+        const orig = copyApaBtn.textContent;
+        copyApaBtn.textContent = '✓ Citation Copied';
+        setTimeout(() => (copyApaBtn.textContent = orig), 1600);
+      });
+
+      // 6. Open Tome Modal
+      const openTome = (id: string) => {
+        const book = bookMap.get(id);
+        if (!book || !tomeDialog) return;
+
+        const folioTag = document.getElementById('tome-folio-tag');
+        const coverEl = document.getElementById('tome-dialog-cover') as HTMLImageElement | null;
+        const pubEl = document.getElementById('tome-dialog-publisher');
+        const isbnEl = document.getElementById('tome-dialog-isbn');
+        const pagesEl = document.getElementById('tome-dialog-pages');
+        const yearEl = document.getElementById('tome-dialog-year');
+        const eyebrowEl = document.getElementById('tome-dialog-eyebrow');
+        const titleEl = document.getElementById('tome-dialog-title');
+        const subEl = document.getElementById('tome-dialog-subtitle');
+        const synEl = document.getElementById('tome-dialog-synopsis');
+        const buyWrap = document.getElementById('tome-purchase-links');
+        const chList = document.getElementById('tome-chapters-list');
+        const endWrap = document.getElementById('tome-endorsements-wrap');
+        const endList = document.getElementById('tome-endorsements-list');
+
+        if (folioTag) folioTag.textContent = `FOLIO ${book.id.toUpperCase()} · MONOGRAPH DOSSIER`;
+        if (coverEl) {
+          coverEl.src = book.coverImage;
+          coverEl.alt = `Cover of ${book.title}`;
+        }
+        if (pubEl) pubEl.textContent = book.publisher;
+        if (isbnEl) isbnEl.textContent = book.isbn;
+        if (pagesEl) pagesEl.textContent = `${book.pages} Pages (Cloth Bound)`;
+        if (yearEl) yearEl.textContent = String(book.year);
+
+        if (eyebrowEl) eyebrowEl.textContent = `FOLIO ${book.id.toUpperCase()} · ${book.year}`;
+        if (titleEl) titleEl.textContent = book.title;
+
+        if (subEl) {
+          if (book.subtitle) {
+            subEl.textContent = book.subtitle;
+            subEl.style.display = 'block';
+          } else {
+            subEl.style.display = 'none';
+          }
+        }
+
+        if (synEl) synEl.textContent = book.synopsis;
+
+        if (buyWrap) {
+          buyWrap.innerHTML = '';
+          (book.purchaseLinks || []).forEach((link: any) => {
+            const a = document.createElement('a');
+            a.href = link.url;
+            a.target = '_blank';
+            a.rel = 'noopener noreferrer';
+            a.className = 'pill';
+            a.style.cssText = 'text-decoration: none; color: var(--text-primary); padding: 0.4rem 0.75rem; text-align: center;';
+            a.textContent = `${link.label} ↗`;
+            buyWrap.appendChild(a);
+          });
+        }
+
+        if (chList) {
+          chList.innerHTML = '';
+          (book.chapters || []).forEach((ch: any) => {
+            const det = document.createElement('details');
+            det.className = 'academic-accordion';
+            det.open = true;
+
+            const sum = document.createElement('summary');
+            sum.innerHTML = `<span class="tabular" style="color: var(--accent); font-size: 0.8rem;">CH ${ch.number}</span> <span>${ch.title}</span>`;
+
+            const body = document.createElement('div');
+            body.className = 'accordion-body';
+            body.innerHTML = `<p>${ch.summary}</p>`;
+
+            det.append(sum, body);
+            chList.appendChild(det);
+          });
+        }
+
+        if (endWrap && endList) {
+          if (book.endorsements && book.endorsements.length > 0) {
+            endWrap.style.display = 'block';
+            endList.innerHTML = '';
+            book.endorsements.forEach((end: any) => {
+              const fig = document.createElement('figure');
+              fig.style.cssText = 'padding: 0.85rem 1.15rem; border-inline-start: 2px solid var(--accent); background: var(--bg-surface); border-radius: 0 4px 4px 0;';
+              fig.innerHTML = `
+                <blockquote><p style="font-family: var(--font-serif); font-style: italic; font-size: 0.98rem; margin-block-end: 0.25rem;">“${end.quote}”</p></blockquote>
+                <figcaption class="tabular" style="font-size: 0.72rem; color: var(--text-muted);">— ${end.sourceTitle}</figcaption>
+              `;
+              endList.appendChild(fig);
+            });
+          } else {
+            endWrap.style.display = 'none';
+          }
+        }
+
+        tomeDialog.removeAttribute('data-closing');
+        tomeDialog.showModal();
+        applyInkTransition(tomeDialog.querySelector('.artefact-modal-body'));
+      };
+
+      // 7. Open Ledger Modal
+      const tabEval = document.getElementById('btn-ledger-tab-eval');
+      const tabCurr = document.getElementById('btn-ledger-tab-curr');
+      const panelEval = document.getElementById('panel-ledger-eval');
+      const panelCurr = document.getElementById('panel-ledger-curr');
+      const ledgerForm = document.getElementById('ledger-review-form') as HTMLFormElement | null;
+      const starsGroup = document.getElementById('ledger-stars-group');
+      const ratingReadout = document.getElementById('ledger-rating-readout');
+      const ratingInput = document.getElementById('ledger-form-rating') as HTMLInputElement | null;
+      const submitBtn = document.getElementById('btn-ledger-submit');
+
+      const switchLedgerTab = (target: 'eval' | 'curr') => {
+        if (target === 'eval') {
+          tabEval?.setAttribute('aria-selected', 'true');
+          tabCurr?.setAttribute('aria-selected', 'false');
+          if (panelEval) panelEval.style.display = 'block';
+          if (panelCurr) panelCurr.style.display = 'none';
+        } else {
+          tabEval?.setAttribute('aria-selected', 'false');
+          tabCurr?.setAttribute('aria-selected', 'true');
+          if (panelEval) panelEval.style.display = 'none';
+          if (panelCurr) panelCurr.style.display = 'block';
+        }
+      };
+
+      tabEval?.addEventListener('click', () => switchLedgerTab('eval'));
+      tabCurr?.addEventListener('click', () => switchLedgerTab('curr'));
+
+      starsGroup?.querySelectorAll<HTMLButtonElement>('.star-select-btn').forEach((btn) => {
+        btn.addEventListener('click', (e) => {
+          e.preventDefault();
+          const val = parseInt(btn.dataset.val || '5', 10);
+          if (ratingInput) ratingInput.value = `${val}.0 / 5.0`;
+          if (ratingReadout) ratingReadout.textContent = `${val}.0 / 5.0`;
+
+          starsGroup.querySelectorAll<HTMLButtonElement>('.star-select-btn').forEach((s) => {
+            const sVal = parseInt(s.dataset.val || '0', 10);
+            s.classList.toggle('active', sVal <= val);
+          });
+        });
+      });
+
+      const openLedger = (courseId: string, initialTab: 'eval' | 'curr' = 'eval') => {
+        const cls = classMap.get(courseId);
+        if (!cls || !ledgerDialog) return;
+
+        const folioTag = document.getElementById('ledger-folio-tag');
+        const eyebrow = document.getElementById('ledger-dialog-eyebrow');
+        const title = document.getElementById('ledger-dialog-title');
+        const code = document.getElementById('ledger-dialog-code');
+        const term = document.getElementById('ledger-dialog-term');
+        const level = document.getElementById('ledger-dialog-level');
+        const sched = document.getElementById('ledger-dialog-sched');
+        const courseIdInput = document.getElementById('ledger-form-course-id') as HTMLInputElement | null;
+        const termInput = document.getElementById('ledger-input-term') as HTMLInputElement | null;
+        const weeksContainer = document.getElementById('ledger-weeks-container');
+
+        if (folioTag) folioTag.textContent = `ACADEMIC LEDGER · ${cls.courseCode} · ${cls.term.toUpperCase()} ${cls.academicYear}`;
+        if (eyebrow) eyebrow.textContent = `CURRICULUM ARCHIVE · ${cls.courseCode}`;
+        if (title) title.textContent = cls.title;
+        if (code) code.textContent = cls.courseCode;
+        if (term) term.textContent = `${cls.term} (${cls.academicYear})`;
+        if (level) level.textContent = cls.level;
+        if (sched) sched.textContent = cls.schedule;
+
+        if (courseIdInput) courseIdInput.value = cls.id;
+        if (termInput) termInput.value = `${cls.term} 2025–2026`;
+
+        if (weeksContainer) {
+          weeksContainer.innerHTML = '';
+          (cls.weeks || []).forEach((wk: any) => {
+            const card = document.createElement('div');
+            card.style.cssText = 'padding: 0.85rem 1.15rem; border-radius: 4px; border: 1px solid var(--border-subtle); background: var(--bg-surface);';
+
+            let readingsHtml = '';
+            if (Array.isArray(wk.readings)) {
+              readingsHtml = `<ul style="margin: 0.45rem 0 0; padding-inline-start: 1.15rem; font-size: 0.86rem; color: var(--text-secondary); display: flex; flex-direction: column; gap: 0.25rem;">${wk.readings.map((r: string) => `<li>${r}</li>`).join('')}</ul>`;
+            }
+
+            card.innerHTML = `
+              <div style="display: flex; align-items: baseline; gap: 0.65rem;">
+                <span class="tabular" style="font-family: var(--font-mono); font-size: 0.72rem; color: var(--accent); font-weight: 600;">${wk.weekNumber}</span>
+                <strong style="font-family: var(--font-serif); font-size: 1rem; color: var(--text-primary);">${wk.topic}</strong>
+              </div>
+              ${readingsHtml}
+            `;
+            weeksContainer.appendChild(card);
+          });
+        }
+
+        switchLedgerTab(initialTab);
+        ledgerDialog.removeAttribute('data-closing');
+        ledgerDialog.showModal();
+        applyInkTransition(ledgerDialog.querySelector('.artefact-modal-body'));
+      };
+
+      ledgerForm?.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const fd = new FormData(ledgerForm);
+        const courseId = String(fd.get('courseId') || '');
+        const listEl = this.querySelector<HTMLElement>(`[data-reviews-list="${courseId}"]`);
+
+        const newRev = {
+          author: String(fd.get('author') || 'Seminar Participant').trim(),
+          role: String(fd.get('role') || 'Ashoka University').trim(),
+          term: String(fd.get('term') || '2025–2026').trim(),
+          rating: String(fd.get('rating') || '5.0 / 5.0').trim(),
+          highlight: String(fd.get('highlight') || '').trim(),
+          quote: String(fd.get('quote') || '').trim(),
+        };
+        if (!newRev.quote) return;
+
+        if (listEl) {
+          const nextNum = listEl.children.length + 1;
+          listEl.prepend(createReviewCardElement({ ...newRev, num: nextNum }));
+        }
+
+        try {
+          const existing = JSON.parse(localStorage.getItem(STORAGE_PREFIX + courseId) || '[]');
+          existing.push(newRev);
+          localStorage.setItem(STORAGE_PREFIX + courseId, JSON.stringify(existing));
+        } catch {}
+
+        if (submitBtn) {
+          submitBtn.textContent = '✓ Recorded into Academic Ledger';
+          submitBtn.classList.add('ink-record-active');
+        }
+
+        setTimeout(() => {
+          ledgerForm.reset();
+          if (submitBtn) {
+            submitBtn.textContent = '✓ Record into Seminar Ledger';
+            submitBtn.classList.remove('ink-record-active');
+          }
+          smoothCloseModal(ledgerDialog);
+        }, 750);
+      });
+
+      // 8. Delegated click triggers for all 3 buttons!
+      this.addEventListener('click', (event) => {
+        const target = event.target as HTMLElement | null;
+        if (!target) return;
+
+        // Button 2: Publications Codex
+        const pubBtn = target.closest<HTMLElement>('[data-open-pub-codex]');
+        if (pubBtn) {
+          event.preventDefault();
+          const id = pubBtn.dataset.openPubCodex;
+          if (id) openCodex(id);
+          return;
+        }
+
+        // Button 3: Books Tome
+        const bookBtn = target.closest<HTMLElement>('[data-open-book-tome]');
+        if (bookBtn) {
+          event.preventDefault();
+          const id = bookBtn.dataset.openBookTome;
+          if (id) openTome(id);
+          return;
+        }
+
+        // Button 4a: Classes Ledger (Curriculum)
+        const classBtn = target.closest<HTMLElement>('[data-open-class-ledger]');
+        if (classBtn) {
+          event.preventDefault();
+          const id = classBtn.dataset.openClassLedger;
+          if (id) openLedger(id, 'curr');
+          return;
+        }
+
+        // Button 4b: Classes Add Review (Evaluation)
+        const reviewBtn = target.closest<HTMLElement>('[data-toggle-review-form]');
+        if (reviewBtn) {
+          event.preventDefault();
+          const id = reviewBtn.dataset.toggleReviewForm;
+          if (id) openLedger(id, 'eval');
+          return;
+        }
+      });
+
+      // Expose to window for external/dev usage
+      (window as any).__drcOpenPubCodex = openCodex;
+      (window as any).__drcOpenBookTome = openTome;
+      (window as any).__drcOpenClassLedger = openLedger;
     }
   }
 
