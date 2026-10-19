@@ -588,6 +588,8 @@ const { featuredConstellationId = null } = Astro.props;
     private starsMap: Map<number, any> = new Map();
     private currentConstellation: any = null;
     private previousConstellation: any = null;
+    private plateSessionCounter: number = 0;
+    private plateNebulaGenomes: Map<string, PlateNebularGenome> = new Map();
 
     // Celestial camera & slewing state
     private camera = {
@@ -884,6 +886,7 @@ const { featuredConstellationId = null } = Astro.props;
       }
 
       this.currentConstellation = chosen;
+      this.plateSessionCounter = 0;
       this.galaxyGenomes.clear();
       this.generateDenseFieldStars(chosen);
       this.generateUniversalFieldGalaxies(chosen);
@@ -905,6 +908,7 @@ const { featuredConstellationId = null } = Astro.props;
 
       this.previousConstellation = this.currentConstellation;
       this.currentConstellation = target;
+      this.plateSessionCounter++;
       this.galaxyGenomes.clear();
       this.generateDenseFieldStars(target);
       this.generateUniversalFieldGalaxies(target);
@@ -1074,8 +1078,11 @@ const { featuredConstellationId = null } = Astro.props;
       // 1. Refractor Lens Dome Vignette on outer margin
       this.drawDomeVignette(w, h, isDark);
 
-      // 2. Volumetric Floating Colors & Interstellar Dust Veils
-      this.drawNebularVeils(w, h, isDark, now, newConstellationAlpha);
+      // 2. Volumetric Floating Colors & Interstellar Dust Veils (Randomized & Hue-Rotated)
+      if (this.previousConstellation && oldConstellationAlpha > 0.01) {
+        this.drawNebularVeils(w, h, isDark, now, oldConstellationAlpha, this.previousConstellation, Math.max(0, this.plateSessionCounter - 1));
+      }
+      this.drawNebularVeils(w, h, isDark, now, newConstellationAlpha, this.currentConstellation, this.plateSessionCounter);
 
       // 3. Archival Graticule Frame & Vernier Ruler (z = 0, sits fixed on the paper aperture)
       this.drawGraticule(w, h, inkSubtle);
@@ -1090,7 +1097,10 @@ const { featuredConstellationId = null } = Astro.props;
       this.drawUniversalFieldGalaxies(w, h, isDark, newConstellationAlpha);
 
       // 6. Volumetric Deep-Sky Nebulae & Multi-Object Galaxies (M31, M42, M13, field galaxies)
-      this.drawDeepSkyBlooms(w, h, isDark, now, newConstellationAlpha);
+      if (this.previousConstellation && oldConstellationAlpha > 0.01) {
+        this.drawDeepSkyBlooms(w, h, isDark, now, oldConstellationAlpha, this.previousConstellation, Math.max(0, this.plateSessionCounter - 1));
+      }
+      this.drawDeepSkyBlooms(w, h, isDark, now, newConstellationAlpha, this.currentConstellation, this.plateSessionCounter);
 
       // 7. 3D Background Starfield (Hipparcos catalog, Pogson-scaled PSF glow, log-normal + chromatic scintillation, true tangent projection)
       this.drawBackgroundStars(w, h, isDark, inkSecondary, now);
@@ -1137,84 +1147,57 @@ const { featuredConstellationId = null } = Astro.props;
       this.ctx.fillRect(0, 0, w, h);
     }
 
+    private getPlateNebulaGenome(con: any, salt: number = this.plateSessionCounter): PlateNebularGenome {
+      if (!con) con = { id: 'default' };
+      const key = `${con.id}_${salt}`;
+      let genome = this.plateNebulaGenomes.get(key);
+      if (!genome) {
+        genome = derivePlateNebulaGenome(con, salt);
+        this.plateNebulaGenomes.set(key, genome);
+      }
+      return genome;
+    }
+
     private drawNebularVeils(
       w: number,
       h: number,
       isDark: boolean,
       now: number,
-      alphaMultiplier: number
+      alphaMultiplier: number,
+      con = this.currentConstellation,
+      salt = this.plateSessionCounter
     ) {
-      if (alphaMultiplier <= 0.01) return;
+      if (!con || alphaMultiplier <= 0.01) return;
 
+      const genome = this.getPlateNebulaGenome(con, salt);
       const cx = w * 0.5;
       const cy = h * 0.5;
       const minDim = Math.min(w, h);
-      const isMilkyWay = this.currentConstellation?.inMilkyWay;
+      const isMilkyWay = con?.inMilkyWay;
       const intensity = (isMilkyWay ? 1.35 : 1.0) * alphaMultiplier;
 
-      // 6 Distinct volumetric nebular cloud centers with slow sidereal undulation
-      const clouds = [
-        // 1. Hydrogen-Alpha Wine/Rose cloud
-        {
-          relX: -0.22, relY: -0.15, rad: minDim * 0.65,
-          freqX: 0.00005, freqY: 0.00007, phase: 1.2,
-          darkRgb: [225, 90, 145], darkAlpha: 0.075 * intensity,
-          lightRgb: [165, 50, 80], lightAlpha: 0.045 * intensity
-        },
-        // 2. Oxygen-III Celestial Cyan/Teal pocket
-        {
-          relX: 0.25, relY: 0.18, rad: minDim * 0.55,
-          freqX: 0.00007, freqY: 0.00004, phase: 3.4,
-          darkRgb: [60, 215, 205], darkAlpha: 0.065 * intensity,
-          lightRgb: [35, 115, 120], lightAlpha: 0.040 * intensity
-        },
-        // 3. Stardust & Cosmic Dust Lane (Warm Amber/Ochre)
-        {
-          relX: 0.08, relY: -0.26, rad: minDim * 0.70,
-          freqX: 0.00004, freqY: 0.00006, phase: 5.1,
-          darkRgb: [235, 175, 95], darkAlpha: 0.055 * intensity,
-          lightRgb: [175, 115, 30], lightAlpha: 0.050 * intensity
-        },
-        // 4. Lapis Lazuli Deep Sky Reflection Veil
-        {
-          relX: -0.18, relY: 0.24, rad: minDim * 0.60,
-          freqX: 0.00006, freqY: 0.00005, phase: 2.8,
-          darkRgb: [85, 135, 240], darkAlpha: 0.060 * intensity,
-          lightRgb: [35, 75, 155], lightAlpha: 0.050 * intensity
-        },
-        // 5. Diffuse Ionized Outflow (Pale Rose)
-        {
-          relX: 0.32, relY: -0.12, rad: minDim * 0.48,
-          freqX: 0.00005, freqY: 0.00008, phase: 0.9,
-          darkRgb: [215, 80, 120], darkAlpha: 0.050 * intensity,
-          lightRgb: [145, 45, 70], lightAlpha: 0.035 * intensity
-        },
-        // 6. Background Cosmic Veil (Pale Violet / Sepia)
-        {
-          relX: 0.0, relY: 0.05, rad: minDim * 0.85,
-          freqX: 0.00003, freqY: 0.00003, phase: 4.2,
-          darkRgb: [160, 120, 210], darkAlpha: 0.040 * intensity,
-          lightRgb: [70, 85, 60], lightAlpha: 0.035 * intensity
-        }
-      ];
+      // Current dynamic hue rotation: base plate offset + continuous time progression
+      const currentHueShift = (genome.plateBaseHueOffset + now * genome.hueShiftSpeed) % 360;
 
-      for (const cl of clouds) {
+      for (const cl of genome.clouds) {
         const driftX = Math.sin(now * cl.freqX + cl.phase) * (minDim * 0.06);
         const driftY = Math.cos(now * cl.freqY + cl.phase) * (minDim * 0.05);
         const px = cx + cl.relX * minDim + driftX + this.parallax.x * 0.10;
         const py = cy + cl.relY * minDim + driftY + this.parallax.y * 0.10;
+        const rad = minDim * cl.radRatio;
 
-        const [r, g, b] = isDark ? cl.darkRgb : cl.lightRgb;
-        const a = isDark ? cl.darkAlpha : cl.lightAlpha;
+        const baseRgb = isDark ? cl.baseHueDark : cl.baseHueLight;
+        const [r, g, b] = rotateRgbHue(baseRgb, currentHueShift);
+        const a = (isDark ? cl.baseDarkAlpha : cl.baseLightAlpha) * intensity;
 
-        const grad = this.ctx.createRadialGradient(px, py, cl.rad * 0.08, px, py, cl.rad);
+        const grad = this.ctx.createRadialGradient(px, py, rad * 0.08, px, py, rad);
         grad.addColorStop(0, `rgba(${r}, ${g}, ${b}, ${a})`);
         grad.addColorStop(0.45, `rgba(${r}, ${g}, ${b}, ${a * 0.45})`);
         grad.addColorStop(1, `rgba(${r}, ${g}, ${b}, 0)`);
 
         this.ctx.fillStyle = grad;
         this.ctx.beginPath();
-        this.ctx.arc(px, py, cl.rad, 0, Math.PI * 2);
+        this.ctx.arc(px, py, rad, 0, Math.PI * 2);
         this.ctx.fill();
       }
     }
@@ -1307,8 +1290,8 @@ const { featuredConstellationId = null } = Astro.props;
       this.ctx.stroke();
     }
 
-    private getGalaxyGenome(dIdx: number, d: any): GalaxyMorphology {
-      const key = `${this.currentConstellation?.id || 'sky'}_${dIdx}_${d[6] || ''}`;
+    private getGalaxyGenome(dIdx: number, d: any, con = this.currentConstellation): GalaxyMorphology {
+      const key = `${con?.id || 'sky'}_${dIdx}_${d[6] || ''}`;
       let genome = this.galaxyGenomes.get(key);
       if (!genome) {
         const [rawX, rawY, , , , rawType, label] = d;
@@ -1324,17 +1307,22 @@ const { featuredConstellationId = null } = Astro.props;
       h: number,
       isDark: boolean,
       now: number,
-      alphaMultiplier: number
+      alphaMultiplier: number,
+      con = this.currentConstellation,
+      salt = this.plateSessionCounter
     ) {
-      if (!this.currentConstellation.deepFieldObjects || alphaMultiplier <= 0.01) return;
+      if (!con || !con.deepFieldObjects || alphaMultiplier <= 0.01) return;
+
+      const genomeNeb = this.getPlateNebulaGenome(con, salt);
+      const currentHueShift = (genomeNeb.plateBaseHueOffset + now * genomeNeb.hueShiftSpeed) % 360;
 
       const cx = w * 0.5;
       const cy = h * 0.5;
       const scale = Math.min(w, h) / 10000;
       let prevLabelPos: { x: number, y: number } | null = null;
 
-      for (let dIdx = 0; dIdx < this.currentConstellation.deepFieldObjects.length; dIdx++) {
-        const d = this.currentConstellation.deepFieldObjects[dIdx];
+      for (let dIdx = 0; dIdx < con.deepFieldObjects.length; dIdx++) {
+        const d = con.deepFieldObjects[dIdx];
         const [rawX, rawY, rad, , , rawType, label] = d;
         const type = (rawType || '').toUpperCase();
         const baseX = cx + (rawX - 5000) * scale;
@@ -1353,7 +1341,7 @@ const { featuredConstellationId = null } = Astro.props;
         const baseAngle = ((hash % 180) * Math.PI) / 180;
 
         const isGalaxy = type === 'S' || type === 'I' || type === 'E';
-        const genome = isGalaxy ? this.getGalaxyGenome(dIdx, d) : null;
+        const genome = isGalaxy ? this.getGalaxyGenome(dIdx, d, con) : null;
 
         this.ctx.save();
         this.ctx.translate(px, py);
@@ -1529,6 +1517,11 @@ const { featuredConstellationId = null } = Astro.props;
 
             // Starburst Knots: Volumetric H II Ionized Pink Nodules & Azure OB Stellar Clusters
             if (isDark && genome.knots && genome.knots.length > 0) {
+              const h2Base: [number, number, number] = [255, 185, 215];
+              const obBase: [number, number, number] = [125, 205, 255];
+              const [h2R, h2G, h2B] = rotateRgbHue(h2Base, currentHueShift);
+              const [obR, obG, obB] = rotateRgbHue(obBase, currentHueShift);
+
               for (let kIdx = 0; kIdx < genome.knots.length; kIdx++) {
                 const knot = genome.knots[kIdx];
                 const kR = (startR + knot.rNorm * (majR - startR));
@@ -1539,15 +1532,15 @@ const { featuredConstellationId = null } = Astro.props;
 
                 const knotGrad = this.ctx.createRadialGradient(kX, kY, 0, kX, kY, kRadius * 1.8);
                 if (knot.isH2) {
-                  // H-alpha ruby/magenta emission
-                  knotGrad.addColorStop(0, `rgba(255, 185, 215, ${kAlpha})`);
-                  knotGrad.addColorStop(0.45, `rgba(240, 95, 150, ${kAlpha * 0.75})`);
-                  knotGrad.addColorStop(1, 'rgba(240, 95, 150, 0)');
+                  // H-alpha ruby/magenta emission (hue rotated)
+                  knotGrad.addColorStop(0, `rgba(${h2R}, ${h2G}, ${h2B}, ${kAlpha})`);
+                  knotGrad.addColorStop(0.45, `rgba(${h2R * 0.94 | 0}, ${h2G * 0.5 | 0}, ${h2B * 0.7 | 0}, ${kAlpha * 0.75})`);
+                  knotGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
                 } else {
-                  // Young OB stellar cluster azure/cyan
-                  knotGrad.addColorStop(0, `rgba(225, 245, 255, ${kAlpha})`);
-                  knotGrad.addColorStop(0.45, `rgba(125, 205, 255, ${kAlpha * 0.75})`);
-                  knotGrad.addColorStop(1, 'rgba(125, 205, 255, 0)');
+                  // Young OB stellar cluster azure/cyan (hue rotated)
+                  knotGrad.addColorStop(0, `rgba(${obR * 0.9 + 25 | 0}, ${obG * 0.95 + 12 | 0}, 255, ${kAlpha})`);
+                  knotGrad.addColorStop(0.45, `rgba(${obR}, ${obG}, ${obB}, ${kAlpha * 0.75})`);
+                  knotGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
                 }
                 this.ctx.fillStyle = knotGrad;
                 this.ctx.beginPath();

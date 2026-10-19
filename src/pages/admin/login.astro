@@ -4,26 +4,35 @@ export const prerender = false;
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import profile from '../../data/profile.json';
 
-const hasError = Astro.url.searchParams.get('error') === 'invalid';
+const errorCode = Astro.url.searchParams.get('error');
+const waitMinutes = Astro.url.searchParams.get('wait') || '15';
+const isInvalid = errorCode === 'invalid';
+const isRateLimited = errorCode === 'ratelimit';
 ---
 
 <BaseLayout
-  title="Sovereign Authentication — The Study"
+  title="Sovereign Authentication — Observatory Control"
   description="Restricted academic archive and study console for Professor Duncan R. Cordry."
 >
   <main class="login-shell">
     <section class="login-card" aria-labelledby="login-heading">
       <div class="login-header">
-        <span class="login-eyebrow scholarly-caps">ACADEMIC ARCHIVE · THE STUDY</span>
-        <h1 id="login-heading">The Study — Sovereign Console</h1>
+        <span class="login-eyebrow scholarly-caps">ACADEMIC ARCHIVE · OBSERVATORY CONTROL</span>
+        <h1 id="login-heading">Observatory Control // Sign In</h1>
         <p class="login-sub">
-          Authenticate to manage publications, seminars, celestial plates, and archive lifecycle.
+          Authenticate to access the Study, manage publications, seminars, celestial plates, and server lifecycle.
         </p>
       </div>
 
-      {hasError && (
+      {isInvalid && (
         <div class="login-alert" role="alert">
-          Authentication failed. Verify your sovereign passphrase (default dev key: <code>cordry-observatory-2026</code>).
+          Authentication failed. Verify your master passphrase (default: <code>observatory-drc-2026</code>).
+        </div>
+      )}
+
+      {isRateLimited && (
+        <div class="login-alert login-alert-danger" role="alert">
+          Observatory console locked due to repeated failed attempts. Please wait <strong>{waitMinutes} minute(s)</strong> before retrying.
         </div>
       )}
 
@@ -131,6 +140,12 @@ const hasError = Astro.url.searchParams.get('error') === 'invalid';
     border: 1px solid oklch(65% 0.2 25);
     background: color-mix(in oklch, oklch(65% 0.2 25) 14%, transparent);
     font-size: var(--step--1);
+  }
+
+  .login-alert-danger {
+    border-color: oklch(55% 0.25 25);
+    background: color-mix(in oklch, oklch(55% 0.25 25) 22%, transparent);
+    color: oklch(85% 0.16 25);
   }
 
   .login-form {

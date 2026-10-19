@@ -1,0 +1,559 @@
+---
+export const prerender = false;
+
+import AdminLayout from '../../layouts/AdminLayout.astro';
+import { getSystemState } from '../../lib/system-state';
+
+const systemState = await getSystemState();
+---
+
+<AdminLayout title="System Lifecycle & Protocols" activeModule="system">
+  <div class="module-container">
+    <div class="module-header">
+      <span class="module-kicker">MODULE 04 · SOVEREIGN LIFECYCLE & PROTOCOLS</span>
+      <h2>System Switchboard, Shutter & Purge Protocols</h2>
+      <p class="module-sub">
+        Execute administrative commands across the 3 escalating operational tiers of the DRC Observatory server.
+      </p>
+    </div>
+
+    <div class="lifecycle-stack">
+      <!-- Tier 1: Soft Maintenance Shutter (HTTP 503) -->
+      <section class="lifecycle-card tier-soft" aria-labelledby="tier-1-heading">
+        <div class="tier-lead">
+          <div class="tier-header-row">
+            <span class="tier-badge">TIER 01</span>
+            <span class="tier-type">REVERSIBLE IN-MEMORY SWITCH</span>
+          </div>
+          <h3 id="tier-1-heading" class="tier-title">Public Observatory Shutter (HTTP 503 Maintenance)</h3>
+          <p class="tier-desc">
+            Immediately intercepts public traffic at the middleware layer with the <code>/offline</code> screen while keeping
+            <code>/admin</code> fully accessible for updates and preparations.
+          </p>
+          <div class="status-indicator-row">
+            <span>Current Public State:</span>
+            <strong id="shutter-status-label" class={systemState.offlineMode ? 'text-amber' : 'text-green'}>
+              {systemState.offlineMode ? 'OFFLINE (HTTP 503 ACTIVE)' : 'ONLINE (PUBLIC ACCESS ENABLED)'}
+            </strong>
+          </div>
+        </div>
+
+        <div class="tier-action-box">
+          <button
+            type="button"
+            id="toggle-offline-btn"
+            data-currently-offline={String(systemState.offlineMode)}
+            class={`btn-tier ${systemState.offlineMode ? 'btn-tier-success' : 'btn-tier-warning'}`}
+          >
+            {systemState.offlineMode ? 'Re-Open Observatory Dome (Restore Public)' : 'Engage 503 Maintenance Shutter'}
+          </button>
+        </div>
+      </section>
+
+      <!-- Tier 2: Hard Process Shutdown (SIGTERM) -->
+      <section class="lifecycle-card tier-hard" aria-labelledby="tier-2-heading">
+        <div class="tier-lead">
+          <div class="tier-header-row">
+            <span class="tier-badge">TIER 02</span>
+            <span class="tier-type">PROCESS HALT</span>
+          </div>
+          <h3 id="tier-2-heading" class="tier-title">Hard Node Server Termination (SIGTERM)</h3>
+          <p class="tier-desc">
+            Gracefully terminates active HTTP socket connections and stops the Node/systemd process.
+            Restarting requires SSH, container orchestration, or host console execution.
+          </p>
+        </div>
+
+        <div class="tier-action-box">
+          <div class="auth-challenge-inline">
+            <input
+              type="password"
+              id="shutdown-password"
+              placeholder="Confirm master passphrase…"
+              aria-label="Master passphrase for process termination"
+              class="tier-input"
+            />
+            <button type="button" id="shutdown-server-btn" class="btn-tier btn-tier-danger">
+              Dispatch SIGTERM Halt
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Tier 3: Scorched-Earth Codebase Purge -->
+      <section class="lifecycle-card tier-purge" aria-labelledby="tier-3-heading">
+        <div class="tier-lead">
+          <div class="tier-header-row">
+            <span class="tier-badge tier-badge-critical">TIER 03</span>
+            <span class="tier-type text-red">PERMANENT DECOMMISSION</span>
+          </div>
+          <h3 id="tier-3-heading" class="tier-title">Sovereign Archive & Codebase Purge</h3>
+          <p class="tier-desc">
+            Irreversibly decommissions the observatory archive by wiping Markdown collections, celestial shard databases,
+            and cached assets from the disk, followed by immediate process termination. Requires two-factor textual confirmation.
+          </p>
+        </div>
+
+        <div class="tier-action-box">
+          <button
+            type="button"
+            id="open-purge-modal-btn"
+            class="btn-tier btn-tier-critical"
+          >
+            Initiate Decommission Dialog…
+          </button>
+        </div>
+      </section>
+    </div>
+
+    <!-- Tier 3 Confirmation Modal (<dialog>) -->
+    <dialog id="purge-confirm-dialog" class="purge-dialog" aria-labelledby="purge-dialog-title">
+      <form id="purge-form" class="purge-form">
+        <div class="dialog-header">
+          <span class="critical-warning-icon">⚠</span>
+          <div>
+            <h3 id="purge-dialog-title">Confirm Irreversible Decommission</h3>
+            <p class="dialog-sub">This protocol cannot be undone once executed.</p>
+          </div>
+        </div>
+
+        <p class="dialog-text">
+          To confirm decommissioning, type the exact phrase <code>DESTROY-DRC-OBSERVATORY</code> and enter your sovereign master passphrase.
+        </p>
+
+        <div class="form-group">
+          <label for="purge-phrase">Confirmation Phrase</label>
+          <input
+            type="text"
+            id="purge-phrase"
+            name="confirmationPhrase"
+            placeholder="DESTROY-DRC-OBSERVATORY"
+            autocomplete="off"
+            required
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="purge-pw">Sovereign Master Passphrase</label>
+          <input
+            type="password"
+            id="purge-pw"
+            name="password"
+            placeholder="Enter passphrase…"
+            required
+          />
+        </div>
+
+        <div class="dialog-actions">
+          <button type="button" id="cancel-purge-btn" class="btn-dialog-abort">
+            Abort Protocol
+          </button>
+          <button type="submit" class="btn-dialog-execute">
+            Execute Permanent Purge
+          </button>
+        </div>
+      </form>
+    </dialog>
+  </div>
+
+  <script>
+    declare const notify: (message: string, status?: string) => void;
+    declare const postAdmin: (url: string, payload: Record<string, any>) => Promise<any>;
+
+    // Tier 1: Soft Shutter Toggle
+    const offlineBtn = document.getElementById('toggle-offline-btn') as HTMLButtonElement | null;
+    const statusLabel = document.getElementById('shutter-status-label');
+
+    offlineBtn?.addEventListener('click', async () => {
+      const currentlyOffline = offlineBtn.getAttribute('data-currently-offline') === 'true';
+      const nextOffline = !currentlyOffline;
+      offlineBtn.disabled = true;
+
+      notify(nextOffline ? 'Engaging HTTP 503 maintenance shutter…' : 'Restoring public observatory access…', 'info');
+      const data = await postAdmin('/api/admin/lifecycle', {
+        action: 'toggle-offline',
+        offline: nextOffline,
+      });
+
+      offlineBtn.disabled = false;
+      if (data.ok) {
+        offlineBtn.setAttribute('data-currently-offline', String(nextOffline));
+        offlineBtn.textContent = nextOffline
+          ? 'Re-Open Observatory Dome (Restore Public)'
+          : 'Engage 503 Maintenance Shutter';
+        offlineBtn.className = `btn-tier ${nextOffline ? 'btn-tier-success' : 'btn-tier-warning'}`;
+
+        if (statusLabel) {
+          statusLabel.textContent = nextOffline ? 'OFFLINE (HTTP 503 ACTIVE)' : 'ONLINE (PUBLIC ACCESS ENABLED)';
+          statusLabel.className = nextOffline ? 'text-amber' : 'text-green';
+        }
+        notify(data.message, 'success');
+      } else {
+        notify(data.error || 'Failed to toggle shutter state.', 'error');
+      }
+    });
+
+    // Tier 2: Hard Server Shutdown (SIGTERM)
+    document.getElementById('shutdown-server-btn')?.addEventListener('click', async () => {
+      const pwInput = document.getElementById('shutdown-password') as HTMLInputElement | null;
+      const pw = pwInput?.value || '';
+      if (!pw) {
+        notify('Passphrase is required to halt the server process.', 'warn');
+        pwInput?.focus();
+        return;
+      }
+
+      if (!confirm('Are you sure you want to dispatch SIGTERM? The Node server process will exit.')) {
+        return;
+      }
+
+      notify('Dispatching SIGTERM process termination…', 'warn');
+      const data = await postAdmin('/api/admin/lifecycle', {
+        action: 'shutdown-server',
+        password: pw,
+      });
+
+      if (data.ok) {
+        notify(data.message, 'warn');
+        if (pwInput) pwInput.value = '';
+      } else {
+        notify(data.error || 'Passphrase verification failed.', 'error');
+      }
+    });
+
+    // Tier 3: Decommission Dialog
+    const purgeDialog = document.getElementById('purge-confirm-dialog') as HTMLDialogElement | null;
+    document.getElementById('open-purge-modal-btn')?.addEventListener('click', () => {
+      if (purgeDialog && !purgeDialog.open) purgeDialog.showModal();
+    });
+
+    document.getElementById('cancel-purge-btn')?.addEventListener('click', () => {
+      purgeDialog?.close();
+    });
+
+    document.getElementById('purge-form')?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const fd = new FormData(e.currentTarget as HTMLFormElement);
+      const confirmationPhrase = String(fd.get('confirmationPhrase') || '');
+      const password = String(fd.get('password') || '');
+
+      notify('Verifying sovereign decommission credentials…', 'warn');
+      const data = await postAdmin('/api/admin/lifecycle', {
+        action: 'purge-codebase',
+        confirmationPhrase,
+        password,
+      });
+
+      purgeDialog?.close();
+      if (data.ok) {
+        notify(data.message || 'Purge initiated.', 'error');
+      } else {
+        notify(data.error || 'Credentials mismatch.', 'error');
+      }
+    });
+  </script>
+</AdminLayout>
+
+<style>
+  .module-container {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+
+  .module-header {
+    border-bottom: 1px solid var(--border-hairline);
+    padding-bottom: 1rem;
+  }
+
+  .module-kicker {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    letter-spacing: 0.12em;
+    color: var(--accent);
+  }
+
+  .module-header h2 {
+    margin: 0.25rem 0 0.25rem;
+    font-size: var(--step-1);
+    font-weight: 500;
+  }
+
+  .module-sub {
+    margin: 0;
+    font-size: 0.88rem;
+    color: var(--text-secondary);
+  }
+
+  .lifecycle-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+  }
+
+  .lifecycle-card {
+    padding: 1.5rem;
+    border-radius: 0.75rem;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-hairline);
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+  }
+
+  .tier-soft {
+    border-left: 3px solid var(--accent);
+  }
+
+  .tier-hard {
+    border-left: 3px solid oklch(75% 0.18 70);
+  }
+
+  .tier-purge {
+    border-left: 3px solid oklch(62% 0.22 25);
+    background: color-mix(in oklch, oklch(62% 0.22 25) 4%, var(--bg-elevated));
+  }
+
+  .tier-header-row {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    margin-bottom: 0.25rem;
+  }
+
+  .tier-badge {
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    font-weight: 600;
+    padding: 0.15rem 0.45rem;
+    border-radius: 0.25rem;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-hairline);
+    color: var(--accent);
+  }
+
+  .tier-badge-critical {
+    color: oklch(75% 0.2 25);
+    border-color: color-mix(in oklch, oklch(62% 0.22 25) 40%, transparent);
+    background: color-mix(in oklch, oklch(62% 0.22 25) 12%, transparent);
+  }
+
+  .tier-type {
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.08em;
+    color: var(--text-tertiary);
+  }
+
+  .tier-title {
+    margin: 0.25rem 0 0.4rem;
+    font-size: 1.05rem;
+    font-weight: 500;
+  }
+
+  .tier-desc {
+    margin: 0;
+    font-size: 0.84rem;
+    color: var(--text-secondary);
+    line-height: 1.5;
+  }
+
+  .status-indicator-row {
+    margin-top: 0.75rem;
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .text-green { color: oklch(78% 0.16 145); }
+  .text-amber { color: oklch(80% 0.18 80); }
+  .text-red { color: oklch(75% 0.2 25); }
+
+  .tier-action-box {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--border-hairline);
+  }
+
+  .btn-tier {
+    padding: 0.65rem 1.15rem;
+    border-radius: 0.375rem;
+    font-family: var(--font-mono);
+    font-size: 0.82rem;
+    letter-spacing: 0.05em;
+    cursor: pointer;
+    transition: all 0.18s ease;
+  }
+
+  .btn-tier-warning {
+    background: color-mix(in oklch, oklch(78% 0.18 80) 14%, var(--bg-surface));
+    border: 1px solid oklch(78% 0.18 80);
+    color: var(--text-primary);
+  }
+  .btn-tier-warning:hover {
+    background: oklch(78% 0.18 80);
+    color: #000;
+  }
+
+  .btn-tier-success {
+    background: color-mix(in oklch, oklch(75% 0.18 145) 14%, var(--bg-surface));
+    border: 1px solid oklch(75% 0.18 145);
+    color: var(--text-primary);
+  }
+  .btn-tier-success:hover {
+    background: oklch(75% 0.18 145);
+    color: #000;
+  }
+
+  .btn-tier-danger {
+    background: color-mix(in oklch, oklch(62% 0.22 25) 15%, var(--bg-surface));
+    border: 1px solid oklch(62% 0.22 25);
+    color: oklch(82% 0.16 25);
+  }
+  .btn-tier-danger:hover {
+    background: oklch(62% 0.22 25);
+    color: #fff;
+  }
+
+  .btn-tier-critical {
+    background: color-mix(in oklch, oklch(55% 0.25 25) 25%, var(--bg-surface));
+    border: 1px solid oklch(65% 0.22 25);
+    color: oklch(85% 0.16 25);
+  }
+  .btn-tier-critical:hover {
+    background: oklch(60% 0.25 25);
+    color: #fff;
+  }
+
+  .auth-challenge-inline {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    width: 100%;
+  }
+
+  .tier-input {
+    flex: 1;
+    min-width: 240px;
+    padding: 0.6rem 0.8rem;
+    border-radius: 0.375rem;
+    border: 1px solid var(--border-hairline);
+    background: var(--bg-canvas);
+    color: var(--text-primary);
+    font-family: inherit;
+    font-size: 0.88rem;
+  }
+
+  .tier-input:focus {
+    outline: none;
+    border-color: var(--accent);
+  }
+
+  /* Purge Dialog Modal */
+  .purge-dialog {
+    max-width: 520px;
+    width: 90vw;
+    border-radius: 0.75rem;
+    background: var(--bg-elevated);
+    border: 1px solid oklch(62% 0.22 25);
+    box-shadow: 0 12px 48px rgba(0, 0, 0, 0.6);
+    color: var(--text-primary);
+    padding: 2rem;
+  }
+
+  .purge-dialog::backdrop {
+    background: rgba(0, 0, 0, 0.75);
+    backdrop-filter: blur(4px);
+  }
+
+  .purge-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+  }
+
+  .dialog-header {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+  }
+
+  .critical-warning-icon {
+    font-size: 2rem;
+    color: oklch(75% 0.2 25);
+  }
+
+  .dialog-header h3 {
+    margin: 0;
+    font-size: 1.15rem;
+  }
+
+  .dialog-sub {
+    margin: 0.2rem 0 0;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+  }
+
+  .dialog-text {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    line-height: 1.5;
+  }
+
+  .dialog-text code {
+    color: oklch(85% 0.16 25);
+    font-family: var(--font-mono);
+  }
+
+  .form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+  }
+
+  .form-group label {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+  }
+
+  .form-group input {
+    padding: 0.6rem 0.8rem;
+    border-radius: 0.375rem;
+    border: 1px solid var(--border-hairline);
+    background: var(--bg-canvas);
+    color: var(--text-primary);
+  }
+
+  .dialog-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    margin-top: 0.5rem;
+  }
+
+  .btn-dialog-abort {
+    padding: 0.6rem 1rem;
+    border-radius: 0.375rem;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-hairline);
+    color: var(--text-primary);
+    cursor: pointer;
+  }
+
+  .btn-dialog-execute {
+    padding: 0.6rem 1.2rem;
+    border-radius: 0.375rem;
+    background: oklch(62% 0.22 25);
+    border: 1px solid oklch(70% 0.22 25);
+    color: #fff;
+    cursor: pointer;
+    font-weight: 600;
+  }
+</style>

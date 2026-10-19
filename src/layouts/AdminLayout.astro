@@ -1,0 +1,411 @@
+---
+export const prerender = false;
+
+import BaseLayout from './BaseLayout.astro';
+import { getCsrfToken, getSessionExpiry } from '../lib/admin-auth';
+import { getSystemState, getFacultyProfile } from '../lib/system-state';
+
+interface Props {
+  title?: string;
+  activeModule?: 'content' | 'media' | 'constellations' | 'system';
+}
+
+const {
+  title = 'Observatory Control // The Study',
+  activeModule = 'content',
+} = Astro.props;
+
+const csrfToken = getCsrfToken(Astro.cookies);
+const systemState = await getSystemState();
+const profile = await getFacultyProfile();
+const sessionExpiry = getSessionExpiry(Astro.cookies);
+const currentPath = Astro.url.pathname;
+
+const navItems = [
+  { id: 'content', href: '/admin', label: '01 · Content & Classes', desc: 'Manuscripts, monographs, syllabi' },
+  { id: 'media', href: '/admin/media', label: '02 · Media & ID Photo', desc: 'Visiting card, 4:5 cropper' },
+  { id: 'constellations', href: '/admin/constellations', label: '03 · Constellations', desc: 'Uranometria catalog shards' },
+  { id: 'system', href: '/admin/system', label: '04 · System & Protocols', desc: '503 shutter, SIGTERM, purge' },
+];
+---
+
+<BaseLayout
+  title={`${title} — DRC Sovereign Archive`}
+  description="High-security administrative observatory control panel for Professor Duncan R. Cordry."
+>
+  <div class="admin-shell" data-csrf={csrfToken} data-expiry={sessionExpiry || ''}>
+    <!-- Top Mission Control Header -->
+    <header class="admin-header">
+      <div class="admin-header-lead">
+        <div class="telemetry-bar">
+          <span class="telemetry-badge">SOVEREIGN ARCHIVE // THE STUDY</span>
+          <span class="telemetry-sep">/</span>
+          <span class="telemetry-epoch">EPOCH J2000.0</span>
+          <span class="telemetry-sep">/</span>
+          <span class={`status-pill ${systemState.offlineMode ? 'status-pill-offline' : 'status-pill-online'}`}>
+            <span class="status-dot"></span>
+            {systemState.offlineMode ? 'OFFLINE (503 ACTIVE)' : 'ONLINE (PUBLIC)'}
+          </span>
+        </div>
+        <h1 class="admin-headline">{profile.name} — Observatory Control</h1>
+      </div>
+
+      <div class="admin-header-actions">
+        <div class="session-indicator" id="session-time-display">
+          Session Active
+        </div>
+        <a href="/" target="_blank" rel="noopener noreferrer" class="btn-control btn-outline">
+          View Live Folio ↗
+        </a>
+        <form method="POST" action="/api/admin/auth" class="logout-form">
+          <input type="hidden" name="action" value="logout" />
+          <button type="submit" class="btn-control btn-lock">
+            Lock Console
+          </button>
+        </form>
+      </div>
+    </header>
+
+    <!-- Modular Navigation Rail -->
+    <nav class="admin-nav" aria-label="Observatory Control Modules">
+      <ul class="admin-nav-list">
+        {navItems.map((item) => {
+          const isActive = activeModule === item.id || currentPath === item.href || (item.id === 'content' && (currentPath === '/admin' || currentPath === '/admin/'));
+          return (
+            <li class="admin-nav-item">
+              <a
+                href={item.href}
+                class={`admin-nav-link ${isActive ? 'is-active' : ''}`}
+                aria-current={isActive ? 'page' : undefined}
+              >
+                <span class="nav-label">{item.label}</span>
+                <span class="nav-desc">{item.desc}</span>
+              </a>
+            </li>
+          );
+        })}
+      </ul>
+    </nav>
+
+    <!-- Main Module Slot -->
+    <main class="admin-content-stage">
+      <slot />
+    </main>
+
+    <!-- Native Top-Layer Toast Notification (popover="manual") -->
+    <div id="admin-toast" popover="manual" class="admin-toast" role="status" aria-live="polite">
+      <div class="toast-inner">
+        <span class="toast-indicator" id="toast-indicator"></span>
+        <span class="toast-message" id="admin-toast-text">Observatory system ready.</span>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Expose global CSRF token & notification dispatch across all admin sub-pages
+    const shell = document.querySelector('.admin-shell') as HTMLElement | null;
+    const csrf = shell?.dataset.csrf || '';
+    (window as any).csrfToken = csrf;
+
+    const toast = document.getElementById('admin-toast') as HTMLElement & {
+      showPopover?: () => void;
+      hidePopover?: () => void;
+    };
+    const toastText = document.getElementById('admin-toast-text');
+    const toastIndicator = document.getElementById('toast-indicator');
+    let toastTimeout: any = null;
+
+    (window as any).notify = (message: string, status: 'info' | 'success' | 'warn' | 'error' = 'info') => {
+      if (toastText) toastText.textContent = message;
+      if (toastIndicator) {
+        toastIndicator.className = `toast-indicator indicator-${status}`;
+      }
+      try {
+        clearTimeout(toastTimeout);
+        toast?.showPopover?.();
+        toastTimeout = setTimeout(() => {
+          try { toast?.hidePopover?.(); } catch {}
+        }, 4500);
+      } catch {
+        console.log(`[Observatory Notice]: ${message}`);
+      }
+    };
+
+    // Global POST helper with CSRF
+    (window as any).postAdmin = async (url: string, payload: Record<string, any>) => {
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...payload, csrfToken: csrf }),
+      });
+      return res.json();
+    };
+
+    // Session Expiry Telemetry
+    const expiryTimestamp = Number(shell?.dataset.expiry || 0);
+    const sessionDisplay = document.getElementById('session-time-display');
+    if (expiryTimestamp && sessionDisplay) {
+      function updateSessionTimer() {
+        const remainingMs = expiryTimestamp - Date.now();
+        if (remainingMs <= 0) {
+          if (sessionDisplay) sessionDisplay.textContent = 'Session Expired';
+          (window as any).notify('Your administrative session has expired. Please re-authenticate.', 'warn');
+          setTimeout(() => { window.location.href = '/admin/login'; }, 2000);
+          return;
+        }
+        const hours = Math.floor(remainingMs / (1000 * 60 * 60));
+        const minutes = Math.floor((remainingMs % (1000 * 60 * 60)) / (1000 * 60));
+        if (sessionDisplay) {
+          sessionDisplay.textContent = `Session: ${hours}h ${minutes}m left`;
+        }
+      }
+      updateSessionTimer();
+      setInterval(updateSessionTimer, 60000);
+    }
+  </script>
+</BaseLayout>
+
+<style>
+  .admin-shell {
+    max-width: 1360px;
+    margin: 0 auto;
+    padding: 2rem 1.5rem 6rem;
+    color: var(--text-primary);
+  }
+
+  /* Mission Control Header */
+  .admin-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    flex-wrap: wrap;
+    gap: 1.25rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid var(--border-hairline);
+  }
+
+  .admin-header-lead {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+  }
+
+  .telemetry-bar {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.65rem;
+    font-family: var(--font-mono);
+    font-size: var(--step--1);
+    letter-spacing: 0.12em;
+    color: var(--text-tertiary);
+  }
+
+  .telemetry-badge {
+    color: var(--accent);
+    font-weight: 600;
+  }
+
+  .telemetry-sep {
+    opacity: 0.4;
+  }
+
+  .status-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.2rem 0.55rem;
+    border-radius: 9999px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+  }
+
+  .status-pill-online {
+    background: color-mix(in oklch, oklch(75% 0.18 145) 15%, transparent);
+    color: oklch(78% 0.16 145);
+    border: 1px solid color-mix(in oklch, oklch(75% 0.18 145) 30%, transparent);
+  }
+
+  .status-pill-offline {
+    background: color-mix(in oklch, oklch(65% 0.22 30) 18%, transparent);
+    color: oklch(72% 0.2 30);
+    border: 1px solid color-mix(in oklch, oklch(65% 0.22 30) 40%, transparent);
+  }
+
+  .status-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+    animation: pulse-dot 2.4s infinite ease-in-out;
+  }
+
+  @keyframes pulse-dot {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.4; transform: scale(0.85); }
+  }
+
+  .admin-headline {
+    margin: 0;
+    font-size: var(--step-2);
+    font-family: var(--font-display, serif);
+    font-weight: 500;
+    letter-spacing: -0.01em;
+  }
+
+  .admin-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+  }
+
+  .session-indicator {
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    color: var(--text-secondary);
+    padding: 0.35rem 0.65rem;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-hairline);
+    border-radius: 0.375rem;
+  }
+
+  .btn-control {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.45rem 0.85rem;
+    border-radius: 0.375rem;
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    letter-spacing: 0.05em;
+    cursor: pointer;
+    text-decoration: none;
+    transition: all 0.18s ease;
+  }
+
+  .btn-outline {
+    background: transparent;
+    color: var(--text-primary);
+    border: 1px solid var(--border-hairline);
+  }
+
+  .btn-outline:hover {
+    background: var(--bg-surface);
+    border-color: var(--accent);
+  }
+
+  .btn-lock {
+    background: color-mix(in oklch, oklch(62% 0.2 25) 12%, transparent);
+    color: oklch(76% 0.16 25);
+    border: 1px solid color-mix(in oklch, oklch(62% 0.2 25) 28%, transparent);
+  }
+
+  .btn-lock:hover {
+    background: color-mix(in oklch, oklch(62% 0.2 25) 22%, transparent);
+    border-color: oklch(76% 0.16 25);
+  }
+
+  /* Modular Navigation Rail */
+  .admin-nav {
+    margin: 1.5rem 0 2.5rem;
+  }
+
+  .admin-nav-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 0.75rem;
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  .admin-nav-item {
+    display: flex;
+  }
+
+  .admin-nav-link {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    padding: 0.85rem 1rem;
+    border-radius: 0.5rem;
+    border: 1px solid var(--border-hairline);
+    background: var(--bg-surface);
+    text-decoration: none;
+    transition: all 0.18s ease;
+  }
+
+  .admin-nav-link:hover {
+    border-color: var(--accent);
+    transform: translateY(-1px);
+  }
+
+  .admin-nav-link.is-active {
+    background: var(--bg-elevated);
+    border-color: var(--accent);
+    box-shadow: 0 0 0 1px var(--accent), 0 4px 12px rgba(0, 0, 0, 0.15);
+  }
+
+  .nav-label {
+    font-family: var(--font-mono);
+    font-size: 0.82rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    color: var(--text-primary);
+  }
+
+  .admin-nav-link.is-active .nav-label {
+    color: var(--accent);
+  }
+
+  .nav-desc {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+  }
+
+  /* Content Stage */
+  .admin-content-stage {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+  }
+
+  /* Native Top-Layer Toast Notification (popover="manual") */
+  .admin-toast {
+    position: fixed;
+    inset: auto 1.5rem 1.5rem auto;
+    margin: 0;
+    padding: 0;
+    border: none;
+    background: transparent;
+    z-index: 9999;
+  }
+
+  .toast-inner {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1.15rem;
+    border-radius: 0.5rem;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-hairline);
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.35);
+    color: var(--text-primary);
+    font-family: var(--font-mono);
+    font-size: 0.82rem;
+  }
+
+  .toast-indicator {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--accent);
+  }
+
+  .toast-indicator.indicator-success { background: oklch(75% 0.18 145); }
+  .toast-indicator.indicator-warn { background: oklch(78% 0.18 80); }
+  .toast-indicator.indicator-error { background: oklch(65% 0.22 25); }
+  .toast-indicator.indicator-info { background: var(--accent); }
+</style>

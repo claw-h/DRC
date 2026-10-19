@@ -1,0 +1,403 @@
+---
+export const prerender = false;
+
+import AdminLayout from '../../layouts/AdminLayout.astro';
+import { getFacultyProfile } from '../../lib/system-state';
+
+const profile = await getFacultyProfile();
+---
+
+<AdminLayout title="Media Atelier & Visiting Card" activeModule="media">
+  <div class="module-container">
+    <div class="module-header">
+      <span class="module-kicker">MODULE 02 · MEDIA & CREDENTIALS ATELIER</span>
+      <h2>Visiting Card Portrait & Office Telemetry</h2>
+      <p class="module-sub">
+        Upload, client-crop, and synchronize Professor Cordry's official Faculty ID portrait (4:5 ratio) and office telemetry.
+      </p>
+    </div>
+
+    <div class="atelier-grid">
+      <!-- Left: Interactive Canvas Cropper -->
+      <section class="atelier-card" aria-labelledby="card-cropper-heading">
+        <h3 id="card-cropper-heading" class="card-title">4:5 Aspect-Ratio Client Cropper</h3>
+        <p class="card-desc">
+          Images are cropped and WebP-encoded directly in your browser canvas. No server-side C++ image binaries are required.
+        </p>
+
+        <div class="canvas-stage">
+          <canvas id="portrait-crop-canvas" width="320" height="400" class="crop-canvas"></canvas>
+          <div class="canvas-overlay-guide">4:5 FACULTY PORTRAIT FRAME (320 × 400)</div>
+        </div>
+
+        <div class="upload-controls">
+          <label class="file-picker-btn">
+            <span>Choose Image File (JPG, PNG, WebP)</span>
+            <input type="file" id="portrait-file" accept="image/*" class="sr-only" />
+          </label>
+          <span class="file-name-display" id="file-chosen-name">No file selected yet</span>
+        </div>
+      </section>
+
+      <!-- Right: Office Telemetry & Save -->
+      <section class="atelier-card" aria-labelledby="card-telemetry-heading">
+        <h3 id="card-telemetry-heading" class="card-title">Visiting Card & Office Telemetry</h3>
+        <p class="card-desc">
+          Update the coordinates displayed in the expanding Faculty ID Card modal on the main portfolio.
+        </p>
+
+        <form id="media-form" class="atelier-form">
+          <div class="form-group">
+            <label for="profile-name">Scholar Full Name</label>
+            <input type="text" id="profile-name" value={profile.name} disabled class="input-disabled" />
+          </div>
+
+          <div class="form-group">
+            <label for="profile-title">Faculty Title</label>
+            <input type="text" id="profile-title" value={profile.title} disabled class="input-disabled" />
+          </div>
+
+          <div class="form-group">
+            <label for="profile-office">Office Location</label>
+            <input
+              type="text"
+              id="profile-office"
+              name="office"
+              value={profile.office}
+              placeholder="e.g. Faculty Block · Rajiv Gandhi Education City"
+              required
+            />
+          </div>
+
+          <div class="form-group">
+            <label for="profile-hours">Consultation / Office Hours</label>
+            <input
+              type="text"
+              id="profile-hours"
+              name="officeHours"
+              value={profile.officeHours}
+              placeholder="e.g. By Appointment · Semesters I & II"
+              required
+            />
+          </div>
+
+          <div class="form-group">
+            <label>Current Saved Portrait URL</label>
+            <div class="preview-row">
+              <img
+                src={profile.portraitUrl}
+                alt={profile.name}
+                class="current-portrait-thumb"
+                id="current-thumb"
+              />
+              <span class="mono-url">{profile.portraitUrl}</span>
+            </div>
+          </div>
+
+          <button type="submit" id="save-media-btn" class="btn-primary">
+            Save Cropped Portrait & Telemetry
+          </button>
+        </form>
+      </section>
+    </div>
+  </div>
+
+  <script>
+    declare const notify: (message: string, status?: string) => void;
+    declare const postAdmin: (url: string, payload: Record<string, any>) => Promise<any>;
+
+    const cropCanvas = document.getElementById('portrait-crop-canvas') as HTMLCanvasElement | null;
+    const ctx = cropCanvas?.getContext('2d');
+    const fileChosenName = document.getElementById('file-chosen-name');
+    let croppedDataUrl = '';
+
+    // Initialize blank canvas state
+    if (ctx && cropCanvas) {
+      ctx.fillStyle = '#0f1117';
+      ctx.fillRect(0, 0, cropCanvas.width, cropCanvas.height);
+      ctx.strokeStyle = 'rgba(215, 185, 120, 0.4)';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(16, 16, cropCanvas.width - 32, cropCanvas.height - 32);
+      ctx.fillStyle = '#8b949e';
+      ctx.font = '11px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText('SELECT IMAGE TO PREVIEW 4:5 CROP', cropCanvas.width / 2, cropCanvas.height / 2);
+    }
+
+    // Handle Image Upload & Client Canvas Center-Crop
+    document.getElementById('portrait-file')?.addEventListener('change', (e) => {
+      const file = (e.currentTarget as HTMLInputElement).files?.[0];
+      if (!file || !cropCanvas || !ctx) return;
+
+      if (fileChosenName) {
+        fileChosenName.textContent = `${file.name} (${Math.round(file.size / 1024)} KB)`;
+      }
+
+      const reader = new FileReader();
+      reader.onload = () => {
+        const img = new Image();
+        img.onload = () => {
+          const targetAspect = 4 / 5;
+          const srcAspect = img.width / img.height;
+          let sx = 0, sy = 0, sw = img.width, sh = img.height;
+
+          if (srcAspect > targetAspect) {
+            sw = img.height * targetAspect;
+            sx = (img.width - sw) / 2;
+          } else {
+            sh = img.width / targetAspect;
+            sy = (img.height - sh) / 2;
+          }
+
+          ctx.clearRect(0, 0, cropCanvas.width, cropCanvas.height);
+          ctx.drawImage(img, sx, sy, sw, sh, 0, 0, cropCanvas.width, cropCanvas.height);
+          
+          // Export high-quality WebP blob directly on client
+          croppedDataUrl = cropCanvas.toDataURL('image/webp', 0.90);
+          notify('Portrait successfully center-cropped to 4:5 ratio on client canvas.', 'success');
+        };
+        img.src = String(reader.result);
+      };
+      reader.readAsDataURL(file);
+    });
+
+    // Submit Telemetry and Media
+    document.getElementById('media-form')?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const office = (document.getElementById('profile-office') as HTMLInputElement).value;
+      const officeHours = (document.getElementById('profile-hours') as HTMLInputElement).value;
+
+      notify('Writing portrait and office telemetry to filesystem…', 'info');
+      const data = await postAdmin('/api/admin/media', {
+        dataUrl: croppedDataUrl,
+        office,
+        officeHours,
+      });
+
+      if (data.ok) {
+        notify(data.message || 'Updated credentials successfully.', 'success');
+        if (data.portraitUrl) {
+          const thumb = document.getElementById('current-thumb') as HTMLImageElement | null;
+          if (thumb) thumb.src = `${data.portraitUrl}?t=${Date.now()}`;
+        }
+      } else {
+        notify(data.error || 'Failed to update credentials.', 'error');
+      }
+    });
+  </script>
+</AdminLayout>
+
+<style>
+  .module-container {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+
+  .module-header {
+    border-bottom: 1px solid var(--border-hairline);
+    padding-bottom: 1rem;
+  }
+
+  .module-kicker {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    letter-spacing: 0.12em;
+    color: var(--accent);
+  }
+
+  .module-header h2 {
+    margin: 0.25rem 0 0.25rem;
+    font-size: var(--step-1);
+    font-weight: 500;
+  }
+
+  .module-sub {
+    margin: 0;
+    font-size: 0.88rem;
+    color: var(--text-secondary);
+  }
+
+  .atelier-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 480px), 1fr));
+    gap: 1.5rem;
+  }
+
+  .atelier-card {
+    padding: 1.5rem;
+    border-radius: 0.75rem;
+    border: 1px solid var(--border-hairline);
+    background: var(--bg-elevated);
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+  }
+
+  .card-title {
+    margin: 0;
+    font-size: 1.05rem;
+    font-weight: 500;
+  }
+
+  .card-desc {
+    margin: -0.5rem 0 0;
+    font-size: 0.82rem;
+    color: var(--text-secondary);
+  }
+
+  .canvas-stage {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background: var(--bg-canvas);
+    border: 1px solid var(--border-hairline);
+    border-radius: 0.5rem;
+    padding: 1.25rem;
+  }
+
+  .crop-canvas {
+    max-width: 100%;
+    height: auto;
+    border-radius: 0.375rem;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+  }
+
+  .canvas-overlay-guide {
+    margin-top: 0.75rem;
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.08em;
+    color: var(--text-tertiary);
+  }
+
+  .upload-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .file-picker-btn {
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    padding: 0.65rem 1rem;
+    background: var(--bg-surface);
+    border: 1px dashed var(--border-hairline);
+    border-radius: 0.375rem;
+    font-family: var(--font-mono);
+    font-size: 0.82rem;
+    color: var(--accent);
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .file-picker-btn:hover {
+    border-color: var(--accent);
+    background: color-mix(in oklch, var(--accent) 8%, var(--bg-surface));
+  }
+
+  .file-name-display {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+  }
+
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    border: 0;
+  }
+
+  /* Form Styles */
+  .atelier-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+  }
+
+  .form-group label {
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    letter-spacing: 0.05em;
+    color: var(--text-secondary);
+  }
+
+  .form-group input {
+    padding: 0.6rem 0.8rem;
+    border-radius: 0.375rem;
+    border: 1px solid var(--border-hairline);
+    background: var(--bg-canvas);
+    color: var(--text-primary);
+    font-family: inherit;
+    font-size: 0.9rem;
+  }
+
+  .form-group input:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 1px var(--accent);
+  }
+
+  .input-disabled {
+    opacity: 0.65;
+    cursor: not-allowed;
+    background: var(--bg-surface) !important;
+  }
+
+  .preview-row {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+    padding: 0.5rem;
+    background: var(--bg-canvas);
+    border-radius: 0.375rem;
+    border: 1px solid var(--border-hairline);
+  }
+
+  .current-portrait-thumb {
+    width: 44px;
+    height: 55px;
+    object-fit: cover;
+    border-radius: 0.25rem;
+    border: 1px solid var(--border-hairline);
+  }
+
+  .mono-url {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    color: var(--text-secondary);
+    word-break: break-all;
+  }
+
+  .btn-primary {
+    padding: 0.75rem 1.25rem;
+    border-radius: 0.375rem;
+    border: 1px solid var(--accent);
+    background: color-mix(in oklch, var(--accent) 18%, var(--bg-surface));
+    color: var(--text-primary);
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+    letter-spacing: 0.06em;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    margin-top: 0.5rem;
+  }
+
+  .btn-primary:hover {
+    background: var(--accent);
+    color: var(--bg-canvas);
+  }
+</style>
