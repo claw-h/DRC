@@ -1,0 +1,414 @@
+---
+// src/components/admin/ActionConfirmModal.astro
+// Middle Ages Calligraphic Standard Action Confirmation Modal
+---
+
+<dialog
+  id="action-confirm-modal"
+  class="action-confirm-dialog"
+  closedby="any"
+  aria-labelledby="confirm-modal-title"
+  aria-describedby="confirm-modal-desc"
+>
+  <div class="confirm-modal-shell" id="confirm-modal-shell">
+    <div class="confirm-modal-glow" aria-hidden="true"></div>
+
+    <header class="confirm-modal-header">
+      <div class="kicker-lockup">
+        <span class="warning-flame" aria-hidden="true">⚠</span>
+        <span class="confirm-kicker">CONFIRM PERMANENT ACTION</span>
+      </div>
+      <button
+        type="button"
+        id="btn-close-confirm-modal"
+        class="study-btn study-btn--ghost study-btn--icon-only study-btn--sm modal-dismiss-btn"
+        aria-label="Dismiss Confirmation"
+      >
+        ✕
+      </button>
+    </header>
+
+    <div class="confirm-modal-body">
+      <h3 id="confirm-modal-title" class="confirm-title">
+        Permanently Delete Content Record?
+      </h3>
+      <p id="confirm-modal-desc" class="confirm-desc">
+        You are about to irreversibly remove this record from the academic archive.
+      </p>
+
+      <div class="item-summary-card">
+        <div class="item-meta-row">
+          <span class="item-type-pill" id="confirm-item-type">COLLECTION</span>
+          <span class="item-id-mono" id="confirm-item-id">record-slug</span>
+        </div>
+        <div class="item-title-text" id="confirm-item-name">
+          Item Title Placeholder
+        </div>
+      </div>
+
+      <div class="safety-advisory">
+        <span class="advisory-icon" aria-hidden="true">ℹ</span>
+        <span class="advisory-text">
+          Once purged, the corresponding Markdown file in <code>src/data/</code> will be unlinked and permanently excised.
+        </span>
+      </div>
+    </div>
+
+    <footer class="confirm-modal-footer">
+      <button type="button" id="btn-cancel-confirm" class="study-btn study-btn--ledger btn-cancel">
+        <span>Cancel</span>
+        <span class="btn-keycap">Esc</span>
+      </button>
+      <button type="button" id="btn-execute-confirm" class="study-btn study-btn--purge study-btn--lg btn-danger">
+        <span class="danger-icon">✕</span>
+        <span id="confirm-btn-label">Confirm Permanent Delete</span>
+        <span class="btn-keycap">↵</span>
+      </button>
+    </footer>
+  </div>
+</dialog>
+
+<script>
+  interface ConfirmOptions {
+    title?: string;
+    message?: string;
+    itemName?: string;
+    itemId?: string;
+    itemType?: string;
+    confirmLabel?: string;
+    onConfirm: () => Promise<void> | void;
+  }
+
+  const dialog = document.getElementById('action-confirm-modal') as HTMLDialogElement | null;
+  const titleEl = document.getElementById('confirm-modal-title');
+  const descEl = document.getElementById('confirm-modal-desc');
+  const typeEl = document.getElementById('confirm-item-type');
+  const idEl = document.getElementById('confirm-item-id');
+  const nameEl = document.getElementById('confirm-item-name');
+  const confirmBtn = document.getElementById('btn-execute-confirm') as HTMLButtonElement | null;
+  const cancelBtn = document.getElementById('btn-cancel-confirm');
+  const closeBtn = document.getElementById('btn-close-confirm-modal');
+  const confirmBtnLabel = document.getElementById('confirm-btn-label');
+
+  let activeConfirmAction: (() => Promise<void> | void) | null = null;
+  let lastActiveElement: HTMLElement | null = null;
+
+  function closeModal() {
+    if (!dialog || !dialog.open) return;
+    dialog.setAttribute('data-closing', 'true');
+    setTimeout(() => {
+      dialog.close();
+      dialog.removeAttribute('data-closing');
+      if (lastActiveElement) {
+        lastActiveElement.focus();
+        lastActiveElement = null;
+      }
+      activeConfirmAction = null;
+    }, 200);
+  }
+
+  cancelBtn?.addEventListener('click', closeModal);
+  closeBtn?.addEventListener('click', closeModal);
+
+  dialog?.addEventListener('cancel', (e) => {
+    e.preventDefault();
+    closeModal();
+  });
+
+  dialog?.addEventListener('click', (e) => {
+    if (e.target === dialog) {
+      closeModal();
+    }
+  });
+
+  confirmBtn?.addEventListener('click', async () => {
+    if (!activeConfirmAction) {
+      closeModal();
+      return;
+    }
+
+    if (confirmBtn) {
+      confirmBtn.disabled = true;
+      if (confirmBtnLabel) confirmBtnLabel.textContent = 'Purging…';
+    }
+
+    try {
+      await activeConfirmAction();
+    } finally {
+      if (confirmBtn) {
+        confirmBtn.disabled = false;
+        if (confirmBtnLabel) confirmBtnLabel.textContent = 'Confirm Permanent Delete';
+      }
+      closeModal();
+    }
+  });
+
+  // Global Singleton Action Confirmation API
+  (window as any).confirmAction = (options: ConfirmOptions) => {
+    lastActiveElement = document.activeElement as HTMLElement | null;
+    activeConfirmAction = options.onConfirm;
+
+    if (titleEl) titleEl.textContent = options.title || 'Permanently Delete Record?';
+    if (descEl) descEl.textContent = options.message || 'You are about to irreversibly remove this record from sovereign storage.';
+    if (typeEl) typeEl.textContent = (options.itemType || 'RECORD').toUpperCase();
+    if (idEl) idEl.textContent = options.itemId || '—';
+    if (nameEl) nameEl.textContent = options.itemName || options.itemId || 'Untitled Record';
+    if (confirmBtnLabel) confirmBtnLabel.textContent = options.confirmLabel || 'Confirm Permanent Delete';
+
+    if (dialog && !dialog.open) {
+      dialog.removeAttribute('data-closing');
+      dialog.showModal();
+      cancelBtn?.focus();
+    }
+  };
+</script>
+
+<style>
+  .action-confirm-dialog {
+    position: fixed;
+    inset: 0;
+    margin: auto;
+    padding: 0;
+    border: none;
+    background: transparent;
+    color: var(--text-primary);
+    inline-size: min(480px, calc(100dvw - 2rem));
+    max-block-size: calc(100dvh - 2rem);
+    overflow: hidden;
+    z-index: 1200;
+
+    opacity: 0;
+    transform: scale(0.96) translateY(-8px);
+    transition:
+      opacity 0.22s cubic-bezier(0.16, 1, 0.3, 1),
+      transform 0.22s cubic-bezier(0.16, 1, 0.3, 1),
+      display 0.22s allow-discrete,
+      overlay 0.22s allow-discrete;
+  }
+
+  .action-confirm-dialog[open] {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+
+  @starting-style {
+    .action-confirm-dialog[open] {
+      opacity: 0;
+      transform: scale(0.96) translateY(-8px);
+    }
+  }
+
+  .action-confirm-dialog[data-closing='true'] {
+    opacity: 0;
+    transform: scale(0.96) translateY(6px);
+  }
+
+  .action-confirm-dialog::backdrop {
+    background: color-mix(in oklch, #020308 82%, transparent);
+    backdrop-filter: blur(12px) saturate(1.4);
+    opacity: 0;
+    transition:
+      opacity 0.22s cubic-bezier(0.16, 1, 0.3, 1),
+      display 0.22s allow-discrete,
+      overlay 0.22s allow-discrete;
+  }
+
+  .action-confirm-dialog[open]::backdrop {
+    opacity: 1;
+  }
+
+  @starting-style {
+    .action-confirm-dialog[open]::backdrop {
+      opacity: 0;
+    }
+  }
+
+  .action-confirm-dialog[data-closing='true']::backdrop {
+    opacity: 0;
+  }
+
+  .confirm-modal-shell {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    background: var(--bg-surface, #0b1220);
+    border: 1px solid color-mix(in oklch, #b83a28 35%, var(--border-hairline, #1e2d4a));
+    border-radius: 0.5rem;
+    box-shadow:
+      0 28px 60px -15px rgba(0, 0, 0, 0.85),
+      0 0 0 1px color-mix(in oklch, #b83a28 20%, transparent);
+    overflow: hidden;
+  }
+
+  .confirm-modal-glow {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, #b83a28, transparent);
+    pointer-events: none;
+  }
+
+  .confirm-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.85rem 1.25rem;
+    border-bottom: 3px double var(--border-hairline, #1e2d4a);
+    background: var(--bg-surface, #0b1220);
+  }
+
+  .kicker-lockup {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .warning-flame {
+    color: #e06c58;
+    font-size: 0.85rem;
+  }
+
+  .confirm-kicker {
+    font-family: var(--font-serif);
+    font-size: 0.72rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #e06c58;
+    font-weight: 600;
+  }
+
+  .modal-dismiss-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 3px;
+    border: 1px solid var(--border-hairline, #1e2d4a);
+    background: var(--bg-canvas, #060a12);
+    color: var(--text-secondary, #c8c3b6);
+    cursor: pointer;
+    font-size: 0.85rem;
+    transition: all 0.15s ease;
+  }
+
+  .modal-dismiss-btn:hover {
+    color: var(--text-primary, #f5f2ea);
+    border-color: var(--accent, #d8b257);
+  }
+
+  .confirm-modal-body {
+    padding: 1.25rem 1.25rem 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+  }
+
+  .confirm-title {
+    margin: 0;
+    font-size: 1.2rem;
+    font-family: var(--font-display);
+    font-weight: 500;
+    letter-spacing: -0.01em;
+    color: var(--text-primary, #f5f2ea);
+    line-height: 1.3;
+  }
+
+  .confirm-desc {
+    margin: 0;
+    font-family: var(--font-serif);
+    font-size: 0.88rem;
+    color: var(--text-secondary, #c8c3b6);
+    line-height: 1.45;
+  }
+
+  .item-summary-card {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    padding: 0.85rem 1rem;
+    background: var(--bg-canvas, #060a12);
+    border: 1px solid var(--border-hairline, #1e2d4a);
+    border-radius: 4px;
+  }
+
+  .item-meta-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .item-type-pill {
+    padding: 0.1rem 0.45rem;
+    border-radius: 3px;
+    background: color-mix(in oklch, var(--accent, #d8b257) 16%, transparent);
+    border: 1px solid color-mix(in oklch, var(--accent, #d8b257) 40%, transparent);
+    color: var(--accent, #d8b257);
+    font-family: var(--font-serif);
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  .item-id-mono {
+    font-family: var(--font-mono, monospace);
+    font-size: 0.74rem;
+    color: var(--text-tertiary, #8b95a5);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .item-title-text {
+    font-family: var(--font-serif);
+    font-size: 0.95rem;
+    font-weight: 500;
+    color: var(--text-primary, #f5f2ea);
+    line-height: 1.35;
+  }
+
+  .safety-advisory {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+    padding: 0.65rem 0.85rem;
+    border-radius: 4px;
+    background: color-mix(in oklch, #b83a28 10%, var(--bg-surface, #0b1220));
+    border: 1px solid color-mix(in oklch, #b83a28 25%, transparent);
+    font-family: var(--font-serif);
+    font-size: 0.8rem;
+    color: #f09a8a;
+    line-height: 1.4;
+  }
+
+  .advisory-icon {
+    font-size: 0.85rem;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+
+  .advisory-text code {
+    font-family: var(--font-mono, monospace);
+    font-size: 0.72rem;
+    padding: 0.1rem 0.3rem;
+    background: rgba(0, 0, 0, 0.4);
+    border-radius: 3px;
+  }
+
+  .confirm-modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 0.65rem;
+    padding: 0.85rem 1.25rem;
+    border-top: 3px double var(--border-hairline, #1e2d4a);
+    background: var(--bg-surface, #0b1220);
+  }
+
+  .danger-icon {
+    font-size: 0.8rem;
+  }
+</style>

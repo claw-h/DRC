@@ -1,6 +1,7 @@
 import type { APIRoute } from 'astro';
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import yaml from 'js-yaml';
 import { verifyAdminSession, verifyCsrfToken } from '../../../lib/admin-auth.ts';
 
 export const prerender = false;
@@ -25,7 +26,7 @@ function cleanAbstract(raw: string): string {
 function parseBibTeXFields(raw: string): Record<string, string> {
   const fields: Record<string, string> = {};
   const lines = raw.split(/\r?\n/);
-  
+
   for (const line of lines) {
     const match = line.match(/^\s*([a-zA-Z_-]+)\s*=\s*[{"]?(.*?)[}"]?,?\s*$/);
     if (match) {
@@ -166,7 +167,226 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     );
   }
 
-  // 3. Create or Update Publication Markdown
+  // 2b. One-Stop ISBN Metadata Resolver for Monographs
+  if (action === 'resolve-isbn') {
+    const rawIsbn = String(body.isbn || '').trim().replace(/[^0-9Xx]/g, '');
+    if (!rawIsbn) {
+      return new Response(JSON.stringify({ error: 'Valid ISBN is required' }), { status: 400 });
+    }
+
+    try {
+      const res = await fetch(`https://openlibrary.org/isbn/${encodeURIComponent(rawIsbn)}.json`, {
+        headers: { 'User-Agent': 'DRC-Observatory/2.0 (mailto:duncan.cordry@ashoka.edu.in)' },
+      });
+      if (!res.ok) throw new Error(`OpenLibrary status ${res.status}`);
+      const data = await res.json();
+      const title = data.title || 'Untitled Monograph';
+      const subtitle = data.subtitle || undefined;
+      const publishers = Array.isArray(data.publishers) ? data.publishers.join(', ') : (data.publishers || 'Academic Press');
+      const year = data.publish_date ? parseInt(data.publish_date.match(/\b(19|20)\d{2}\b/)?.[0] || '2026', 10) : 2026;
+      const pages = Number(data.number_of_pages) || 200;
+
+      let synopsis = '';
+      if (typeof data.description === 'string') synopsis = data.description;
+      else if (data.description && typeof data.description.value === 'string') synopsis = data.description.value;
+
+      return new Response(
+        JSON.stringify({
+          ok: true,
+          metadata: {
+            title,
+            subtitle,
+            publisher: publishers,
+            year,
+            pages,
+            isbn: rawIsbn,
+            synopsis: synopsis || 'Synopsis forthcoming.',
+          },
+        }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } }
+      );
+    } catch (err: any) {
+      return new Response(
+        JSON.stringify({
+          error: `Could not retrieve ISBN metadata: ${err?.message || 'OpenLibrary unreachable'}. You may fill fields directly.`,
+        }),
+        { status: 502, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+  }
+
+  // 2c. Direct Document Upload (PDF Papers & Course Syllabi)
+  if (action === 'upload-document') {
+    const docType = String(body.type || 'publications');
+    const dataUrl = String(body.dataUrl || '');
+    const originalName = String(body.fileName || 'manuscript.pdf').trim();
+
+    if (!dataUrl.startsWith('data:')) {
+      return new Response(JSON.stringify({ error: 'Valid file data URL is required' }), { status: 400 });
+    }
+
+    const matches = dataUrl.match(/^data:([^;]+);base64,(.+)$/);
+    if (!matches) {
+      return new Response(JSON.stringify({ error: 'Malformed file payload' }), { status: 400 });
+    }
+
+    const mime = matches[1].toLowerCase();
+    const buffer = Buffer.from(matches[2], 'base64');
+
+    let ext = 'pdf';
+    if (mime.includes('markdown') || originalName.endsWith('.md')) ext = 'md';
+    else if (mime.includes('epub') || originalName.endsWith('.epub')) ext = 'epub';
+
+    const subDir = docType === 'classes' ? 'syllabi' : 'papers';
+    const targetDir = path.resolve(process.cwd(), `public/${subDir}`);
+    await fs.mkdir(targetDir, { recursive: true });
+
+    const baseName = slugify(originalName.replace(/\.[^/.]+$/, '')) || 'document';
+    const fileName = `${baseName}-${Date.now().toString().slice(-4)}.${ext}`;
+    const outPath = path.resolve(targetDir, fileName);
+
+    await fs.writeFile(outPath, buffer);
+    const fileUrl = `/${subDir}/${fileName}`;
+
+    return new Response(
+      JSON.stringify({
+        ok: true,
+        fileUrl,
+        fileName,
+        sizeBytes: buffer.length,
+        message: `Successfully uploaded document to ${fileUrl}`,
+      }),
+      { status: 200, headers: { 'Content-Type': 'application/json' } }
+    );
+  }
+
+  // 2d. Direct Inline Book Cover Upload
+  if (action === 'upload-book-cover') {
+    const dataUrl = String(body.dataUrl || '');
+    if (!dataUrl.startsWith('data:image/')) {
+      return new Response(JSON.stringify({ error: 'Valid image data URL required for book cover' }), { status: 400 });
+    }
+
+    const matches = dataUrl.match(/^data:image\/([a-zA-Z0-9+]+);base64,(.+)$/);
+    if (!matches) {
+      return new Response(JSON.stringify({ error: 'Malformed image data' }), { status: 400 });
+    }
+
+    const ext = matches[1] === 'jpeg' ? 'jpg' : matches[1];
+    const buffer = Buffer.from(matches[2], 'base64');
+    const rawName = String(body.customFileName || 'monograph-cover').trim();
+    const slugName = slugify(rawName) || 'monograph-cover';
+    const fileName = `${slugName}-${Date.now().toString().slice(-4)}.${ext}`;
+
+    const booksDir = path.resolve(process.cwd(), 'public/images/books');
+    await fs.mkdir(booksDir, { recursive: true });
+
+    const outPath = path.resolve(booksDir, fileName);
+    await fs.writeFile(outPath, buffer);
+
+    const imageUrl = `/images/books/${fileName}`;
+    return new Response(
+      JSON.stringify({
+        ok: true,
+        imageUrl,
+        message: `Saved monograph cover to ${imageUrl}`,
+      }),
+      { status: 200, headers: { 'Content-Type': 'application/json' } }
+    );
+  }
+
+  // 2e. Atomic Update of Existing Book Cover
+  if (action === 'update-book-cover') {
+    const bookId = String(body.bookId || '').replace(/[^a-zA-Z0-9_-]/g, '');
+    const dataUrl = String(body.dataUrl || '');
+    if (!bookId) {
+      return new Response(JSON.stringify({ error: 'Book ID is required' }), { status: 400 });
+    }
+    if (!dataUrl.startsWith('data:image/')) {
+      return new Response(JSON.stringify({ error: 'Valid image data URL required for book cover' }), { status: 400 });
+    }
+
+    const matches = dataUrl.match(/^data:image\/([a-zA-Z0-9+]+);base64,(.+)$/);
+    if (!matches) {
+      return new Response(JSON.stringify({ error: 'Malformed image data' }), { status: 400 });
+    }
+
+    const ext = matches[1] === 'jpeg' ? 'jpg' : matches[1];
+    const buffer = Buffer.from(matches[2], 'base64');
+    const rawName = String(body.customFileName || bookId).trim();
+    const slugName = slugify(rawName) || bookId;
+    const fileName = `${slugName}-${Date.now().toString().slice(-4)}.${ext}`;
+
+    const booksDir = path.resolve(process.cwd(), 'public/images/books');
+    await fs.mkdir(booksDir, { recursive: true });
+
+    const outPath = path.resolve(booksDir, fileName);
+    await fs.writeFile(outPath, buffer);
+
+    const imageUrl = `/images/books/${fileName}`;
+
+    // Read and update the markdown file
+    const bookFile = path.resolve(process.cwd(), `src/data/books/${bookId}.md`);
+    try {
+      const raw = await fs.readFile(bookFile, 'utf8');
+      const match = raw.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n?([\s\S]*)$/);
+      if (match) {
+        const frontmatter = yaml.load(match[1]) as Record<string, any>;
+        frontmatter.coverImage = imageUrl;
+        const bodyContent = match[2] || '';
+        const updatedMd = `---\n${yaml.dump(frontmatter, { lineWidth: -1 })}---\n${bodyContent}`;
+        await fs.writeFile(bookFile, updatedMd, 'utf8');
+      }
+    } catch (err: any) {
+      return new Response(JSON.stringify({ error: `Could not update book metadata: ${err.message}` }), { status: 500 });
+    }
+
+    return new Response(
+      JSON.stringify({
+        ok: true,
+        imageUrl,
+        message: `Updated cover for book "${bookId}" to ${imageUrl}`,
+      }),
+      { status: 200, headers: { 'Content-Type': 'application/json' } }
+    );
+  }
+
+  // 3. Get Content Record (Publications, Books, Classes) for In-Situ Editing
+  if (action === 'get-content') {
+    const type = String(body.type || '');
+    const cleanId = String(body.id || '').replace(/[^a-zA-Z0-9_-]/g, '');
+
+    if (!['publications', 'books', 'classes'].includes(type) || !cleanId) {
+      return new Response(JSON.stringify({ error: 'Valid content type and id are required' }), { status: 400 });
+    }
+
+    const filePath = path.resolve(process.cwd(), `src/data/${type}/${cleanId}.md`);
+    try {
+      const raw = await fs.readFile(filePath, 'utf8');
+      const match = raw.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n?([\s\S]*)$/);
+      if (!match) {
+        return new Response(JSON.stringify({ error: `Invalid markdown frontmatter format in ${cleanId}.md` }), { status: 422 });
+      }
+
+      const parsedData = yaml.load(match[1]) as Record<string, any>;
+      const bodyContent = match[2]?.trim() || '';
+
+      return new Response(
+        JSON.stringify({
+          ok: true,
+          type,
+          id: cleanId,
+          data: parsedData,
+          body: bodyContent,
+        }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } }
+      );
+    } catch {
+      return new Response(JSON.stringify({ error: `File not found: ${cleanId}.md in ${type}` }), { status: 404 });
+    }
+  }
+
+  // 4. Create or Update Publication Markdown
   if (action === 'create-publication') {
     const title = String(body.title || '').trim();
     if (!title) {
@@ -175,10 +395,10 @@ export const POST: APIRoute = async ({ request, cookies }) => {
 
     const year = Number(body.year) || new Date().getFullYear();
     const venue = String(body.venue || 'Philosophy of Technology').trim();
-    const subtitle = body.subtitle ? String(body.subtitle).trim() : '';
-    const volumeIssue = body.volumeIssue ? String(body.volumeIssue).trim() : '';
-    const doi = String(body.doi || '').trim();
-    const pdfUrl = body.pdfUrl ? String(body.pdfUrl).trim() : '';
+    const subtitle = body.subtitle ? String(body.subtitle).trim() : undefined;
+    const volumeIssue = body.volumeIssue ? String(body.volumeIssue).trim() : undefined;
+    const doi = body.doi ? String(body.doi).trim() : undefined;
+    const pdfUrl = body.pdfUrl ? String(body.pdfUrl).trim() : undefined;
     const abstract = String(body.abstract || 'Abstract forthcoming.').trim();
 
     let coAuthors: string[] = [];
@@ -188,50 +408,77 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       coAuthors = body.coAuthors.split(',').map((a: string) => a.trim()).filter(Boolean);
     }
 
-    const slug = slugify(`cordry-${year}-${title}`);
-    const citationBibtex = String(body.citationBibtex || `@article{${slug.replace(/-/g, '_')},
-  author = {Cordry, Duncan R.},
-  title = {${title}},
-  journal = {${venue}},
-  year = {${year}}
-}`);
+    const existingId = body.existingId ? String(body.existingId).replace(/[^a-zA-Z0-9_-]/g, '') : '';
+    const slug = existingId || slugify(`cordry-${year}-${title}`);
 
-    const mdContent = `---
-id: "${slug}"
-title: ${JSON.stringify(title)}
-${subtitle ? `subtitle: ${JSON.stringify(subtitle)}\n` : ''}year: ${year}
-venue: ${JSON.stringify(venue)}
-${volumeIssue ? `volumeIssue: ${JSON.stringify(volumeIssue)}\n` : ''}coAuthors: ${JSON.stringify(coAuthors)}
-abstract: ${JSON.stringify(abstract)}
-${doi ? `doi: ${JSON.stringify(doi)}\n` : ''}${pdfUrl ? `pdfUrl: ${JSON.stringify(pdfUrl)}\n` : ''}citationBibtex: |
-${citationBibtex.split('\n').map((l) => '  ' + l).join('\n')}
-sections:
-  - id: "sec-1"
-    heading: "I. Overview & Foundational Statement"
-    body: ${JSON.stringify(abstract)}
-references: []
----
+    // If updating, preserve existing sections and references if present
+    let sections: Array<{ id: string; heading: string; body: string }> = [
+      { id: 'sec-1', heading: 'I. Overview & Foundational Statement', body: abstract },
+    ];
+    let references: any[] = [];
 
-${abstract}
-`;
+    if (existingId) {
+      try {
+        const oldFile = await fs.readFile(path.resolve(process.cwd(), `src/data/publications/${existingId}.md`), 'utf8');
+        const oldMatch = oldFile.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n?([\s\S]*)$/);
+        if (oldMatch) {
+          const oldData = yaml.load(oldMatch[1]) as any;
+          if (Array.isArray(oldData?.sections) && oldData.sections.length > 0) {
+            sections = oldData.sections;
+          }
+          if (Array.isArray(oldData?.references)) {
+            references = oldData.references;
+          }
+        }
+      } catch {}
+    }
 
+    const citationBibtex = String(
+      body.citationBibtex ||
+        `@article{${slug.replace(/-/g, '_')},\n  author = {Cordry, Duncan R.},\n  title = {${title}},\n  journal = {${venue}},\n  year = {${year}}\n}`
+    ).trim();
+
+    const frontmatter: Record<string, any> = {
+      id: slug,
+      title,
+      ...(subtitle ? { subtitle } : {}),
+      year,
+      venue,
+      ...(volumeIssue ? { volumeIssue } : {}),
+      coAuthors,
+      abstract,
+      ...(doi ? { doi } : {}),
+      ...(pdfUrl ? { pdfUrl } : {}),
+      citationBibtex,
+      sections,
+      references,
+    };
+
+    const mdContent = `---\n${yaml.dump(frontmatter, { lineWidth: -1 })}---\n\n${abstract}\n`;
     const outPath = path.resolve(process.cwd(), `src/data/publications/${slug}.md`);
     await fs.writeFile(outPath, mdContent, 'utf8');
 
     return new Response(
-      JSON.stringify({ ok: true, slug, message: `Committed manuscript "${title}" (${slug}.md) to publications collection.` }),
+      JSON.stringify({
+        ok: true,
+        slug,
+        item: frontmatter,
+        message: existingId
+          ? `Updated manuscript "${title}" (${slug}.md).`
+          : `Committed manuscript "${title}" (${slug}.md) to publications collection.`,
+      }),
       { status: 200, headers: { 'Content-Type': 'application/json' } }
     );
   }
 
-  // 4. Create or Update Monograph / Book Markdown
+  // 5. Create or Update Monograph / Book Markdown
   if (action === 'create-book') {
     const title = String(body.title || '').trim();
     if (!title) {
       return new Response(JSON.stringify({ error: 'Book title is required' }), { status: 400 });
     }
 
-    const subtitle = body.subtitle ? String(body.subtitle).trim() : '';
+    const subtitle = body.subtitle ? String(body.subtitle).trim() : undefined;
     const year = Number(body.year) || new Date().getFullYear();
     const publisher = String(body.publisher || 'Ashoka University · Philosophy Monograph').trim();
     const isbn = String(body.isbn || `ASHOKA-PHIL-${year}-DRC`).trim();
@@ -239,66 +486,99 @@ ${abstract}
     const coverImage = String(body.coverImage || '/images/books/celestial-mechanics.svg').trim();
     const synopsis = String(body.synopsis || '').trim();
 
-    const chapters = Array.isArray(body.chapters) ? body.chapters : [
-      { number: '01', title: 'Foundational Epistemologies', summary: 'Introduction to primary technical and ontological frameworks.' }
+    const existingId = body.existingId ? String(body.existingId).replace(/[^a-zA-Z0-9_-]/g, '') : '';
+    const slug = existingId || slugify(`book-${title}-${year}`);
+
+    let chapters: Array<{ number: string; title: string; summary: string }> = [];
+    if (Array.isArray(body.chapters) && body.chapters.length > 0) {
+      chapters = body.chapters.map((ch: any, idx: number) => ({
+        number: String(ch.number || String(idx + 1).padStart(2, '0')).trim(),
+        title: String(ch.title || '').trim(),
+        summary: String(ch.summary || '').trim(),
+      })).filter((ch) => ch.title);
+    }
+    if (chapters.length === 0) {
+      chapters = [
+        { number: '01', title: 'Foundational Epistemologies', summary: 'Introduction to primary technical and ontological frameworks.' },
+      ];
+    }
+
+    let endorsements: any[] = [];
+    let purchaseLinks: any[] = [
+      { label: 'Ashoka Faculty Profile', url: 'https://www.ashoka.edu.in/profile/duncan-cordry/' },
     ];
 
-    const endorsements = Array.isArray(body.endorsements) ? body.endorsements : [];
-    const purchaseLinks = Array.isArray(body.purchaseLinks) && body.purchaseLinks.length ? body.purchaseLinks : [
-      { label: 'Ashoka Faculty Profile', url: 'https://www.ashoka.edu.in/profile/duncan-cordry/' }
-    ];
+    if (existingId) {
+      try {
+        const oldFile = await fs.readFile(path.resolve(process.cwd(), `src/data/books/${existingId}.md`), 'utf8');
+        const oldMatch = oldFile.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n?([\s\S]*)$/);
+        if (oldMatch) {
+          const oldData = yaml.load(oldMatch[1]) as any;
+          if (Array.isArray(oldData?.endorsements)) endorsements = oldData.endorsements;
+          if (Array.isArray(oldData?.purchaseLinks) && oldData.purchaseLinks.length > 0) purchaseLinks = oldData.purchaseLinks;
+        }
+      } catch {}
+    }
 
-    const slug = slugify(`book-${title}-${year}`);
+    const frontmatter: Record<string, any> = {
+      id: slug,
+      title,
+      ...(subtitle ? { subtitle } : {}),
+      year,
+      publisher,
+      isbn,
+      pages,
+      coverImage,
+      synopsis,
+      endorsements,
+      chapters,
+      purchaseLinks,
+    };
 
-    const mdContent = `---
-id: "${slug}"
-title: ${JSON.stringify(title)}
-${subtitle ? `subtitle: ${JSON.stringify(subtitle)}\n` : ''}year: ${year}
-publisher: ${JSON.stringify(publisher)}
-isbn: ${JSON.stringify(isbn)}
-pages: ${pages}
-coverImage: ${JSON.stringify(coverImage)}
-synopsis: ${JSON.stringify(synopsis)}
-endorsements: ${JSON.stringify(endorsements, null, 2).replace(/\n/g, '\n')}
-chapters: ${JSON.stringify(chapters, null, 2).replace(/\n/g, '\n')}
-purchaseLinks: ${JSON.stringify(purchaseLinks, null, 2).replace(/\n/g, '\n')}
----
-
-${synopsis}
-`;
-
+    const mdContent = `---\n${yaml.dump(frontmatter, { lineWidth: -1 })}---\n\n${synopsis}\n`;
     const outPath = path.resolve(process.cwd(), `src/data/books/${slug}.md`);
     await fs.writeFile(outPath, mdContent, 'utf8');
 
     return new Response(
-      JSON.stringify({ ok: true, slug, message: `Published book monograph "${title}" (${slug}.md).` }),
+      JSON.stringify({
+        ok: true,
+        slug,
+        item: frontmatter,
+        message: existingId
+          ? `Updated monograph "${title}" (${slug}.md).`
+          : `Published book monograph "${title}" (${slug}.md).`,
+      }),
       { status: 200, headers: { 'Content-Type': 'application/json' } }
     );
   }
 
-  // 5. Create or Update Class Markdown
+  // 6. Create or Update Class Markdown
   if (action === 'create-class') {
-    const courseCode = String(body.code || 'PHIL 3050').trim().toUpperCase();
+    const courseCode = String(body.code || body.courseCode || 'PHIL 3050').trim().toUpperCase();
     const title = String(body.title || 'Philosophy Seminar').trim();
     const term = String(body.term || 'Monsoon').trim();
     const academicYear = String(body.academicYear || '2025–2026').trim();
     const level = ['Undergraduate', 'Graduate', 'Seminar'].includes(body.level) ? body.level : 'Seminar';
-    const schedule = String(body.location || 'Ashoka University · Department of Philosophy').trim();
+    const schedule = String(body.location || body.schedule || 'Ashoka University · Department of Philosophy').trim();
     const syllabusPdf = body.syllabusPdf ? String(body.syllabusPdf).trim() : undefined;
-    const summary = String(body.description || '').trim();
+    const summary = String(body.description || body.summary || '').trim();
+
+    const existingId = body.existingId ? String(body.existingId).replace(/[^a-zA-Z0-9_-]/g, '') : '';
+    const slug = existingId || slugify(`${courseCode}-${title}`);
 
     let weeks: Array<{ weekNumber: string; topic: string; readings: string[] }> = [];
     if (Array.isArray(body.weeks) && body.weeks.length > 0) {
-      weeks = body.weeks.map((w: any) => ({
-        weekNumber: String(w.weekNumber || 'WK 01').trim(),
+      weeks = body.weeks.map((w: any, idx: number) => ({
+        weekNumber: String(w.weekNumber || `WK ${String(idx + 1).padStart(2, '0')}`).trim(),
         topic: String(w.topic || 'General Lecture & Discussion').trim(),
         readings: Array.isArray(w.readings)
-          ? w.readings.map(String)
+          ? w.readings.map(String).map((r) => r.trim()).filter(Boolean)
           : typeof w.readings === 'string'
             ? w.readings.split('\n').map((r: string) => r.trim()).filter(Boolean)
             : ['Selected Primary Seminar Texts'],
-      }));
-    } else {
+      })).filter((w) => w.topic);
+    }
+    if (weeks.length === 0) {
       weeks = [
         {
           weekNumber: 'WK 01',
@@ -308,34 +588,50 @@ ${synopsis}
       ];
     }
 
-    const slug = slugify(`${courseCode}-${title}`);
+    let reviews: any[] = [];
+    if (existingId) {
+      try {
+        const oldFile = await fs.readFile(path.resolve(process.cwd(), `src/data/classes/${existingId}.md`), 'utf8');
+        const oldMatch = oldFile.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n?([\s\S]*)$/);
+        if (oldMatch) {
+          const oldData = yaml.load(oldMatch[1]) as any;
+          if (Array.isArray(oldData?.reviews)) reviews = oldData.reviews;
+        }
+      } catch {}
+    }
 
-    const mdContent = `---
-id: "${slug}"
-courseCode: ${JSON.stringify(courseCode)}
-title: ${JSON.stringify(title)}
-academicYear: ${JSON.stringify(academicYear)}
-term: ${JSON.stringify(term)}
-level: "${level}"
-schedule: ${JSON.stringify(schedule)}
-${syllabusPdf ? `syllabusPdf: ${JSON.stringify(syllabusPdf)}\n` : ''}summary: ${JSON.stringify(summary)}
-weeks: ${JSON.stringify(weeks, null, 2)}
-reviews: []
----
+    const frontmatter: Record<string, any> = {
+      id: slug,
+      courseCode,
+      title,
+      academicYear,
+      term,
+      level,
+      schedule,
+      ...(syllabusPdf ? { syllabusPdf } : {}),
+      summary,
+      weeks,
+      reviews,
+    };
 
-${summary}
-`;
-
+    const mdContent = `---\n${yaml.dump(frontmatter, { lineWidth: -1 })}---\n\n${summary}\n`;
     const outPath = path.resolve(process.cwd(), `src/data/classes/${slug}.md`);
     await fs.writeFile(outPath, mdContent, 'utf8');
 
     return new Response(
-      JSON.stringify({ ok: true, slug, message: `Published syllabus for ${courseCode} (${slug}.md).` }),
+      JSON.stringify({
+        ok: true,
+        slug,
+        item: frontmatter,
+        message: existingId
+          ? `Updated syllabus for ${courseCode} (${slug}.md).`
+          : `Published syllabus for ${courseCode} (${slug}.md).`,
+      }),
       { status: 200, headers: { 'Content-Type': 'application/json' } }
     );
   }
 
-  // 6. Delete Content Record (Publications, Books, Classes)
+  // 7. Delete Content Record (Publications, Books, Classes)
   if (action === 'delete-content') {
     const type = String(body.type || '');
     const id = String(body.id || '').trim();
@@ -344,7 +640,6 @@ ${summary}
       return new Response(JSON.stringify({ error: 'Invalid content type' }), { status: 400 });
     }
 
-    // Sanitize ID
     const cleanId = id.replace(/[^a-zA-Z0-9_-]/g, '');
     if (!cleanId) {
       return new Response(JSON.stringify({ error: 'Valid item ID is required' }), { status: 400 });
@@ -354,7 +649,7 @@ ${summary}
     try {
       await fs.unlink(filePath);
       return new Response(
-        JSON.stringify({ ok: true, deletedId: cleanId, type, message: `Removed ${cleanId}.md from ${type}.` }),
+        JSON.stringify({ ok: true, deletedId: cleanId, type, message: `Permanently removed ${cleanId}.md from ${type}.` }),
         { status: 200, headers: { 'Content-Type': 'application/json' } }
       );
     } catch {

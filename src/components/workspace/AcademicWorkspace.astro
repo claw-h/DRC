@@ -375,6 +375,8 @@ const sortedBooks = [...books].sort((a, b) => b.data.year - a.data.year);
     connectedCallback() {
       this.initViewTabsAndJumpBridges();
       this.initSeamlessSectionScroll();
+      this.initScriptoriumHotkeys();
+      this.initScrubberBridge();
       this.initSidebarCollapseInsidePane();
       this.initItemSelectors();
       this.initSearchAndFilters();
@@ -402,16 +404,24 @@ const sortedBooks = [...books].sort((a, b) => b.data.year - a.data.year);
         b.setAttribute('aria-current', b.dataset.targetView === targetId ? 'page' : 'false');
       });
 
-      // Update NavStrip horizontal scrub & fascicle locator readout
+      // Keep NavStrip track stable without artificial negative offsets that clip collapsed numerals
       const navTrack = document.getElementById('nav-strip-track');
       if (navTrack) {
-        const scrubPx = -nextIndex * 24;
-        navTrack.style.setProperty('--nav-scrub-offset', `${scrubPx}px`);
+        navTrack.style.setProperty('--nav-scrub-offset', '0px');
       }
 
+      const targetPct = ((nextIndex + 1) / VIEW_ORDER.length) * 100;
       const flowFill = document.getElementById('nav-scroll-flow-fill');
+      const thumb = document.getElementById('folio-ribbon-thumb');
+      const scrubber = document.getElementById('folio-ribbon-meter');
       if (flowFill) {
-        flowFill.style.width = `${((nextIndex + 1) / VIEW_ORDER.length) * 100}%`;
+        flowFill.style.width = `${targetPct}%`;
+      }
+      if (thumb) {
+        thumb.style.left = `${targetPct}%`;
+      }
+      if (scrubber) {
+        scrubber.setAttribute('aria-valuenow', Math.round(targetPct).toString());
       }
 
       const locatorEl = document.getElementById('nav-cathode-status');
@@ -471,7 +481,86 @@ const sortedBooks = [...books].sort((a, b) => b.data.year - a.data.year);
       });
     }
 
-    // 2. Seamless Scroll Progression (bound to window + live elementFromPoint so stationary cursor never stalls)
+    // 2. Scriptorium Hotkeys: 1, 2, 3, [, ], ArrowLeft, ArrowRight
+    private initScriptoriumHotkeys() {
+      window.addEventListener('keydown', (e: KeyboardEvent) => {
+        // Guard 1: Ignore modified keys (Cmd, Ctrl, Alt)
+        if (e.metaKey || e.ctrlKey || e.altKey) return;
+
+        // Guard 2: Ignore typing inside inputs, textareas, or contenteditables
+        const target = e.target as HTMLElement | null;
+        if (
+          target &&
+          (target.tagName === 'INPUT' ||
+            target.tagName === 'TEXTAREA' ||
+            target.tagName === 'SELECT' ||
+            target.isContentEditable)
+        ) {
+          return;
+        }
+
+        // Guard 3: Ignore if any modal dialog is open
+        if (document.querySelector('dialog[open]')) {
+          return;
+        }
+
+        let targetIdx = -1;
+        if (e.key === '1') targetIdx = 0;
+        else if (e.key === '2') targetIdx = 1;
+        else if (e.key === '3') targetIdx = 2;
+        else if (e.key === '[' || e.key === 'ArrowLeft') {
+          targetIdx = Math.max(0, this.activeViewIndex - 1);
+        } else if (e.key === ']' || e.key === 'ArrowRight') {
+          targetIdx = Math.min(VIEW_ORDER.length - 1, this.activeViewIndex + 1);
+        }
+
+        if (targetIdx !== -1 && targetIdx !== this.activeViewIndex) {
+          e.preventDefault();
+          this.switchToViewIndex(targetIdx, targetIdx > this.activeViewIndex ? 'down' : 'up');
+          if (document.body.dataset.stage !== 'stage-3') {
+            (window as any).__drcSnapToStage?.(3);
+          }
+        }
+      });
+    }
+
+    // 3. Interactive Ribbon Scrubber Bridge (Click & Continuous Drag)
+    private initScrubberBridge() {
+      (window as any).__drcScrubToProgress = (ratio: number) => {
+        const clampedRatio = Math.max(0, Math.min(1, ratio));
+        const numSections = VIEW_ORDER.length;
+        const targetIndex = Math.min(numSections - 1, Math.floor(clampedRatio * numSections));
+        const localRatio = (clampedRatio * numSections) - targetIndex;
+
+        if (this.activeViewIndex !== targetIndex) {
+          this.switchToViewIndex(targetIndex, targetIndex > this.activeViewIndex ? 'down' : 'up');
+        }
+
+        if (document.body.dataset.stage !== 'stage-3') {
+          (window as any).__drcSnapToStage?.(3);
+        }
+
+        const activeView = this.querySelector<HTMLElement>(`#${VIEW_ORDER[targetIndex]}`);
+        if (activeView) {
+          const primaryReader = activeView.querySelector<HTMLElement>('[data-primary-reader]');
+          if (primaryReader) {
+            const maxScroll = Math.max(0, primaryReader.scrollHeight - primaryReader.clientHeight);
+            primaryReader.scrollTop = Math.round(localRatio * maxScroll);
+          }
+        }
+
+        // Keep flow fill, thumb, and aria attribute locked to the scrub ratio
+        const totalPct = clampedRatio * 100;
+        const flowFill = document.getElementById('nav-scroll-flow-fill');
+        const thumb = document.getElementById('folio-ribbon-thumb');
+        const scrubber = document.getElementById('folio-ribbon-meter');
+        if (flowFill) flowFill.style.width = `${totalPct.toFixed(1)}%`;
+        if (thumb) thumb.style.left = `${totalPct.toFixed(1)}%`;
+        if (scrubber) scrubber.setAttribute('aria-valuenow', Math.round(totalPct).toString());
+      };
+    }
+
+    // 4. Seamless Scroll Progression (bound to window + live elementFromPoint so stationary cursor never stalls)
     private initSeamlessSectionScroll() {
       const THRESHOLD = 120;
       const REST_GATE_MS = 180;
@@ -556,13 +645,21 @@ const sortedBooks = [...books].sort((a, b) => b.data.year - a.data.year);
               this.updateChargeMeters(0);
             }
 
-            // Update continuous progress bar inside NavStrip based on current scroll + view index
+            // Update continuous progress bar & scrubber inside NavStrip based on current scroll + view index
             const nextScrollTop = Math.min(maxScroll, Math.max(0, primaryReader.scrollTop));
-            const localProgress = maxScroll > 0 ? nextScrollTop / maxScroll : 1;
+            const localProgress = maxScroll > 0 ? nextScrollTop / maxScroll : 0;
             const totalProgress = ((this.activeViewIndex + localProgress) / VIEW_ORDER.length) * 100;
             const flowFill = document.getElementById('nav-scroll-flow-fill');
+            const thumb = document.getElementById('folio-ribbon-thumb');
+            const scrubber = document.getElementById('folio-ribbon-meter');
             if (flowFill) {
-              flowFill.style.width = `${Math.max(12, totalProgress).toFixed(1)}%`;
+              flowFill.style.width = `${Math.max(6, totalProgress).toFixed(1)}%`;
+            }
+            if (thumb) {
+              thumb.style.left = `${Math.max(0, Math.min(100, totalProgress)).toFixed(1)}%`;
+            }
+            if (scrubber) {
+              scrubber.setAttribute('aria-valuenow', Math.round(totalProgress).toString());
             }
             return;
           }

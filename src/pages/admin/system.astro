@@ -18,11 +18,11 @@ try {
 } catch {}
 try {
   const books = await fs.readdir(path.resolve(process.cwd(), 'src/data/books'));
-  bookCount = books.filter(f => f.endsWith('.json')).length;
+  bookCount = books.filter(f => f.endsWith('.md') || f.endsWith('.json')).length;
 } catch {}
 try {
   const classes = await fs.readdir(path.resolve(process.cwd(), 'src/data/classes'));
-  classCount = classes.filter(f => f.endsWith('.json')).length;
+  classCount = classes.filter(f => f.endsWith('.md') || f.endsWith('.json')).length;
 } catch {}
 
 // Server runtime telemetry
@@ -31,26 +31,26 @@ const rssMB = (mem.rss / 1024 / 1024).toFixed(1);
 const heapMB = (mem.heapUsed / 1024 / 1024).toFixed(1);
 const uptimeMin = Math.floor(process.uptime() / 60);
 const uptimeHrs = (uptimeMin / 60).toFixed(1);
+const hostPid = process.pid;
 ---
 
-<AdminLayout title="System Lifecycle & Protocols" activeModule="system">
+<AdminLayout title="System & Maintenance" activeModule="system">
   <div class="module-container">
     <div class="module-header">
-      <span class="module-kicker">MODULE 04 · SOVEREIGN LIFECYCLE & PROTOCOLS</span>
-      <h2>System Switchboard, Data Archive & Purge Protocols</h2>
+      <h2>System Status, Archival Backups &amp; Maintenance Controls</h2>
       <p class="module-sub">
-        Monitor host telemetry, download complete sovereign data backups, and execute administrative actions across the 3 escalating operational tiers.
+        Monitor host runtime status, download archival data backups, and manage maintenance mode or server processes.
       </p>
     </div>
 
-    <!-- Live Telemetry Deck -->
-    <section class="telemetry-deck" aria-label="Observatory Server Telemetry">
+    <!-- Host Environment Status Deck -->
+    <section class="telemetry-deck" aria-label="Host Server Environment Status">
       <div class="deck-stat">
         <span class="stat-label">RUNTIME ENGINE</span>
         <strong class="stat-value">{process.version} ({process.platform}-{process.arch})</strong>
       </div>
       <div class="deck-stat">
-        <span class="stat-label">SYSTEM MEMORY</span>
+        <span class="stat-label">MEMORY ALLOCATION</span>
         <strong class="stat-value">{rssMB} MB <span class="stat-detail">(Heap: {heapMB} MB)</span></strong>
       </div>
       <div class="deck-stat">
@@ -58,8 +58,8 @@ const uptimeHrs = (uptimeMin / 60).toFixed(1);
         <strong class="stat-value">{uptimeHrs} hrs <span class="stat-detail">({uptimeMin} min)</span></strong>
       </div>
       <div class="deck-stat">
-        <span class="stat-label">ARCHIVE PAYLOAD</span>
-        <strong class="stat-value">{pubCount} papers · {bookCount} books · {classCount} courses</strong>
+        <span class="stat-label">ARCHIVED RECORDS</span>
+        <strong class="stat-value">{pubCount} articles · {bookCount} monographs · {classCount} syllabi</strong>
       </div>
     </section>
 
@@ -68,18 +68,18 @@ const uptimeHrs = (uptimeMin / 60).toFixed(1);
       <section class="lifecycle-card tier-archive" aria-labelledby="tier-archive-heading">
         <div class="tier-lead">
           <div class="tier-header-row">
-            <span class="tier-badge tier-badge-archive">TIER 00</span>
-            <span class="tier-type">DATA SOVEREIGNTY SNAPSHOT</span>
+            <span class="tier-badge tier-badge-archive">BACKUP</span>
+            <span class="tier-type">FULL ARCHIVE EXPORT</span>
           </div>
-          <h3 id="tier-archive-heading" class="tier-title">One-Click Sovereign Archive Backup (.tar.gz)</h3>
+          <h3 id="tier-archive-heading" class="tier-title">Download Full Archive Backup (.tar.gz)</h3>
           <p class="tier-desc">
-            Instantly packages the entire repository's academic data—including Markdown manuscripts, monograph syllabi,
-            course schedules, faculty portrait media, and all 5,000 celestial sky shards—into a compressed gzip tarball.
-            You own 100% of your data in standard, open formats forever.
+            Instantly packages the entire repository's academic data—including Markdown manuscripts, monograph files,
+            course syllabi, and faculty portrait media—into a portable gzip tarball archive.
+            All files are stored in standard, open formats with zero proprietary lock-in.
           </p>
           <div class="archive-spec-row">
             <span class="spec-tag">FORMAT: POSIX TAR.GZ</span>
-            <span class="spec-tag">CONTENTS: src/data/ & public/</span>
+            <span class="spec-tag">CONTENTS: src/data/ &amp; public/</span>
             <span class="spec-tag">ZERO DATABASE LOCK-IN</span>
           </div>
         </div>
@@ -89,29 +89,30 @@ const uptimeHrs = (uptimeMin / 60).toFixed(1);
             href="/api/admin/lifecycle?action=download-archive"
             download
             id="download-archive-btn"
-            class="btn-tier btn-tier-archive"
+            class="study-btn study-btn--seal study-btn--lg btn-tier btn-tier-archive"
           >
-            ↓ Download Sovereign Archive Snapshot (.tar.gz)
+            <span class="btn-icon">↓</span>
+            <span>Download Full Archive (.tar.gz)</span>
           </a>
         </div>
       </section>
 
-      <!-- Tier 1: Soft Maintenance Shutter (HTTP 503) -->
+      <!-- Tier 1: Maintenance Mode (HTTP 503) -->
       <section class="lifecycle-card tier-soft" aria-labelledby="tier-1-heading">
         <div class="tier-lead">
           <div class="tier-header-row">
-            <span class="tier-badge">TIER 01</span>
-            <span class="tier-type">REVERSIBLE IN-MEMORY SWITCH</span>
+            <span class="tier-badge">MAINTENANCE</span>
+            <span class="tier-type">PUBLIC ACCESS SWITCH</span>
           </div>
-          <h3 id="tier-1-heading" class="tier-title">Public Observatory Shutter (HTTP 503 Maintenance)</h3>
+          <h3 id="tier-1-heading" class="tier-title">Maintenance Mode (Take Site Offline)</h3>
           <p class="tier-desc">
-            Immediately intercepts public visitors at the middleware layer with the austere <code>/offline</code> calibration screen.
-            The sovereign <code>/admin</code> control panel remains 100% accessible to you for updates and preparations.
+            Immediately places public portfolio pages into maintenance mode with an HTTP 503 status.
+            The faculty <code>/admin</code> control panel remains 100% accessible to you for updates and preparations.
           </p>
           <div class="status-indicator-row">
-            <span>Current Public State:</span>
+            <span>Public Site Status:</span>
             <strong id="shutter-status-label" class={systemState.offlineMode ? 'text-amber' : 'text-green'}>
-              {systemState.offlineMode ? '● OFFLINE (HTTP 503 ACTIVE)' : '● ONLINE (PUBLIC ACCESS ENABLED)'}
+              {systemState.offlineMode ? '● Offline (Maintenance Mode Active)' : '● Online (Public Access Enabled)'}
             </strong>
           </div>
         </div>
@@ -121,54 +122,50 @@ const uptimeHrs = (uptimeMin / 60).toFixed(1);
             type="button"
             id="toggle-offline-btn"
             data-currently-offline={String(systemState.offlineMode)}
-            class={`btn-tier ${systemState.offlineMode ? 'btn-tier-success' : 'btn-tier-warning'}`}
+            class={`study-btn study-btn--lg btn-tier ${systemState.offlineMode ? 'study-btn--ignite btn-tier-success' : 'study-btn--hazard btn-tier-warning'}`}
           >
-            {systemState.offlineMode ? 'Re-Open Observatory Dome (Restore Public Access)' : 'Engage 503 Maintenance Shutter'}
+            {systemState.offlineMode ? 'Restore Public Site (Disable Maintenance Mode)' : 'Take Site Offline (Enable Maintenance Mode)'}
           </button>
         </div>
       </section>
 
-      <!-- Tier 2: Hard Process Shutdown (SIGTERM) -->
+      <!-- Tier 2: Server Process Halt -->
       <section class="lifecycle-card tier-hard" aria-labelledby="tier-2-heading">
         <div class="tier-lead">
           <div class="tier-header-row">
-            <span class="tier-badge">TIER 02</span>
-            <span class="tier-type">PROCESS HALT</span>
+            <span class="tier-badge">PROCESS</span>
+            <span class="tier-type">HOST SERVER CONTROLS</span>
           </div>
-          <h3 id="tier-2-heading" class="tier-title">Hard Node Server Termination (SIGTERM)</h3>
+          <h3 id="tier-2-heading" class="tier-title">Restart / Stop Server Process</h3>
           <p class="tier-desc">
-            Gracefully terminates active HTTP socket connections and halts the Node/systemd daemon process.
-            Restarting requires SSH, container orchestration, or host terminal restart.
+            Gracefully terminates active socket connections and halts the Node.js server process (SIGTERM).
+            If managed under a process manager (such as systemd, Docker, or PM2), the service will automatically restart fresh.
           </p>
         </div>
 
         <div class="tier-action-box">
-          <div class="auth-challenge-inline">
-            <input
-              type="password"
-              id="shutdown-password"
-              placeholder="Confirm master passphrase…"
-              aria-label="Master passphrase for process termination"
-              class="tier-input"
-            />
-            <button type="button" id="shutdown-server-btn" class="btn-tier btn-tier-danger">
-              Dispatch SIGTERM Halt
-            </button>
-          </div>
+          <button
+            type="button"
+            id="open-shutdown-modal-btn"
+            class="study-btn study-btn--hazard study-btn--lg btn-tier btn-tier-danger"
+          >
+            <span class="btn-icon">⏹</span>
+            <span>Stop Server Process (SIGTERM)…</span>
+          </button>
         </div>
       </section>
 
-      <!-- Tier 3: Scorched-Earth Codebase Purge -->
+      <!-- Tier 3: Permanent Codebase & Data Reset -->
       <section class="lifecycle-card tier-purge" aria-labelledby="tier-3-heading">
         <div class="tier-lead">
           <div class="tier-header-row">
-            <span class="tier-badge tier-badge-critical">TIER 03</span>
-            <span class="tier-type text-red">PERMANENT DECOMMISSION</span>
+            <span class="tier-badge tier-badge-critical">PERMANENT RESET</span>
+            <span class="tier-type text-red">DESTRUCTIVE OPERATION</span>
           </div>
-          <h3 id="tier-3-heading" class="tier-title">Sovereign Archive & Codebase Purge</h3>
+          <h3 id="tier-3-heading" class="tier-title">Permanent Archive &amp; Server Excision</h3>
           <p class="tier-desc">
-            Irreversibly decommissions the observatory archive by wiping Markdown collections, celestial shard databases,
-            and cached assets from the disk, followed by immediate process termination. Requires two-factor confirmation.
+            Irreversibly removes content collection files, research archives, and cached assets from disk.
+            Requires explicit two-factor authentication and confirmation phrase.
           </p>
         </div>
 
@@ -176,61 +173,250 @@ const uptimeHrs = (uptimeMin / 60).toFixed(1);
           <button
             type="button"
             id="open-purge-modal-btn"
-            class="btn-tier btn-tier-critical"
+            class="study-btn study-btn--purge study-btn--lg btn-tier btn-tier-critical"
           >
-            Initiate Decommission Protocol…
+            <span class="btn-icon">✕</span>
+            <span>Initiate Archive &amp; Server Reset…</span>
           </button>
         </div>
       </section>
     </div>
 
-    <!-- Tier 3 Confirmation Modal (<dialog>) -->
-    <dialog id="purge-confirm-dialog" class="purge-dialog" aria-labelledby="purge-dialog-title">
-      <form id="purge-form" class="purge-form">
-        <div class="dialog-header">
-          <span class="critical-warning-icon">⚠</span>
-          <div>
-            <h3 id="purge-dialog-title">Confirm Irreversible Decommission</h3>
-            <p class="dialog-sub">This protocol cannot be undone once executed.</p>
+    <!-- Tier 2 Confirmation Modal (<dialog>) -->
+    <dialog
+      id="shutdown-confirm-dialog"
+      class="sovereign-modal shutdown-dialog"
+      closedby="any"
+      aria-labelledby="shutdown-dialog-title"
+      aria-describedby="shutdown-dialog-desc"
+    >
+      <div class="modal-chassis shutdown-shell">
+        <div class="modal-glow-bar shutdown-modal-glow" aria-hidden="true"></div>
+        <span class="modal-corner modal-corner--tl" aria-hidden="true">✠</span>
+        <span class="modal-corner modal-corner--tr" aria-hidden="true">✠</span>
+        <span class="modal-corner modal-corner--bl" aria-hidden="true">✠</span>
+        <span class="modal-corner modal-corner--br" aria-hidden="true">✠</span>
+
+        <header class="modal-header">
+          <div class="modal-kicker-row">
+            <div class="kicker-badge-lockup kicker-warning">
+              <span class="hazard-pip" aria-hidden="true">⏹</span>
+              <span class="modal-kicker">TIER 02 · HOST RUNTIME PROCESS HALT</span>
+            </div>
+            <button
+              type="button"
+              id="btn-close-shutdown-x"
+              class="study-btn study-btn--ghost study-btn--icon-only study-btn--sm modal-close-btn"
+              aria-label="Dismiss Modal"
+            >
+              ✕
+            </button>
+          </div>
+          <h3 id="shutdown-dialog-title" class="modal-title">Halt Server Runtime Process</h3>
+          <p id="shutdown-dialog-desc" class="modal-desc">
+            Dispatches a graceful termination signal (<code>SIGTERM</code>) to the active Node.js server. Active socket connections will flush before process termination.
+          </p>
+        </header>
+
+        <div class="runtime-manifest" role="region" aria-label="Host Runtime Telemetry">
+          <div class="manifest-header">
+            <span class="manifest-title">ACTIVE RUNTIME TARGET</span>
+            <span class="manifest-tag text-amber">GRACEFUL SHUTDOWN</span>
+          </div>
+          <div class="manifest-grid">
+            <div class="manifest-cell">
+              <span class="cell-label">PROCESS PID</span>
+              <strong class="cell-val tabular">{hostPid}</strong>
+              <span class="cell-path">Node.js {process.version}</span>
+            </div>
+            <div class="manifest-cell">
+              <span class="cell-label">SERVER UPTIME</span>
+              <strong class="cell-val tabular">{uptimeHrs} hrs</strong>
+              <span class="cell-path">{uptimeMin} min elapsed</span>
+            </div>
+            <div class="manifest-cell">
+              <span class="cell-label">MEMORY ALLOCATION</span>
+              <strong class="cell-val tabular">{rssMB} MB</strong>
+              <span class="cell-path">Heap: {heapMB} MB</span>
+            </div>
+            <div class="manifest-cell">
+              <span class="cell-label">SUPERVISOR RESTART</span>
+              <strong class="cell-val">Auto-Spawn</strong>
+              <span class="cell-path">systemd / Docker / PM2</span>
+            </div>
           </div>
         </div>
 
-        <p class="dialog-text">
-          To confirm decommissioning, type the exact phrase <code>DESTROY-DRC-OBSERVATORY</code> and enter your sovereign master passphrase.
-        </p>
+        <form id="shutdown-form" class="modal-form">
+          <div class="safety-gate-group">
+            <label for="shutdown-modal-pw" class="gate-label">
+              <span class="step-num">✦</span>
+              <span>Administrator Master Passphrase</span>
+            </label>
+            <div class="password-input-wrap">
+              <input
+                type="password"
+                id="shutdown-modal-pw"
+                name="password"
+                placeholder="Enter administrator passphrase…"
+                autocomplete="current-password"
+                required
+                class="gate-input"
+              />
+            </div>
+          </div>
 
-        <div class="form-group">
-          <label for="purge-phrase">Confirmation Phrase</label>
-          <input
-            type="text"
-            id="purge-phrase"
-            name="confirmationPhrase"
-            placeholder="DESTROY-DRC-OBSERVATORY"
-            autocomplete="off"
-            required
-          />
+          <div class="modal-actions-footer">
+            <button type="button" id="cancel-shutdown-btn" class="study-btn study-btn--ledger btn-dialog-abort">
+              <span>Abort</span>
+              <span class="btn-keycap">Esc</span>
+            </button>
+            <button
+              type="submit"
+              id="btn-execute-shutdown"
+              class="study-btn study-btn--hazard study-btn--lg btn-dialog-execute"
+            >
+              <span class="btn-icon">⏹</span>
+              <span id="shutdown-btn-label">Halt Server Process</span>
+              <span class="btn-keycap">↵</span>
+            </button>
+          </div>
+        </form>
+      </div>
+    </dialog>
+
+    <!-- Tier 3 Confirmation Modal (<dialog>) -->
+    <dialog
+      id="purge-confirm-dialog"
+      class="sovereign-modal purge-dialog"
+      closedby="any"
+      aria-labelledby="purge-dialog-title"
+      aria-describedby="purge-dialog-desc"
+    >
+      <div class="modal-chassis purge-shell">
+        <div class="modal-glow-bar purge-modal-glow" aria-hidden="true"></div>
+        <span class="modal-corner modal-corner--tl" aria-hidden="true">✠</span>
+        <span class="modal-corner modal-corner--tr" aria-hidden="true">✠</span>
+        <span class="modal-corner modal-corner--bl" aria-hidden="true">✠</span>
+        <span class="modal-corner modal-corner--br" aria-hidden="true">✠</span>
+
+        <header class="modal-header">
+          <div class="modal-kicker-row">
+            <div class="kicker-badge-lockup kicker-critical">
+              <span class="hazard-pip" aria-hidden="true">⚠</span>
+              <span class="modal-kicker">TIER 03 · IRREVERSIBLE EXCISION PROTOCOL</span>
+            </div>
+            <button
+              type="button"
+              id="btn-close-purge-x"
+              class="study-btn study-btn--ghost study-btn--icon-only study-btn--sm modal-close-btn"
+              aria-label="Dismiss Modal"
+            >
+              ✕
+            </button>
+          </div>
+          <h3 id="purge-dialog-title" class="modal-title">Irreversible Server &amp; Archive Purge</h3>
+          <p id="purge-dialog-desc" class="modal-desc">
+            You are initiating the highest-tier destructive protocol. This action permanently deletes academic manuscripts, book monographs, curricula syllabi, and celestial plate files from the filesystem.
+          </p>
+        </header>
+
+        <div class="destruction-manifest" role="region" aria-label="Target Destruction Manifest">
+          <div class="manifest-header">
+            <span class="manifest-title">TARGET DESTRUCTION MANIFEST</span>
+            <span class="manifest-tag">FATAL · PERMANENT</span>
+          </div>
+          <div class="manifest-grid">
+            <div class="manifest-cell">
+              <span class="cell-label">ARTICLES</span>
+              <strong class="cell-val">{pubCount} Records</strong>
+              <span class="cell-path">src/data/publications/</span>
+            </div>
+            <div class="manifest-cell">
+              <span class="cell-label">MONOGRAPHS</span>
+              <strong class="cell-val">{bookCount} Records</strong>
+              <span class="cell-path">src/data/books/</span>
+            </div>
+            <div class="manifest-cell">
+              <span class="cell-label">SYLLABI</span>
+              <strong class="cell-val">{classCount} Records</strong>
+              <span class="cell-path">src/data/classes/</span>
+            </div>
+            <div class="manifest-cell">
+              <span class="cell-label">CELESTIAL ATLAS</span>
+              <strong class="cell-val">88 Plates &amp; Shards</strong>
+              <span class="cell-path">public/data/sky/</span>
+            </div>
+          </div>
         </div>
 
-        <div class="form-group">
-          <label for="purge-pw">Sovereign Master Passphrase</label>
-          <input
-            type="password"
-            id="purge-pw"
-            name="password"
-            placeholder="Enter passphrase…"
-            required
-          />
-        </div>
+        <form id="purge-form" class="purge-form">
+          <!-- Step 1: Confirmation Phrase Interlock -->
+          <div class="safety-gate-group">
+            <div class="gate-header">
+              <label for="purge-phrase" class="gate-label">
+                <span class="step-num">1</span>
+                <span>Type safety disengage phrase</span>
+              </label>
+              <button type="button" id="btn-copy-phrase" class="phrase-helper-btn" title="Click to auto-fill safety phrase">
+                <span>Insert <code>CONFIRM-PERMANENT-RESET</code></span>
+              </button>
+            </div>
+            <div class="phrase-input-wrap">
+              <input
+                type="text"
+                id="purge-phrase"
+                name="confirmationPhrase"
+                placeholder="Type CONFIRM-PERMANENT-RESET"
+                autocomplete="off"
+                spellcheck="false"
+                required
+                class="gate-input"
+              />
+              <div id="phrase-verification-badge" class="verification-badge is-waiting">
+                <span class="badge-dot"></span>
+                <span id="verification-badge-text">LOCKED</span>
+              </div>
+            </div>
+          </div>
 
-        <div class="dialog-actions">
-          <button type="button" id="cancel-purge-btn" class="btn-dialog-abort">
-            Abort Protocol
-          </button>
-          <button type="submit" class="btn-dialog-execute">
-            Execute Permanent Purge
-          </button>
-        </div>
-      </form>
+          <!-- Step 2: Master Administrator Passphrase -->
+          <div class="safety-gate-group">
+            <label for="purge-pw" class="gate-label">
+              <span class="step-num">2</span>
+              <span>Administrator Master Passphrase</span>
+            </label>
+            <div class="password-input-wrap">
+              <input
+                type="password"
+                id="purge-pw"
+                name="password"
+                placeholder="Enter administrator passphrase…"
+                autocomplete="current-password"
+                required
+                class="gate-input"
+              />
+            </div>
+          </div>
+
+          <div class="purge-actions-footer">
+            <button type="button" id="cancel-purge-btn" class="study-btn study-btn--ledger btn-dialog-abort">
+              <span>Abort Excision</span>
+              <span class="btn-keycap">Esc</span>
+            </button>
+            <button
+              type="submit"
+              id="btn-execute-purge"
+              class="study-btn study-btn--purge study-btn--lg btn-dialog-execute"
+              disabled
+            >
+              <span class="btn-icon">✕</span>
+              <span id="purge-btn-label">Execute Irreversible Excision</span>
+              <span class="btn-keycap">↵</span>
+            </button>
+          </div>
+        </form>
+      </div>
     </dialog>
   </div>
 
@@ -241,7 +427,7 @@ const uptimeHrs = (uptimeMin / 60).toFixed(1);
     // Tier 0: Archive Snapshot Download
     const downloadBtn = document.getElementById('download-archive-btn') as HTMLAnchorElement | null;
     downloadBtn?.addEventListener('click', () => {
-      notify('Packaging complete sovereign archive (src/data/ & public/) into .tar.gz…', 'info');
+      notify('Packaging complete archive backup (src/data/ & public/) into .tar.gz…', 'info');
     });
 
     // Tier 1: Soft Shutter Toggle
@@ -253,7 +439,7 @@ const uptimeHrs = (uptimeMin / 60).toFixed(1);
       const nextOffline = !currentlyOffline;
       offlineBtn.disabled = true;
 
-      notify(nextOffline ? 'Engaging HTTP 503 maintenance shutter…' : 'Restoring public observatory access…', 'info');
+      notify(nextOffline ? 'Enabling maintenance mode…' : 'Restoring public site access…', 'info');
       const data = await postAdmin('/api/admin/lifecycle', {
         action: 'toggle-offline',
         offline: nextOffline,
@@ -263,76 +449,211 @@ const uptimeHrs = (uptimeMin / 60).toFixed(1);
       if (data.ok) {
         offlineBtn.setAttribute('data-currently-offline', String(nextOffline));
         offlineBtn.textContent = nextOffline
-          ? 'Re-Open Observatory Dome (Restore Public Access)'
-          : 'Engage 503 Maintenance Shutter';
-        offlineBtn.className = `btn-tier ${nextOffline ? 'btn-tier-success' : 'btn-tier-warning'}`;
+          ? 'Restore Public Site (Disable Maintenance Mode)'
+          : 'Take Site Offline (Enable Maintenance Mode)';
+        offlineBtn.className = `study-btn study-btn--lg btn-tier ${nextOffline ? 'study-btn--ignite btn-tier-success' : 'study-btn--hazard btn-tier-warning'}`;
 
         if (statusLabel) {
-          statusLabel.textContent = nextOffline ? '● OFFLINE (HTTP 503 ACTIVE)' : '● ONLINE (PUBLIC ACCESS ENABLED)';
+          statusLabel.textContent = nextOffline ? '● Offline (Maintenance Mode Active)' : '● Online (Public Access Enabled)';
           statusLabel.className = nextOffline ? 'text-amber' : 'text-green';
         }
         notify(data.message, 'success');
       } else {
-        notify(data.error || 'Failed to toggle shutter state.', 'error');
+        notify(data.error || 'Failed to toggle maintenance state.', 'error');
       }
     });
 
-    // Tier 2: Hard Server Shutdown (SIGTERM)
-    document.getElementById('shutdown-server-btn')?.addEventListener('click', async () => {
-      const pwInput = document.getElementById('shutdown-password') as HTMLInputElement | null;
-      const pw = pwInput?.value || '';
-      if (!pw) {
-        notify('Passphrase is required to halt the server process.', 'warn');
-        pwInput?.focus();
-        return;
-      }
+    function closeDialogWithAnim(dlg: HTMLDialogElement | null) {
+      if (!dlg || !dlg.open) return;
+      dlg.setAttribute('data-closing', 'true');
+      setTimeout(() => {
+        dlg.close();
+        dlg.removeAttribute('data-closing');
+      }, 220);
+    }
 
-      if (!confirm('Are you sure you want to dispatch SIGTERM? The Node server process will exit.')) {
-        return;
-      }
+    // Tier 2: Hard Server Shutdown Modal (SIGTERM)
+    const shutdownDialog = document.getElementById('shutdown-confirm-dialog') as HTMLDialogElement | null;
+    const openShutdownBtn = document.getElementById('open-shutdown-modal-btn');
+    const cancelShutdownBtn = document.getElementById('cancel-shutdown-btn');
+    const closeShutdownX = document.getElementById('btn-close-shutdown-x');
+    const shutdownForm = document.getElementById('shutdown-form') as HTMLFormElement | null;
+    const shutdownPw = document.getElementById('shutdown-modal-pw') as HTMLInputElement | null;
+    const shutdownBtn = document.getElementById('btn-execute-shutdown') as HTMLButtonElement | null;
+    const shutdownBtnLabel = document.getElementById('shutdown-btn-label');
 
-      notify('Dispatching SIGTERM process termination…', 'warn');
-      const data = await postAdmin('/api/admin/lifecycle', {
-        action: 'shutdown-server',
-        password: pw,
-      });
-
-      if (data.ok) {
-        notify(data.message, 'warn');
-        if (pwInput) pwInput.value = '';
-      } else {
-        notify(data.error || 'Passphrase verification failed.', 'error');
+    openShutdownBtn?.addEventListener('click', () => {
+      if (shutdownDialog && !shutdownDialog.open) {
+        shutdownDialog.removeAttribute('data-closing');
+        shutdownDialog.showModal();
+        setTimeout(() => shutdownPw?.focus(), 80);
       }
     });
 
-    // Tier 3: Decommission Dialog
-    const purgeDialog = document.getElementById('purge-confirm-dialog') as HTMLDialogElement | null;
-    document.getElementById('open-purge-modal-btn')?.addEventListener('click', () => {
-      if (purgeDialog && !purgeDialog.open) purgeDialog.showModal();
+    cancelShutdownBtn?.addEventListener('click', () => closeDialogWithAnim(shutdownDialog));
+    closeShutdownX?.addEventListener('click', () => closeDialogWithAnim(shutdownDialog));
+
+    shutdownDialog?.addEventListener('click', (e) => {
+      if (e.target === shutdownDialog) closeDialogWithAnim(shutdownDialog);
     });
 
-    document.getElementById('cancel-purge-btn')?.addEventListener('click', () => {
-      purgeDialog?.close();
-    });
-
-    document.getElementById('purge-form')?.addEventListener('submit', async (e) => {
+    shutdownDialog?.addEventListener('cancel', (e) => {
       e.preventDefault();
-      const fd = new FormData(e.currentTarget as HTMLFormElement);
-      const confirmationPhrase = String(fd.get('confirmationPhrase') || '');
-      const password = String(fd.get('password') || '');
+      closeDialogWithAnim(shutdownDialog);
+    });
 
-      notify('Verifying sovereign decommission credentials…', 'warn');
-      const data = await postAdmin('/api/admin/lifecycle', {
-        action: 'purge-codebase',
-        confirmationPhrase,
-        password,
-      });
+    shutdownForm?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const pw = shutdownPw?.value || '';
+      if (!pw) {
+        notify('Passphrase is required to stop the server process.', 'warn');
+        shutdownPw?.focus();
+        return;
+      }
 
-      purgeDialog?.close();
-      if (data.ok) {
-        notify(data.message || 'Purge initiated.', 'error');
+      if (shutdownBtn) {
+        shutdownBtn.disabled = true;
+        if (shutdownBtnLabel) shutdownBtnLabel.textContent = 'Halting process…';
+      }
+
+      notify('Sending server shutdown signal…', 'warn');
+      try {
+        const data = await postAdmin('/api/admin/lifecycle', {
+          action: 'shutdown-server',
+          password: pw,
+        });
+
+        closeDialogWithAnim(shutdownDialog);
+        if (data.ok) {
+          notify(data.message || 'Server halting in 600ms.', 'warn');
+          if (shutdownPw) shutdownPw.value = '';
+        } else {
+          notify(data.error || 'Passphrase verification failed.', 'error');
+        }
+      } catch (err: any) {
+        notify(err.message || 'Failed to dispatch shutdown signal.', 'error');
+      } finally {
+        if (shutdownBtn) {
+          shutdownBtn.disabled = false;
+          if (shutdownBtnLabel) shutdownBtnLabel.textContent = 'Halt Server Process';
+        }
+      }
+    });
+
+    // Tier 3: Decommission & Excision Dialog
+    const purgeDialog = document.getElementById('purge-confirm-dialog') as HTMLDialogElement | null;
+    const openPurgeBtn = document.getElementById('open-purge-modal-btn');
+    const cancelPurgeBtn = document.getElementById('cancel-purge-btn');
+    const closePurgeX = document.getElementById('btn-close-purge-x');
+    const purgeForm = document.getElementById('purge-form') as HTMLFormElement | null;
+    const purgePhraseInput = document.getElementById('purge-phrase') as HTMLInputElement | null;
+    const purgePwInput = document.getElementById('purge-pw') as HTMLInputElement | null;
+    const executePurgeBtn = document.getElementById('btn-execute-purge') as HTMLButtonElement | null;
+    const purgeBtnLabel = document.getElementById('purge-btn-label');
+    const phraseBadge = document.getElementById('phrase-verification-badge');
+    const phraseBadgeText = document.getElementById('verification-badge-text');
+    const copyPhraseBtn = document.getElementById('btn-copy-phrase');
+
+    const REQUIRED_PHRASE = 'CONFIRM-PERMANENT-RESET';
+
+    function checkPhraseMatch() {
+      const val = (purgePhraseInput?.value || '').trim();
+      const isMatched = val === REQUIRED_PHRASE || val === 'DESTROY-DRC-OBSERVATORY';
+
+      if (isMatched) {
+        purgePhraseInput?.classList.add('is-valid');
+        if (phraseBadge) {
+          phraseBadge.classList.remove('is-waiting');
+          phraseBadge.classList.add('is-verified');
+        }
+        if (phraseBadgeText) phraseBadgeText.textContent = 'MATCH VERIFIED ✓';
+        if (executePurgeBtn) executePurgeBtn.disabled = false;
       } else {
-        notify(data.error || 'Credentials mismatch.', 'error');
+        purgePhraseInput?.classList.remove('is-valid');
+        if (phraseBadge) {
+          phraseBadge.classList.remove('is-verified');
+          phraseBadge.classList.add('is-waiting');
+        }
+        if (phraseBadgeText) phraseBadgeText.textContent = val.length > 0 ? `${val.length}/${REQUIRED_PHRASE.length}` : 'LOCKED';
+        if (executePurgeBtn) executePurgeBtn.disabled = true;
+      }
+    }
+
+    purgePhraseInput?.addEventListener('input', checkPhraseMatch);
+
+    copyPhraseBtn?.addEventListener('click', () => {
+      if (purgePhraseInput) {
+        purgePhraseInput.value = REQUIRED_PHRASE;
+        checkPhraseMatch();
+        purgePwInput?.focus();
+      }
+    });
+
+    openPurgeBtn?.addEventListener('click', () => {
+      if (purgeDialog && !purgeDialog.open) {
+        purgeDialog.removeAttribute('data-closing');
+        purgeDialog.showModal();
+        checkPhraseMatch();
+        setTimeout(() => purgePhraseInput?.focus(), 80);
+      }
+    });
+
+    cancelPurgeBtn?.addEventListener('click', () => closeDialogWithAnim(purgeDialog));
+    closePurgeX?.addEventListener('click', () => closeDialogWithAnim(purgeDialog));
+
+    purgeDialog?.addEventListener('click', (e) => {
+      if (e.target === purgeDialog) closeDialogWithAnim(purgeDialog);
+    });
+
+    purgeDialog?.addEventListener('cancel', (e) => {
+      e.preventDefault();
+      closeDialogWithAnim(purgeDialog);
+    });
+
+    purgeForm?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const confirmationPhrase = String(purgePhraseInput?.value || '').trim();
+      const password = String(purgePwInput?.value || '');
+
+      if (confirmationPhrase !== REQUIRED_PHRASE && confirmationPhrase !== 'DESTROY-DRC-OBSERVATORY') {
+        notify(`Confirmation phrase must match ${REQUIRED_PHRASE}`, 'warn');
+        purgePhraseInput?.focus();
+        return;
+      }
+
+      if (!password) {
+        notify('Administrator master passphrase is required.', 'warn');
+        purgePwInput?.focus();
+        return;
+      }
+
+      if (executePurgeBtn) {
+        executePurgeBtn.disabled = true;
+        if (purgeBtnLabel) purgeBtnLabel.textContent = 'Excision in progress…';
+      }
+
+      notify('Verifying administrator credentials…', 'warn');
+      try {
+        const data = await postAdmin('/api/admin/lifecycle', {
+          action: 'purge-codebase',
+          confirmationPhrase,
+          password,
+        });
+
+        closeDialogWithAnim(purgeDialog);
+        if (data.ok) {
+          notify(data.message || 'Purge initiated.', 'error');
+          setTimeout(() => window.location.reload(), 1500);
+        } else {
+          notify(data.error || 'Credentials mismatch.', 'error');
+        }
+      } catch (err: any) {
+        notify(err.message || 'Purge request failed.', 'error');
+      } finally {
+        if (executePurgeBtn) {
+          executePurgeBtn.disabled = false;
+          if (purgeBtnLabel) purgeBtnLabel.textContent = 'Execute Irreversible Excision';
+        }
       }
     });
   </script>
@@ -351,25 +672,30 @@ const uptimeHrs = (uptimeMin / 60).toFixed(1);
   }
 
   .module-kicker {
-    font-family: var(--font-mono);
-    font-size: 0.75rem;
-    letter-spacing: 0.12em;
+    font-family: var(--font-serif);
+    font-size: 0.76rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
     color: var(--accent);
+    font-weight: 500;
   }
 
   .module-header h2 {
     margin: 0.25rem 0 0.25rem;
     font-size: var(--step-1);
+    font-family: var(--font-display);
     font-weight: 500;
+    letter-spacing: -0.01em;
   }
 
   .module-sub {
     margin: 0;
-    font-size: 0.88rem;
+    font-size: 0.9rem;
     color: var(--text-secondary);
+    font-family: var(--font-serif);
   }
 
-  /* Telemetry Deck */
+  /* Status Deck */
   .telemetry-deck {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -379,7 +705,7 @@ const uptimeHrs = (uptimeMin / 60).toFixed(1);
   .deck-stat {
     background: var(--bg-surface);
     border: 1px solid var(--border-hairline);
-    border-radius: 0.5rem;
+    border-radius: 4px;
     padding: 0.85rem 1rem;
     display: flex;
     flex-direction: column;
@@ -387,15 +713,16 @@ const uptimeHrs = (uptimeMin / 60).toFixed(1);
   }
 
   .stat-label {
-    font-family: var(--font-mono);
-    font-size: 0.68rem;
-    letter-spacing: 0.1em;
+    font-family: var(--font-serif);
+    font-size: 0.72rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
     color: var(--text-tertiary);
   }
 
   .stat-value {
-    font-family: var(--font-mono);
-    font-size: 0.88rem;
+    font-family: var(--font-serif);
+    font-size: 0.96rem;
     font-weight: 500;
     color: var(--text-primary);
   }
@@ -403,7 +730,7 @@ const uptimeHrs = (uptimeMin / 60).toFixed(1);
   .stat-detail {
     font-weight: normal;
     color: var(--text-secondary);
-    font-size: 0.78rem;
+    font-size: 0.82rem;
   }
 
   .lifecycle-stack {
@@ -414,8 +741,8 @@ const uptimeHrs = (uptimeMin / 60).toFixed(1);
 
   .lifecycle-card {
     padding: 1.5rem;
-    border-radius: 0.75rem;
-    background: var(--bg-elevated);
+    border-radius: 4px;
+    background: var(--bg-surface);
     border: 1px solid var(--border-hairline);
     display: flex;
     flex-direction: column;
@@ -423,21 +750,19 @@ const uptimeHrs = (uptimeMin / 60).toFixed(1);
   }
 
   .tier-archive {
-    border-left: 3px solid oklch(75% 0.16 220);
-    background: color-mix(in oklch, oklch(75% 0.16 220) 4%, var(--bg-elevated));
-  }
-
-  .tier-soft {
     border-left: 3px solid var(--accent);
   }
 
+  .tier-soft {
+    border-left: 3px solid #e5a93c;
+  }
+
   .tier-hard {
-    border-left: 3px solid oklch(75% 0.18 70);
+    border-left: 3px solid #d8b257;
   }
 
   .tier-purge {
-    border-left: 3px solid oklch(62% 0.22 25);
-    background: color-mix(in oklch, oklch(62% 0.22 25) 4%, var(--bg-elevated));
+    border-left: 3px solid #b83a28;
   }
 
   .tier-header-row {
@@ -448,44 +773,49 @@ const uptimeHrs = (uptimeMin / 60).toFixed(1);
   }
 
   .tier-badge {
-    font-family: var(--font-mono);
-    font-size: 0.7rem;
+    font-family: var(--font-serif);
+    font-size: 0.72rem;
     font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
     padding: 0.15rem 0.45rem;
-    border-radius: 0.25rem;
+    border-radius: 3px;
     background: var(--bg-surface);
     border: 1px solid var(--border-hairline);
     color: var(--accent);
   }
 
   .tier-badge-archive {
-    color: oklch(80% 0.16 220);
-    border-color: color-mix(in oklch, oklch(75% 0.16 220) 40%, transparent);
-    background: color-mix(in oklch, oklch(75% 0.16 220) 12%, transparent);
+    color: var(--accent);
+    border-color: color-mix(in oklch, var(--accent) 40%, transparent);
+    background: color-mix(in oklch, var(--accent) 12%, transparent);
   }
 
   .tier-badge-critical {
-    color: oklch(75% 0.2 25);
-    border-color: color-mix(in oklch, oklch(62% 0.22 25) 40%, transparent);
-    background: color-mix(in oklch, oklch(62% 0.22 25) 12%, transparent);
+    color: #f09a8a;
+    border-color: color-mix(in oklch, #b83a28 40%, transparent);
+    background: color-mix(in oklch, #b83a28 12%, transparent);
   }
 
   .tier-type {
-    font-family: var(--font-mono);
-    font-size: 0.7rem;
+    font-family: var(--font-serif);
+    font-size: 0.72rem;
     letter-spacing: 0.08em;
+    text-transform: uppercase;
     color: var(--text-tertiary);
   }
 
   .tier-title {
     margin: 0.25rem 0 0.4rem;
-    font-size: 1.05rem;
+    font-family: var(--font-display);
+    font-size: 1.15rem;
     font-weight: 500;
   }
 
   .tier-desc {
     margin: 0;
-    font-size: 0.84rem;
+    font-family: var(--font-serif);
+    font-size: 0.88rem;
     color: var(--text-secondary);
     line-height: 1.5;
   }
@@ -498,11 +828,12 @@ const uptimeHrs = (uptimeMin / 60).toFixed(1);
   }
 
   .spec-tag {
-    font-family: var(--font-mono);
-    font-size: 0.68rem;
+    font-family: var(--font-serif);
+    font-size: 0.72rem;
     letter-spacing: 0.05em;
+    text-transform: uppercase;
     padding: 0.2rem 0.5rem;
-    border-radius: 0.25rem;
+    border-radius: 3px;
     background: var(--bg-canvas);
     border: 1px solid var(--border-hairline);
     color: var(--text-secondary);
@@ -510,16 +841,16 @@ const uptimeHrs = (uptimeMin / 60).toFixed(1);
 
   .status-indicator-row {
     margin-top: 0.75rem;
-    font-family: var(--font-mono);
-    font-size: 0.78rem;
+    font-family: var(--font-serif);
+    font-size: 0.84rem;
     display: flex;
     align-items: center;
     gap: 0.5rem;
   }
 
-  .text-green { color: oklch(78% 0.16 145); }
-  .text-amber { color: oklch(80% 0.18 80); }
-  .text-red { color: oklch(75% 0.2 25); }
+  .text-green { color: #58b87a; }
+  .text-amber { color: #d8b257; }
+  .text-red { color: #e06c58; }
 
   .tier-action-box {
     display: flex;
@@ -528,71 +859,6 @@ const uptimeHrs = (uptimeMin / 60).toFixed(1);
     gap: 0.75rem;
     padding-top: 0.75rem;
     border-top: 1px solid var(--border-hairline);
-  }
-
-  .btn-tier {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    text-decoration: none;
-    padding: 0.65rem 1.15rem;
-    border-radius: 0.375rem;
-    font-family: var(--font-mono);
-    font-size: 0.82rem;
-    letter-spacing: 0.05em;
-    cursor: pointer;
-    transition: all 0.18s ease;
-    border: 1px solid transparent;
-  }
-
-  .btn-tier-archive {
-    background: color-mix(in oklch, oklch(75% 0.16 220) 18%, var(--bg-surface));
-    border: 1px solid oklch(75% 0.16 220);
-    color: oklch(90% 0.12 220);
-  }
-  .btn-tier-archive:hover {
-    background: oklch(75% 0.16 220);
-    color: #000;
-  }
-
-  .btn-tier-warning {
-    background: color-mix(in oklch, oklch(78% 0.18 80) 14%, var(--bg-surface));
-    border: 1px solid oklch(78% 0.18 80);
-    color: var(--text-primary);
-  }
-  .btn-tier-warning:hover {
-    background: oklch(78% 0.18 80);
-    color: #000;
-  }
-
-  .btn-tier-success {
-    background: color-mix(in oklch, oklch(75% 0.18 145) 14%, var(--bg-surface));
-    border: 1px solid oklch(75% 0.18 145);
-    color: var(--text-primary);
-  }
-  .btn-tier-success:hover {
-    background: oklch(75% 0.18 145);
-    color: #000;
-  }
-
-  .btn-tier-danger {
-    background: color-mix(in oklch, oklch(62% 0.22 25) 15%, var(--bg-surface));
-    border: 1px solid oklch(62% 0.22 25);
-    color: oklch(82% 0.16 25);
-  }
-  .btn-tier-danger:hover {
-    background: oklch(62% 0.22 25);
-    color: #fff;
-  }
-
-  .btn-tier-critical {
-    background: color-mix(in oklch, oklch(55% 0.25 25) 25%, var(--bg-surface));
-    border: 1px solid oklch(65% 0.22 25);
-    color: oklch(85% 0.16 25);
-  }
-  .btn-tier-critical:hover {
-    background: oklch(60% 0.25 25);
-    color: #fff;
   }
 
   .auth-challenge-inline {
@@ -606,13 +872,13 @@ const uptimeHrs = (uptimeMin / 60).toFixed(1);
   .tier-input {
     flex: 1;
     min-width: 240px;
-    padding: 0.6rem 0.8rem;
-    border-radius: 0.375rem;
+    padding: 0.55rem 0.8rem;
+    border-radius: 3px;
     border: 1px solid var(--border-hairline);
     background: var(--bg-canvas);
     color: var(--text-primary);
-    font-family: inherit;
-    font-size: 0.88rem;
+    font-family: var(--font-serif);
+    font-size: 0.86rem;
   }
 
   .tier-input:focus {
@@ -620,105 +886,452 @@ const uptimeHrs = (uptimeMin / 60).toFixed(1);
     border-color: var(--accent);
   }
 
-  /* Purge Dialog Modal */
-  .purge-dialog {
-    max-width: 520px;
-    width: 90vw;
-    border-radius: 0.75rem;
-    background: var(--bg-elevated);
-    border: 1px solid oklch(62% 0.22 25);
-    box-shadow: 0 12px 48px rgba(0, 0, 0, 0.6);
+  /* =========================================================================
+     Sovereign Modals: High-Weight Administrative Excision & Shutdown Dialogs
+     Centered Top-Layer Viewport Stacking with Calligraphic Gravity
+     ========================================================================= */
+
+  .sovereign-modal {
+    position: fixed;
+    inset: 0;
+    margin: auto;
+    padding: 0;
+    border: none;
+    background: transparent;
     color: var(--text-primary);
-    padding: 2rem;
+    inline-size: min(600px, calc(100dvw - 2rem));
+    max-block-size: calc(100dvh - 2.5rem);
+    overflow-y: auto;
+    overflow-x: hidden;
+    z-index: 1200;
+    box-sizing: border-box;
+
+    opacity: 0;
+    transform: scale(0.96) translateY(-10px);
+    transition:
+      opacity 0.22s cubic-bezier(0.16, 1, 0.3, 1),
+      transform 0.22s cubic-bezier(0.16, 1, 0.3, 1),
+      display 0.22s allow-discrete,
+      overlay 0.22s allow-discrete;
   }
 
-  .purge-dialog::backdrop {
-    background: rgba(0, 0, 0, 0.75);
-    backdrop-filter: blur(4px);
+  .sovereign-modal[open] {
+    opacity: 1;
+    transform: scale(1) translateY(0);
   }
 
+  @starting-style {
+    .sovereign-modal[open] {
+      opacity: 0;
+      transform: scale(0.96) translateY(-10px);
+    }
+  }
+
+  .sovereign-modal[data-closing='true'] {
+    opacity: 0;
+    transform: scale(0.96) translateY(8px);
+  }
+
+  .sovereign-modal::backdrop {
+    background: color-mix(in oklch, #02040b 86%, transparent);
+    backdrop-filter: blur(14px) saturate(1.4);
+    opacity: 0;
+    transition:
+      opacity 0.22s cubic-bezier(0.16, 1, 0.3, 1),
+      display 0.22s allow-discrete,
+      overlay 0.22s allow-discrete;
+  }
+
+  .sovereign-modal[open]::backdrop {
+    opacity: 1;
+  }
+
+  @starting-style {
+    .sovereign-modal[open]::backdrop {
+      opacity: 0;
+    }
+  }
+
+  .sovereign-modal[data-closing='true']::backdrop {
+    opacity: 0;
+  }
+
+  /* Chassis / Heavyweight Physical Scriptorium Shell */
+  .modal-chassis {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    background: var(--bg-surface, #0b1020);
+    border-radius: 6px;
+    padding: 1.75rem 2rem;
+    gap: 1.25rem;
+    box-sizing: border-box;
+    overflow: hidden;
+  }
+
+  .purge-shell {
+    border: 1px solid color-mix(in oklch, #b83a28 45%, var(--border-hairline));
+    box-shadow:
+      0 32px 84px -12px rgba(0, 0, 0, 0.95),
+      0 0 0 1px color-mix(in oklch, #b83a28 28%, transparent),
+      0 0 44px -8px rgba(184, 58, 40, 0.25),
+      inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  }
+
+  .shutdown-shell {
+    border: 1px solid color-mix(in oklch, var(--accent-amber, #d4973b) 45%, var(--border-hairline));
+    box-shadow:
+      0 32px 84px -12px rgba(0, 0, 0, 0.95),
+      0 0 0 1px color-mix(in oklch, var(--accent-amber, #d4973b) 28%, transparent),
+      0 0 44px -8px rgba(212, 151, 59, 0.22),
+      inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  }
+
+  /* Glowing Accent Rule */
+  .modal-glow-bar {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    pointer-events: none;
+  }
+
+  .purge-modal-glow {
+    background: linear-gradient(90deg, transparent 5%, #b83a28 25%, #f09a8a 50%, #b83a28 75%, transparent 95%);
+  }
+
+  .shutdown-modal-glow {
+    background: linear-gradient(90deg, transparent 5%, #b2781b 25%, #ffd479 50%, #b2781b 75%, transparent 95%);
+  }
+
+  /* Intaglio Calligraphic Corner Seals */
+  .modal-corner {
+    position: absolute;
+    font-size: 0.72rem;
+    opacity: 0.45;
+    pointer-events: none;
+    line-height: 1;
+    user-select: none;
+  }
+
+  .purge-shell .modal-corner {
+    color: #e06c58;
+  }
+
+  .shutdown-shell .modal-corner {
+    color: var(--accent-amber, #d4973b);
+  }
+
+  .modal-corner--tl { top: 0.65rem; left: 0.7rem; }
+  .modal-corner--tr { top: 0.65rem; right: 0.7rem; }
+  .modal-corner--bl { bottom: 0.65rem; left: 0.7rem; }
+  .modal-corner--br { bottom: 0.65rem; right: 0.7rem; }
+
+  /* Header & Kicker */
+  .modal-header {
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+  }
+
+  .modal-kicker-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+  }
+
+  .kicker-badge-lockup {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.22rem 0.6rem;
+    border-radius: 3px;
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .kicker-critical {
+    background: color-mix(in oklch, #b83a28 18%, transparent);
+    border: 1px solid color-mix(in oklch, #b83a28 45%, transparent);
+    color: #f09a8a;
+  }
+
+  .kicker-warning {
+    background: color-mix(in oklch, var(--accent-amber, #d4973b) 18%, transparent);
+    border: 1px solid color-mix(in oklch, var(--accent-amber, #d4973b) 45%, transparent);
+    color: var(--accent-amber, #d4973b);
+  }
+
+  .hazard-pip {
+    font-size: 0.85em;
+    line-height: 1;
+  }
+
+  .modal-close-btn {
+    font-size: 0.95rem;
+    color: var(--text-muted);
+    transition: color 0.15s ease;
+  }
+
+  .modal-close-btn:hover {
+    color: var(--text-primary);
+  }
+
+  .modal-title {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: 1.35rem;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    color: var(--text-primary);
+    line-height: 1.25;
+  }
+
+  .modal-desc {
+    margin: 0;
+    font-family: var(--font-serif);
+    font-size: 0.88rem;
+    color: var(--text-secondary);
+    line-height: 1.55;
+  }
+
+  .modal-desc code {
+    font-family: var(--font-mono);
+    font-size: 0.82rem;
+    padding: 0.1rem 0.35rem;
+    border-radius: 3px;
+    background: color-mix(in oklch, var(--text-primary) 6%, transparent);
+    border: 1px solid var(--border-hairline);
+    color: var(--text-primary);
+  }
+
+  /* Destruction Manifest & Runtime Info Boxes */
+  .destruction-manifest,
+  .runtime-manifest {
+    border-radius: 4px;
+    background: color-mix(in oklch, var(--bg-canvas) 85%, transparent);
+    border: 1px solid var(--border-hairline);
+    padding: 0.85rem 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+  }
+
+  .manifest-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+    border-bottom: 1px dashed var(--border-hairline);
+    padding-bottom: 0.45rem;
+  }
+
+  .manifest-tag {
+    color: #e06c58;
+    font-weight: 700;
+  }
+
+  .manifest-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.65rem 1rem;
+  }
+
+  .manifest-cell {
+    display: flex;
+    flex-direction: column;
+    gap: 0.12rem;
+  }
+
+  .manifest-cell .cell-label {
+    font-family: var(--font-mono);
+    font-size: 0.64rem;
+    color: var(--text-muted);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  .manifest-cell .cell-val {
+    font-family: var(--font-serif);
+    font-size: 0.92rem;
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+
+  .manifest-cell .cell-path {
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    color: var(--text-secondary);
+    opacity: 0.8;
+  }
+
+  /* Form & Interlocks */
+  .modal-form,
   .purge-form {
     display: flex;
     flex-direction: column;
-    gap: 1.25rem;
+    gap: 1.15rem;
   }
 
-  .dialog-header {
-    display: flex;
-    align-items: center;
-    gap: 0.85rem;
-  }
-
-  .critical-warning-icon {
-    font-size: 2rem;
-    color: oklch(75% 0.2 25);
-  }
-
-  .dialog-header h3 {
-    margin: 0;
-    font-size: 1.15rem;
-  }
-
-  .dialog-sub {
-    margin: 0.2rem 0 0;
-    font-size: 0.8rem;
-    color: var(--text-secondary);
-  }
-
-  .dialog-text {
-    font-size: 0.85rem;
-    color: var(--text-secondary);
-    line-height: 1.5;
-  }
-
-  .dialog-text code {
-    color: oklch(85% 0.16 25);
-    font-family: var(--font-mono);
-  }
-
-  .form-group {
+  .safety-gate-group {
     display: flex;
     flex-direction: column;
-    gap: 0.35rem;
+    gap: 0.4rem;
   }
 
-  .form-group label {
+  .gate-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  .gate-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    font-family: var(--font-serif);
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+
+  .step-num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 17px;
+    height: 17px;
+    border-radius: 50%;
+    background: color-mix(in oklch, var(--accent) 25%, transparent);
+    color: var(--accent);
     font-family: var(--font-mono);
-    font-size: 0.75rem;
-    color: var(--text-secondary);
+    font-size: 0.65rem;
+    font-weight: 700;
+    line-height: 1;
   }
 
-  .form-group input {
-    padding: 0.6rem 0.8rem;
-    border-radius: 0.375rem;
+  .phrase-helper-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    font-family: var(--font-serif);
+    font-size: 0.76rem;
+    cursor: pointer;
+    padding: 0;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    transition: color 0.15s ease;
+  }
+
+  .phrase-helper-btn:hover {
+    color: var(--accent);
+  }
+
+  .phrase-helper-btn code {
+    font-family: var(--font-mono);
+    font-weight: 600;
+  }
+
+  .phrase-input-wrap,
+  .password-input-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
+
+  .gate-input {
+    width: 100%;
+    padding: 0.65rem 0.85rem;
+    border-radius: 4px;
     border: 1px solid var(--border-hairline);
     background: var(--bg-canvas);
     color: var(--text-primary);
+    font-family: var(--font-serif);
+    font-size: 0.88rem;
+    box-sizing: border-box;
+    transition: border-color 0.16s ease, box-shadow 0.16s ease;
   }
 
-  .dialog-actions {
+  .gate-input:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 22%, transparent);
+  }
+
+  #purge-phrase {
+    font-family: var(--font-mono);
+    font-size: 0.84rem;
+    letter-spacing: 0.04em;
+    padding-inline-end: 140px;
+  }
+
+  #purge-phrase.is-valid {
+    border-color: #2ea043;
+    box-shadow: 0 0 0 2px rgba(46, 160, 67, 0.2);
+  }
+
+  .verification-badge {
+    position: absolute;
+    right: 0.5rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.2rem 0.5rem;
+    border-radius: 3px;
+    font-family: var(--font-mono);
+    font-size: 0.66rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    pointer-events: none;
+    user-select: none;
+    transition: all 0.18s ease;
+  }
+
+  .verification-badge.is-waiting {
+    background: color-mix(in oklch, var(--text-muted) 12%, transparent);
+    color: var(--text-muted);
+    border: 1px solid var(--border-hairline);
+  }
+
+  .verification-badge.is-verified {
+    background: rgba(46, 160, 67, 0.16);
+    color: #3fb950;
+    border: 1px solid rgba(46, 160, 67, 0.4);
+  }
+
+  .badge-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+  }
+
+  /* Actions Footer */
+  .modal-actions-footer,
+  .purge-actions-footer {
     display: flex;
+    align-items: center;
     justify-content: flex-end;
     gap: 0.75rem;
-    margin-top: 0.5rem;
+    margin-top: 0.4rem;
+    padding-top: 0.85rem;
+    border-top: 1px solid var(--border-hairline);
   }
 
-  .btn-dialog-abort {
-    padding: 0.6rem 1rem;
-    border-radius: 0.375rem;
-    background: var(--bg-surface);
-    border: 1px solid var(--border-hairline);
-    color: var(--text-primary);
-    cursor: pointer;
-  }
-
-  .btn-dialog-execute {
-    padding: 0.6rem 1.2rem;
-    border-radius: 0.375rem;
-    background: oklch(62% 0.22 25);
-    border: 1px solid oklch(70% 0.22 25);
-    color: #fff;
-    cursor: pointer;
-    font-weight: 600;
+  .btn-dialog-execute:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    filter: grayscale(0.6);
+    box-shadow: none !important;
   }
 </style>

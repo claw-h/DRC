@@ -10,6 +10,9 @@ const { pubCount, bookCount, classCount } = Astro.props;
 
 <nav class="nav-strip-wrapper" aria-label="Academic Sections">
   <ul class="nav-strip-track" id="nav-strip-track">
+    <!-- Fluid Sliding Ink-Rule Active Indicator -->
+    <li class="nav-strip-ink-rule" id="nav-strip-ink-rule" aria-hidden="true"></li>
+
     <li>
       <button
         type="button"
@@ -17,10 +20,15 @@ const { pubCount, bookCount, classCount } = Astro.props;
         data-target-view="view-publications"
         data-view-index="0"
         aria-current="page"
+        aria-label={`Fascicle I: Publications (${pubCount} works)`}
+        title="Fascicle I: Publications (Press 1)"
       >
         <span class="nav-strip-idx tabular">I</span>
-        <span class="nav-strip-label">PUBLICATIONS</span>
-        <span class="nav-strip-count tabular">[{String(pubCount).padStart(2, '0')}]</span>
+        <span class="nav-strip-expandable">
+          <span class="nav-strip-label">PUBLICATIONS</span>
+          <span class="nav-strip-count tabular">[{String(pubCount).padStart(2, '0')}]</span>
+        </span>
+        <span class="nav-strip-keyhint" aria-hidden="true" title="Hot-key: 1">1</span>
       </button>
     </li>
     <li class="nav-strip-connector" aria-hidden="true">───</li>
@@ -31,10 +39,15 @@ const { pubCount, bookCount, classCount } = Astro.props;
         data-target-view="view-books"
         data-view-index="1"
         aria-current="false"
+        aria-label={`Fascicle II: Books (${bookCount} works)`}
+        title="Fascicle II: Books (Press 2)"
       >
         <span class="nav-strip-idx tabular">II</span>
-        <span class="nav-strip-label">BOOKS</span>
-        <span class="nav-strip-count tabular">[{String(bookCount).padStart(2, '0')}]</span>
+        <span class="nav-strip-expandable">
+          <span class="nav-strip-label">BOOKS</span>
+          <span class="nav-strip-count tabular">[{String(bookCount).padStart(2, '0')}]</span>
+        </span>
+        <span class="nav-strip-keyhint" aria-hidden="true" title="Hot-key: 2">2</span>
       </button>
     </li>
     <li class="nav-strip-connector" aria-hidden="true">───</li>
@@ -45,54 +58,130 @@ const { pubCount, bookCount, classCount } = Astro.props;
         data-target-view="view-classes"
         data-view-index="2"
         aria-current="false"
+        aria-label={`Fascicle III: Classes (${classCount} courses)`}
+        title="Fascicle III: Classes (Press 3)"
       >
         <span class="nav-strip-idx tabular">III</span>
-        <span class="nav-strip-label">CLASSES</span>
-        <span class="nav-strip-count tabular">[{String(classCount).padStart(2, '0')}]</span>
+        <span class="nav-strip-expandable">
+          <span class="nav-strip-label">CLASSES</span>
+          <span class="nav-strip-count tabular">[{String(classCount).padStart(2, '0')}]</span>
+        </span>
+        <span class="nav-strip-keyhint" aria-hidden="true" title="Hot-key: 3">3</span>
       </button>
     </li>
   </ul>
+
+  <!-- Scholarly Hover Cartouche (Fascicle Mini-Preview Cardlet) -->
+  <div
+    class="fascicle-cartouche"
+    id="fascicle-cartouche"
+    role="tooltip"
+    aria-hidden="true"
+  >
+    <div class="cartouche-header">
+      <span class="cartouche-ornament" aria-hidden="true">❧</span>
+      <span class="cartouche-kicker scholarly-caps" id="cartouche-kicker">FASCICLE I · 4 MANUSCRIPTS</span>
+    </div>
+    <div class="cartouche-title" id="cartouche-title">Manuscripts & Critical Essays</div>
+    <div class="cartouche-meta" id="cartouche-meta">Refereed Articles, Philosophy Born of Struggle & Alain Locke</div>
+    <div class="cartouche-cue scholarly-caps" id="cartouche-cue">Click tab or press 1 to open</div>
+  </div>
 
   <div class="nav-strip-right">
     <div class="fascicle-locator" aria-live="polite">
       <span class="locator-icon">§</span>
       <span class="locator-value scholarly-caps" id="nav-cathode-status">FASCICLE I · PUBLICATIONS</span>
     </div>
-    <div class="folio-ribbon-meter" title="Folio fascicle progression">
-      <div class="folio-ribbon-fill" id="nav-scroll-flow-fill" style="width: 33.3%;"></div>
+
+    <!-- Interactive Silk Ribbon Scrubber -->
+    <div class="folio-scrubber-wrapper">
+      <div
+        class="folio-ribbon-meter interactive-scrubber"
+        id="folio-ribbon-meter"
+        role="slider"
+        tabindex="0"
+        aria-label="Folio manuscript progression scrubber"
+        aria-valuemin="0"
+        aria-valuemax="100"
+        aria-valuenow="33"
+        title="Drag or click to scrub through manuscript folios (Arrow keys to step)"
+      >
+        <div class="folio-ribbon-fill" id="nav-scroll-flow-fill" style="width: 33.3%;"></div>
+        <div class="folio-ribbon-thumb" id="folio-ribbon-thumb" style="left: 33.3%;"></div>
+      </div>
+      <div class="folio-scrub-tooltip" id="folio-scrub-tooltip" aria-hidden="true">
+        <span id="folio-scrub-tooltip-text">I · 33%</span>
+      </div>
     </div>
   </div>
 </nav>
 
 <style>
   .nav-strip-wrapper {
+    position: relative;
     justify-content: space-between;
     gap: 1rem;
+    overflow: visible;
+  }
+
+  .nav-strip-track {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: clamp(0.45rem, 1.2vw, 0.85rem);
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  /* Fluid Sliding Ink-Rule Indicator */
+  .nav-strip-ink-rule {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    height: 2px;
+    background: var(--accent);
+    border-radius: 1px;
+    box-shadow: 0 0 10px color-mix(in oklab, var(--accent) 55%, transparent);
+    pointer-events: none;
+    transform: translate3d(var(--ink-left, 0px), 0, 0);
+    width: var(--ink-width, 0px);
+    opacity: var(--ink-opacity, 0);
+    transition:
+      transform 0.36s cubic-bezier(0.16, 1, 0.3, 1),
+      width 0.36s cubic-bezier(0.16, 1, 0.3, 1),
+      opacity 0.22s ease;
+    z-index: 3;
   }
 
   .nav-strip-btn {
+    position: relative;
     display: inline-flex;
     align-items: center;
-    gap: 0.45rem;
-    padding: 0.35rem 0.3rem;
+    padding: 0.35rem 0.45rem;
     background: none;
     border: none;
     border-block-end: 2px solid transparent;
     font-family: var(--font-mono);
     font-size: 0.76rem;
-    letter-spacing: 0.16em;
+    letter-spacing: 0.14em;
     color: var(--text-muted);
     cursor: pointer;
-    transition: color 0.22s ease, border-color 0.22s ease, text-shadow 0.22s ease;
+    white-space: nowrap;
+    border-radius: 2px 2px 0 0;
+    transition:
+      color 0.22s ease,
+      background-color 0.22s ease,
+      text-shadow 0.22s ease;
   }
 
   .nav-strip-btn:hover {
     color: var(--text-primary);
+    background: color-mix(in oklab, var(--text-primary) 5%, transparent);
   }
 
   .nav-strip-btn[aria-current="page"] {
     color: var(--text-primary);
-    border-block-end-color: var(--accent);
     font-weight: 600;
     text-shadow: 0 0 12px color-mix(in oklab, var(--accent) 45%, transparent);
   }
@@ -105,8 +194,75 @@ const { pubCount, bookCount, classCount } = Astro.props;
   }
 
   .nav-strip-idx {
-    font-size: 0.66rem;
+    font-size: 0.68rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-inline-size: 1.15rem;
+    transition: color 0.22s ease;
+  }
+
+  .nav-strip-btn[aria-current="page"] .nav-strip-idx,
+  .nav-strip-btn:hover .nav-strip-idx {
     color: var(--accent);
+  }
+
+  /* Hotkey Discrete Badge */
+  .nav-strip-keyhint {
+    font-family: var(--font-mono);
+    font-size: 0.55rem;
+    padding: 0.05rem 0.28rem;
+    border-radius: 2px;
+    background: color-mix(in oklab, var(--text-primary) 6%, transparent);
+    color: var(--text-muted);
+    border: 1px solid var(--border-subtle);
+    line-height: 1;
+    margin-inline-start: 0.35rem;
+    opacity: 0.55;
+    transition: opacity 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+    user-select: none;
+  }
+
+  .nav-strip-btn:hover .nav-strip-keyhint,
+  .nav-strip-btn[aria-current="page"] .nav-strip-keyhint {
+    opacity: 1;
+    border-color: color-mix(in oklab, var(--accent) 45%, transparent);
+    color: var(--accent);
+  }
+
+  /* Smart Collapsible Sections */
+  .nav-strip-expandable {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    max-inline-size: 0;
+    opacity: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    pointer-events: none;
+    margin-inline-start: 0;
+    transform: translate3d(-6px, 0, 0);
+    transition:
+      max-inline-size 0.38s cubic-bezier(0.16, 1, 0.3, 1),
+      opacity 0.26s cubic-bezier(0.16, 1, 0.3, 1),
+      margin-inline-start 0.38s cubic-bezier(0.16, 1, 0.3, 1),
+      transform 0.38s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .nav-strip-btn[aria-current="page"] .nav-strip-expandable,
+  .nav-strip-wrapper:hover .nav-strip-expandable,
+  .nav-strip-track:focus-within .nav-strip-expandable {
+    max-inline-size: 240px;
+    opacity: 1;
+    pointer-events: auto;
+    margin-inline-start: 0.45rem;
+    transform: translate3d(0, 0, 0);
+  }
+
+  .nav-strip-label {
+    letter-spacing: 0.14em;
   }
 
   .nav-strip-count {
@@ -114,13 +270,97 @@ const { pubCount, bookCount, classCount } = Astro.props;
     color: var(--text-muted);
   }
 
+  .nav-strip-btn[aria-current="page"] .nav-strip-count {
+    color: color-mix(in oklab, var(--accent) 70%, var(--text-muted));
+  }
+
+  /* Scholarly Hover Cartouche (Fascicle Mini-Preview Cardlet) */
+  .fascicle-cartouche {
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 9999;
+    pointer-events: none;
+    opacity: 0;
+    transform: translate3d(var(--cartouche-x, 0px), calc(var(--cartouche-y, 0px) - 6px), 0);
+    transition:
+      opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+      transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    width: min(340px, calc(100vw - 2rem));
+    padding: 0.8rem 1rem;
+    background: color-mix(in oklab, var(--bg-surface) 96%, var(--paper-vellum, #f4efe6) 4%);
+    border: 1px solid var(--border-subtle);
+    border-radius: 3px;
+    box-shadow:
+      0 12px 28px rgba(0, 0, 0, 0.28),
+      0 2px 6px rgba(0, 0, 0, 0.12),
+      inset 0 1px 0 rgba(255, 255, 255, 0.06);
+    backdrop-filter: blur(18px);
+  }
+
+  .fascicle-cartouche.is-active {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translate3d(var(--cartouche-x, 0px), var(--cartouche-y, 0px), 0);
+  }
+
+  .cartouche-header {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    margin-bottom: 0.35rem;
+  }
+
+  .cartouche-ornament {
+    font-family: var(--font-serif);
+    font-size: 0.85rem;
+    color: var(--accent);
+    line-height: 1;
+  }
+
+  .cartouche-kicker {
+    font-family: var(--font-mono);
+    font-size: 0.62rem;
+    letter-spacing: 0.14em;
+    color: var(--accent);
+    font-weight: 600;
+  }
+
+  .cartouche-title {
+    font-family: var(--font-serif);
+    font-size: 0.88rem;
+    font-weight: 500;
+    line-height: 1.35;
+    color: var(--text-primary);
+    margin-bottom: 0.25rem;
+  }
+
+  .cartouche-meta {
+    font-family: var(--font-mono);
+    font-size: 0.64rem;
+    line-height: 1.45;
+    color: var(--text-muted);
+    margin-bottom: 0.45rem;
+  }
+
+  .cartouche-cue {
+    display: block;
+    font-family: var(--font-mono);
+    font-size: 0.58rem;
+    letter-spacing: 0.1em;
+    color: color-mix(in oklab, var(--accent) 80%, var(--text-muted));
+    border-top: 1px dashed var(--border-subtle);
+    padding-top: 0.35rem;
+    width: 100%;
+  }
+
+  /* Right-Docked Status & Scrubber */
   .nav-strip-right {
     display: none;
     align-items: center;
-    gap: 0.75rem;
+    gap: 0.85rem;
   }
 
-  /* Scriptorium Fascicle Locator & Silk Ribbon Bookmark Progression */
   .fascicle-locator {
     display: inline-flex;
     align-items: center;
@@ -148,19 +388,97 @@ const { pubCount, bookCount, classCount } = Astro.props;
     color: var(--text-primary);
   }
 
+  /* Interactive Silk Ribbon Scrubber */
+  .folio-scrubber-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
+
   .folio-ribbon-meter {
-    width: 68px;
-    height: 4px;
-    border-radius: 1px;
+    width: 76px;
+    height: 5px;
+    border-radius: 2px;
     background: var(--border-subtle);
-    overflow: hidden;
-    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.15);
+    position: relative;
+    cursor: ew-resize;
+    user-select: none;
+    touch-action: none;
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.2);
+    transition: height 0.18s ease;
+  }
+
+  /* 28px comfortable touch/click target */
+  .folio-ribbon-meter::before {
+    content: '';
+    position: absolute;
+    inset: -12px -8px;
+    cursor: ew-resize;
+  }
+
+  .folio-ribbon-meter:hover,
+  .folio-ribbon-meter.is-dragging {
+    height: 7px;
   }
 
   .folio-ribbon-fill {
     height: 100%;
+    border-radius: 2px;
     background: var(--ribbon-silk, oklch(48% 0.17 28));
-    transition: width 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+    pointer-events: none;
+    transition: width 0.08s linear;
+  }
+
+  .folio-ribbon-thumb {
+    position: absolute;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 8px;
+    height: 11px;
+    border-radius: 2px;
+    background: var(--accent);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.45);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.18s ease, transform 0.18s ease;
+  }
+
+  .folio-ribbon-meter:hover .folio-ribbon-thumb,
+  .folio-ribbon-meter.is-dragging .folio-ribbon-thumb,
+  .folio-ribbon-meter:focus-visible .folio-ribbon-thumb {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1.18);
+  }
+
+  .folio-ribbon-meter:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 4px;
+  }
+
+  .folio-scrub-tooltip {
+    position: absolute;
+    bottom: calc(100% + 8px);
+    right: 0;
+    padding: 0.22rem 0.55rem;
+    background: color-mix(in oklab, var(--bg-surface) 96%, var(--paper-vellum, #f4efe6) 4%);
+    border: 1px solid var(--border-subtle);
+    border-radius: 2px;
+    font-family: var(--font-mono);
+    font-size: 0.62rem;
+    letter-spacing: 0.1em;
+    white-space: nowrap;
+    color: var(--text-primary);
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+    pointer-events: none;
+    opacity: 0;
+    transform: translateY(3px);
+    transition: opacity 0.16s ease, transform 0.16s ease;
+    z-index: 100;
+  }
+
+  .folio-scrub-tooltip.is-active {
+    opacity: 1;
+    transform: translateY(0);
   }
 
   @media (min-width: 768px) {
@@ -168,4 +486,303 @@ const { pubCount, bookCount, classCount } = Astro.props;
       display: inline-flex;
     }
   }
+
+  @media (prefers-reduced-motion: reduce) {
+    .nav-strip-expandable,
+    .nav-strip-ink-rule,
+    .fascicle-cartouche,
+    .folio-scrub-tooltip {
+      transition: opacity 0.12s ease !important;
+      transform: none !important;
+    }
+  }
 </style>
+
+<script>
+  // Editorial Cartouche Metadata
+  const CARTOUCHE_DATA = [
+    {
+      kicker: 'FASCICLE I · 4 MANUSCRIPTS',
+      title: 'Publications, Critical Pragmatism & Insurrectionist Ethics',
+      meta: 'Refereed essays on Leonard Harris, Alain Locke & Frantz Fanon (2021–2023)',
+      cue: 'Click tab or press 1 to open Fascicle I'
+    },
+    {
+      kicker: 'FASCICLE II · 3 MONOGRAPHS',
+      title: 'Authored Tomes, Myth, Memory & Technical Objects',
+      meta: 'Philosophical monographs on Bernard Stiegler & Sylvia Wynter (2023–2025)',
+      cue: 'Click tab or press 2 to open Fascicle II'
+    },
+    {
+      kicker: 'FASCICLE III · 4 SEMINARS',
+      title: 'University Syllabi, Continental Ethics & Biopolitics',
+      meta: 'Upper-division seminars on Phenomenology of Time, Deleuze & Foucault',
+      cue: 'Click tab or press 3 to open Fascicle III'
+    }
+  ];
+
+  // 1. Sliding Ink-Rule Synchronization Engine
+  const track = document.getElementById('nav-strip-track');
+  const inkRule = document.getElementById('nav-strip-ink-rule');
+
+  function syncInkRule() {
+    if (!track || !inkRule) return;
+    const activeBtn = track.querySelector<HTMLButtonElement>('.nav-strip-btn[aria-current="page"]');
+    if (!activeBtn) {
+      inkRule.style.setProperty('--ink-opacity', '0');
+      return;
+    }
+    const trackRect = track.getBoundingClientRect();
+    const btnRect = activeBtn.getBoundingClientRect();
+    const left = btnRect.left - trackRect.left;
+    const width = btnRect.width;
+
+    inkRule.style.setProperty('--ink-left', `${left.toFixed(1)}px`);
+    inkRule.style.setProperty('--ink-width', `${width.toFixed(1)}px`);
+    inkRule.style.setProperty('--ink-opacity', '1');
+  }
+
+  // Animate ink-rule smoothly during expanding/collapsing transitions
+  let inkRafId: number | null = null;
+  function startInkRafLoop(durationMs = 420) {
+    if (inkRafId) cancelAnimationFrame(inkRafId);
+    const start = performance.now();
+    const tick = (now: number) => {
+      syncInkRule();
+      if (now - start < durationMs) {
+        inkRafId = requestAnimationFrame(tick);
+      } else {
+        inkRafId = null;
+        syncInkRule();
+      }
+    };
+    inkRafId = requestAnimationFrame(tick);
+  }
+
+  if (track) {
+    const observer = new MutationObserver(() => syncInkRule());
+    observer.observe(track, { attributes: true, subtree: true, attributeFilter: ['aria-current'] });
+
+    const resizeObserver = new ResizeObserver(() => syncInkRule());
+    resizeObserver.observe(track);
+
+    const wrapper = track.closest('.nav-strip-wrapper');
+    if (wrapper) {
+      wrapper.addEventListener('pointerenter', () => startInkRafLoop(420));
+      wrapper.addEventListener('pointerleave', () => startInkRafLoop(420));
+    }
+
+    track.querySelectorAll<HTMLButtonElement>('.nav-strip-btn').forEach((b) => {
+      b.addEventListener('click', () => startInkRafLoop(420));
+    });
+
+    window.addEventListener('resize', syncInkRule, { passive: true });
+    // Initial sync
+    setTimeout(syncInkRule, 50);
+  }
+
+  // 2. Scholarly Hover Cartouche (120ms intent delay)
+  const cartouche = document.getElementById('fascicle-cartouche');
+  if (cartouche && cartouche.parentElement !== document.body) {
+    document.body.appendChild(cartouche);
+  }
+  const cartoucheKicker = document.getElementById('cartouche-kicker');
+  const cartoucheTitle = document.getElementById('cartouche-title');
+  const cartoucheMeta = document.getElementById('cartouche-meta');
+  const cartoucheCue = document.getElementById('cartouche-cue');
+
+  let cartoucheTimer: number | null = null;
+  let isHoveringCartouche = false;
+
+  if (cartouche) {
+    cartouche.addEventListener('mouseenter', () => { isHoveringCartouche = true; });
+    cartouche.addEventListener('mouseleave', () => {
+      isHoveringCartouche = false;
+      if (cartouche) {
+        cartouche.classList.remove('is-active');
+        cartouche.setAttribute('aria-hidden', 'true');
+      }
+    });
+  }
+
+  function showCartouche(btn: HTMLButtonElement) {
+    if (!cartouche || !cartoucheKicker || !cartoucheTitle || !cartoucheMeta || !cartoucheCue) return;
+    const idx = Number(btn.dataset.viewIndex ?? 0);
+    const data = CARTOUCHE_DATA[idx];
+    if (!data) return;
+
+    cartoucheKicker.textContent = data.kicker;
+    cartoucheTitle.textContent = data.title;
+    cartoucheMeta.textContent = data.meta;
+    cartoucheCue.textContent = data.cue;
+
+    const btnRect = btn.getBoundingClientRect();
+    const cartoucheWidth = 340;
+    let x = btnRect.left;
+    if (x + cartoucheWidth > window.innerWidth - 16) {
+      x = Math.max(16, window.innerWidth - cartoucheWidth - 16);
+    }
+    const y = btnRect.bottom + 8;
+
+    cartouche.style.setProperty('--cartouche-x', `${Math.round(x)}px`);
+    cartouche.style.setProperty('--cartouche-y', `${Math.round(y)}px`);
+    cartouche.classList.add('is-active');
+    cartouche.setAttribute('aria-hidden', 'false');
+  }
+
+  function hideCartouche() {
+    if (cartoucheTimer) {
+      window.clearTimeout(cartoucheTimer);
+      cartoucheTimer = null;
+    }
+    window.setTimeout(() => {
+      if (!isHoveringCartouche && cartouche) {
+        cartouche.classList.remove('is-active');
+        cartouche.setAttribute('aria-hidden', 'true');
+      }
+    }, 90);
+  }
+
+  document.querySelectorAll<HTMLButtonElement>('.nav-strip-btn').forEach((btn) => {
+    btn.addEventListener('mouseenter', () => {
+      if (cartoucheTimer) window.clearTimeout(cartoucheTimer);
+      // 120ms intentional hover gate requested by user
+      cartoucheTimer = window.setTimeout(() => showCartouche(btn), 120);
+    });
+
+    btn.addEventListener('mouseleave', hideCartouche);
+    btn.addEventListener('click', () => {
+      isHoveringCartouche = false;
+      if (cartouche) {
+        cartouche.classList.remove('is-active');
+        cartouche.setAttribute('aria-hidden', 'true');
+      }
+    });
+  });
+
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      isHoveringCartouche = false;
+      if (cartouche) {
+        cartouche.classList.remove('is-active');
+        cartouche.setAttribute('aria-hidden', 'true');
+      }
+    }
+  });
+
+  let lastScrollY = window.scrollY;
+  window.addEventListener('scroll', () => {
+    if (Math.abs(window.scrollY - lastScrollY) > 40) {
+      isHoveringCartouche = false;
+      if (cartouche) {
+        cartouche.classList.remove('is-active');
+        cartouche.setAttribute('aria-hidden', 'true');
+      }
+      lastScrollY = window.scrollY;
+    }
+  }, { passive: true });
+
+  // 3. Interactive Silk Ribbon Scrubber (Click & Continuous Drag)
+  const scrubber = document.getElementById('folio-ribbon-meter');
+  const scrubTooltip = document.getElementById('folio-scrub-tooltip');
+  const scrubTooltipText = document.getElementById('folio-scrub-tooltip-text');
+  const thumb = document.getElementById('folio-ribbon-thumb');
+  const flowFill = document.getElementById('nav-scroll-flow-fill');
+
+  let isDraggingScrubber = false;
+
+  function calculateScrubRatio(e: PointerEvent): number {
+    if (!scrubber) return 0;
+    const rect = scrubber.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    return Math.max(0, Math.min(1, x / rect.width));
+  }
+
+  function updateScrubberVisuals(ratio: number) {
+    const pct = ratio * 100;
+    if (flowFill) flowFill.style.width = `${pct.toFixed(1)}%`;
+    if (thumb) thumb.style.left = `${pct.toFixed(1)}%`;
+    if (scrubber) scrubber.setAttribute('aria-valuenow', Math.round(pct).toString());
+
+    if (scrubTooltipText) {
+      let label = 'FASCICLE I';
+      if (ratio >= 0.666) label = 'FASCICLE III · CLASSES';
+      else if (ratio >= 0.333) label = 'FASCICLE II · BOOKS';
+      else label = 'FASCICLE I · PUBLICATIONS';
+      scrubTooltipText.textContent = `${label} (${Math.round(pct)}%)`;
+    }
+  }
+
+  function handleScrubPointer(e: PointerEvent) {
+    const ratio = calculateScrubRatio(e);
+    updateScrubberVisuals(ratio);
+    (window as any).__drcScrubToProgress?.(ratio);
+  }
+
+  if (scrubber) {
+    scrubber.addEventListener('pointerdown', (e: PointerEvent) => {
+      isDraggingScrubber = true;
+      scrubber.classList.add('is-dragging');
+      scrubber.setPointerCapture(e.pointerId);
+      if (scrubTooltip) scrubTooltip.classList.add('is-active');
+      handleScrubPointer(e);
+    });
+
+    scrubber.addEventListener('pointermove', (e: PointerEvent) => {
+      const ratio = calculateScrubRatio(e);
+      if (scrubTooltip) {
+        scrubTooltip.classList.add('is-active');
+        let label = 'FASCICLE I';
+        if (ratio >= 0.666) label = 'III · CLASSES';
+        else if (ratio >= 0.333) label = 'II · BOOKS';
+        else label = 'I · PUBLICATIONS';
+        if (scrubTooltipText) scrubTooltipText.textContent = `${label} (${Math.round(ratio * 100)}%)`;
+      }
+      if (isDraggingScrubber) {
+        handleScrubPointer(e);
+      }
+    });
+
+    scrubber.addEventListener('pointerup', (e: PointerEvent) => {
+      if (isDraggingScrubber) {
+        isDraggingScrubber = false;
+        scrubber.classList.remove('is-dragging');
+        try { scrubber.releasePointerCapture(e.pointerId); } catch {}
+        if (scrubTooltip) scrubTooltip.classList.remove('is-active');
+      }
+    });
+
+    scrubber.addEventListener('pointercancel', (e: PointerEvent) => {
+      if (isDraggingScrubber) {
+        isDraggingScrubber = false;
+        scrubber.classList.remove('is-dragging');
+        try { scrubber.releasePointerCapture(e.pointerId); } catch {}
+        if (scrubTooltip) scrubTooltip.classList.remove('is-active');
+      }
+    });
+
+    scrubber.addEventListener('pointerleave', () => {
+      if (!isDraggingScrubber && scrubTooltip) {
+        scrubTooltip.classList.remove('is-active');
+      }
+    });
+
+    // Keyboard slider controls
+    scrubber.addEventListener('keydown', (e: KeyboardEvent) => {
+      const curVal = Number(scrubber.getAttribute('aria-valuenow') ?? 33);
+      let nextVal = curVal;
+      if (e.key === 'ArrowRight' || e.key === 'ArrowUp') nextVal = Math.min(100, curVal + 5);
+      else if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') nextVal = Math.max(0, curVal - 5);
+      else if (e.key === 'PageUp') nextVal = Math.min(100, curVal + 20);
+      else if (e.key === 'PageDown') nextVal = Math.max(0, curVal - 20);
+      else if (e.key === 'Home') nextVal = 0;
+      else if (e.key === 'End') nextVal = 100;
+      else return;
+
+      e.preventDefault();
+      const ratio = nextVal / 100;
+      updateScrubberVisuals(ratio);
+      (window as any).__drcScrubToProgress?.(ratio);
+    });
+  }
+</script>

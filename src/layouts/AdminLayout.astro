@@ -2,16 +2,20 @@
 export const prerender = false;
 
 import BaseLayout from './BaseLayout.astro';
+import '../styles/admin-buttons.css';
+import MediaCropModal from '../components/admin/MediaCropModal.astro';
+import ContentEditorModal from '../components/admin/ContentEditorModal.astro';
+import ActionConfirmModal from '../components/admin/ActionConfirmModal.astro';
 import { getCsrfToken, getSessionExpiry } from '../lib/admin-auth';
 import { getSystemState, getFacultyProfile } from '../lib/system-state';
 
 interface Props {
   title?: string;
-  activeModule?: 'content' | 'media' | 'constellations' | 'system';
+  activeModule?: 'content' | 'identity' | 'constellations' | 'system';
 }
 
 const {
-  title = 'Observatory Control // The Study',
+  title = 'Faculty Administration · The Study',
   activeModule = 'content',
 } = Astro.props;
 
@@ -22,75 +26,288 @@ const sessionExpiry = getSessionExpiry(Astro.cookies);
 const currentPath = Astro.url.pathname;
 
 const navItems = [
-  { id: 'content', href: '/admin', label: '01 · Content & Classes', desc: 'Manuscripts, monographs, syllabi' },
-  { id: 'media', href: '/admin/media', label: '02 · Media & ID Photo', desc: 'Visiting card, 4:5 cropper' },
-  { id: 'constellations', href: '/admin/constellations', label: '03 · Constellations', desc: 'Uranometria catalog shards' },
-  { id: 'system', href: '/admin/system', label: '04 · System & Protocols', desc: '503 shutter, SIGTERM, purge' },
+  { id: 'content', href: '/admin', code: '01', label: '01 · Content & Syllabi', shortTitle: 'Content & Syllabi', desc: 'Publications, monographs, and syllabi' },
+  { id: 'identity', href: '/admin/identity', code: '02', label: '02 · Faculty Identity', shortTitle: 'Faculty Identity', desc: 'Carte de visite, credentials, and portrait' },
+  { id: 'constellations', href: '/admin/constellations', code: '03', label: '03 · Celestial Atlas', shortTitle: 'Celestial Atlas', desc: 'Uranometria catalog and plates' },
+  { id: 'system', href: '/admin/system', code: '04', label: '04 · System & Maintenance', shortTitle: 'System & Maintenance', desc: 'Backups, offline status, and server operations' },
 ];
+
+const activeItem = navItems.find((item) => {
+  return activeModule === item.id || currentPath === item.href || (item.id === 'content' && (currentPath === '/admin' || currentPath === '/admin/'));
+}) || navItems[0];
 ---
 
 <BaseLayout
-  title={`${title} — DRC Sovereign Archive`}
-  description="High-security administrative observatory control panel for Professor Duncan R. Cordry."
+  title={`${title} — DRC Academic Archive`}
+  description="Administrative management console for Professor Duncan R. Cordry."
+  isAdmin={true}
 >
   <div class="admin-shell" data-csrf={csrfToken} data-expiry={sessionExpiry || ''}>
-    <!-- Top Mission Control Header -->
+    <!-- Sovereign Minimalist Admin Header (Zero Bloat, Dynamic Active Module Anchored) -->
     <header class="admin-header">
       <div class="admin-header-lead">
-        <div class="telemetry-bar">
-          <span class="telemetry-badge">SOVEREIGN ARCHIVE // THE STUDY</span>
-          <span class="telemetry-sep">/</span>
-          <span class="telemetry-epoch">EPOCH J2000.0</span>
-          <span class="telemetry-sep">/</span>
-          <span class={`status-pill ${systemState.offlineMode ? 'status-pill-offline' : 'status-pill-online'}`}>
-            <span class="status-dot"></span>
-            {systemState.offlineMode ? 'OFFLINE (503 ACTIVE)' : 'ONLINE (PUBLIC)'}
-          </span>
+        <!-- Faculty Portrait Cameo Trigger -->
+        <button
+          type="button"
+          id="btn-header-avatar"
+          class="header-avatar-btn"
+          title="Open Faculty Atelier (Portrait & Credentials)"
+          aria-label="Open Faculty Atelier"
+        >
+          <img
+            src={profile.portraitUrl}
+            alt={profile.name}
+            class="header-avatar-img"
+            onerror="this.src='/images/duncan-cordry-portrait.svg';"
+          />
+        </button>
+
+        <!-- Brand Lockup + Dynamic Active Module -->
+        <div class="header-nav-station">
+          <div class="header-identity-lockup">
+            <span class="header-brand-name">{profile.name}</span>
+            <span class="header-brand-tag">The Study</span>
+          </div>
+
+          <span class="header-slash" aria-hidden="true">/</span>
+
+          <!-- Dynamic Active Module Breadcrumb with Smooth Dropdown & Ink Transition -->
+          <details class="header-module-dropdown" id="module-dropdown">
+            <summary class="header-module-badge" title="Click to view all faculty modules (Jump switch)" aria-current="page">
+              <span class="module-code">{activeItem.code}</span>
+              <span class="module-title">{activeItem.shortTitle}</span>
+              <span class="module-active-pip" aria-hidden="true">✦</span>
+              <span class="module-chevron" aria-hidden="true">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="6 9 12 15 18 9"></polyline>
+                </svg>
+              </span>
+            </summary>
+
+            <div class="picker-menu" role="menu" aria-label="Faculty Module Switcher">
+              <div class="picker-header">
+                <span class="picker-kicker">FACULTY MODULES</span>
+              </div>
+              <ul class="picker-list" role="none">
+                {navItems.map((item) => {
+                  const isActive = activeItem.id === item.id;
+                  return (
+                    <li role="none">
+                      <a
+                        href={item.href}
+                        class={`picker-item ${isActive ? 'is-current' : ''}`}
+                        role="menuitem"
+                        data-module-id={item.id}
+                        aria-current={isActive ? 'page' : undefined}
+                      >
+                        <span class="picker-code">{item.code}</span>
+                        <div class="picker-info">
+                          <span class="picker-title">{item.shortTitle}</span>
+                          <span class="picker-desc">{item.desc}</span>
+                        </div>
+                        {isActive && <span class="picker-pip" aria-hidden="true">✦</span>}
+                      </a>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          </details>
         </div>
-        <h1 class="admin-headline">{profile.name} — Observatory Control</h1>
       </div>
 
       <div class="admin-header-actions">
-        <div class="session-indicator" id="session-time-display">
+        <!-- Live Telemetry Status Pill -->
+        <div
+          class={`status-pill ${systemState.offlineMode ? 'status-pill-offline' : 'status-pill-online'}`}
+          title={systemState.offlineMode ? 'Site is in Offline Maintenance Mode' : 'Site is Live to Public'}
+        >
+          <span class="status-dot"></span>
+          <span class="status-label">{systemState.offlineMode ? 'Offline' : 'Online'}</span>
+        </div>
+
+        <!-- Session Remaining Countdown -->
+        <div class="session-pill tabular" id="session-time-display" title="Session duration remaining">
           Session Active
         </div>
-        <a href="/" target="_blank" rel="noopener noreferrer" class="btn-control btn-outline">
-          View Live Folio ↗
+
+        <!-- Display Settings (A11y + Theme Toggles) -->
+        <div class="controls-group" role="group" aria-label="Display Settings">
+          <button
+            type="button"
+            id="btn-admin-a11y"
+            class="btn-icon-control"
+            aria-label="Toggle Admin High-Contrast & Legibility Mode"
+            title="Toggle Admin Accessibility Mode (High Contrast & Enhanced Legibility)"
+            aria-pressed="false"
+          >
+            <svg
+              class="icon-a11y"
+              aria-hidden="true"
+              width="15"
+              height="15"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.8"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="M3.5 19L8 6l4.5 13"></path>
+              <path d="M5 14.5h6"></path>
+              <circle cx="17.5" cy="15" r="3.2"></circle>
+              <path d="M20.7 12v7"></path>
+            </svg>
+          </button>
+
+          <button
+            type="button"
+            id="btn-admin-theme"
+            class="btn-icon-control"
+            aria-label="Toggle Admin Theme (Dark / Light)"
+            title="Toggle Admin Theme (Dark / Light)"
+          >
+            <!-- Sun icon (shown in dark mode) -->
+            <svg
+              class="icon-admin-sun"
+              aria-hidden="true"
+              width="15"
+              height="15"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.8"
+            >
+              <circle cx="12" cy="12" r="4.5"></circle>
+              <path d="M12 2v2.5M12 19.5V22M4.93 4.93l1.77 1.77M17.3 17.3l1.77 1.77M2 12h2.5M19.5 12H22M4.93 19.07l1.77-1.77M17.3 6.7l1.77-1.77"></path>
+            </svg>
+            <!-- Moon icon (shown in light mode) -->
+            <svg
+              class="icon-admin-moon"
+              aria-hidden="true"
+              width="15"
+              height="15"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.8"
+              style="display: none;"
+            >
+              <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+            </svg>
+          </button>
+        </div>
+
+        <!-- Public Folio Link -->
+        <a href="/" target="_blank" rel="noopener noreferrer" class="study-btn study-btn--ledger study-btn--sm btn-folio-link">
+          <span>Public Folio</span>
+          <span class="folio-arrow" aria-hidden="true">↗</span>
         </a>
+
+        <!-- Sign Out Form -->
         <form method="POST" action="/api/admin/auth" class="logout-form">
           <input type="hidden" name="action" value="logout" />
-          <button type="submit" class="btn-control btn-lock">
-            Lock Console
+          <button type="submit" class="study-btn study-btn--hazard study-btn--sm btn-signout" title="Sign out of administrative session">
+            <span>Sign Out</span>
           </button>
         </form>
       </div>
     </header>
 
-    <!-- Modular Navigation Rail -->
-    <nav class="admin-nav" aria-label="Observatory Control Modules">
-      <ul class="admin-nav-list">
-        {navItems.map((item) => {
-          const isActive = activeModule === item.id || currentPath === item.href || (item.id === 'content' && (currentPath === '/admin' || currentPath === '/admin/'));
-          return (
-            <li class="admin-nav-item">
-              <a
-                href={item.href}
-                class={`admin-nav-link ${isActive ? 'is-active' : ''}`}
-                aria-current={isActive ? 'page' : undefined}
-              >
-                <span class="nav-label">{item.label}</span>
-                <span class="nav-desc">{item.desc}</span>
-              </a>
-            </li>
-          );
-        })}
-      </ul>
-    </nav>
+    <!-- Inline Pre-Hydration Sync to prevent sidebar layout flash -->
+    <script is:inline>
+      (function () {
+        try {
+          if (localStorage.getItem('drc-admin-sidebar-pinned') === 'true') {
+            document.documentElement.setAttribute('data-sidebar-pinned', 'true');
+          }
+        } catch (e) {}
+      })();
+    </script>
 
-    <!-- Main Module Slot -->
-    <main class="admin-content-stage">
-      <slot />
-    </main>
+    <!-- Main Workbench Layout: Left Side Tabs + Content Stage -->
+    <div class="admin-workbench-layout" id="admin-workbench">
+      <!-- Grid Column Track (Provides layout spacing) -->
+      <div class="admin-sidebar-track">
+        <!-- Floating / Sticky Sidebar Container -->
+        <aside class="admin-sidebar" id="admin-sidebar" aria-label="Faculty Navigation Rail">
+          <!-- Continuous Golden Trim Line (Glows between numbers even on recession/idle) -->
+          <div class="spine-golden-axis" aria-hidden="true"></div>
+
+          <!-- Sidebar Header: Kicker + Pin Toggle Button -->
+          <div class="sidebar-header">
+            <div class="sidebar-kicker">
+              <span class="fleuron" aria-hidden="true">❧</span>
+              <span class="kicker-title">FACULTY MODULES</span>
+            </div>
+            <button
+              type="button"
+              id="btn-pin-sidebar"
+              class="study-btn study-btn--instrument study-btn--icon-only study-btn--sm sidebar-pin-btn"
+              aria-label="Pin navigation rail open"
+              title="Pin navigation rail open (click to toggle)"
+              aria-pressed="false"
+            >
+              <svg class="icon-pin" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <line x1="12" y1="17" x2="12" y2="22"></line>
+                <path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.89A2 2 0 0 1 15 10.77V5a3 3 0 0 0-6 0v5.77a2 2 0 0 1-1.11 1.79l-1.78.89A2 2 0 0 0 5 15.24Z"></path>
+              </svg>
+            </button>
+          </div>
+
+          <nav class="admin-nav" aria-label="Observatory Control Modules">
+            <ul class="admin-nav-list" role="tablist" aria-orientation="vertical">
+              {navItems.map((item) => {
+                const isActive = activeItem.id === item.id;
+                return (
+                  <li class="admin-nav-item" role="presentation">
+                    <a
+                      href={item.href}
+                      class={`admin-nav-link ${isActive ? 'is-active' : ''}`}
+                      aria-current={isActive ? 'page' : undefined}
+                      data-module-id={item.id}
+                      role="tab"
+                      aria-selected={isActive ? 'true' : 'false'}
+                      data-tooltip={item.label}
+                    >
+                      <div class="nav-node-anchor">
+                        <div class="nav-node">
+                          <span class="nav-code">{item.code}</span>
+                          {isActive && <span class="nav-node-halo" aria-hidden="true"></span>}
+                        </div>
+                      </div>
+                      <div class="nav-text-group">
+                        <span class="nav-label">{item.shortTitle}</span>
+                        <span class="nav-desc">{item.desc}</span>
+                      </div>
+                    </a>
+                  </li>
+                );
+              })}
+            </ul>
+          </nav>
+
+          <!-- Scriptoria Colophon / Seal -->
+          <div class="sidebar-colophon" aria-hidden="true">
+            <span class="colophon-seal">✠</span>
+            <div class="colophon-meta">
+              <span class="colophon-title">The Study Archive</span>
+              <span class="colophon-author">Duncan R. Cordry</span>
+            </div>
+          </div>
+        </aside>
+      </div>
+
+      <!-- Main Module Slot -->
+      <main class="admin-content-stage">
+        <slot />
+      </main>
+    </div>
+
+    <!-- Global Persistent Modals -->
+    <MediaCropModal />
+    <ContentEditorModal />
+    <ActionConfirmModal />
 
     <!-- Native Top-Layer Toast Notification (popover="manual") -->
     <div id="admin-toast" popover="manual" class="admin-toast" role="status" aria-live="polite">
@@ -141,6 +358,127 @@ const navItems = [
       return res.json();
     };
 
+    // Header Avatar Click Handler: Navigates to /admin/identity or launches portrait cropper
+    document.getElementById('btn-header-avatar')?.addEventListener('click', () => {
+      if (window.location.pathname.startsWith('/admin/identity')) {
+        (window as any).openMediaCropper?.({
+          aspect: 'portrait',
+          targetEntity: { type: 'portrait' },
+          title: 'Faculty Portrait Adjuster',
+          applyLabel: 'Apply Portrait Asset ✓',
+        });
+      } else {
+        window.location.href = '/admin/identity';
+      }
+    });
+
+    // Auto-open portrait cropper if redirected with query ?cropPortrait=true
+    if (new URLSearchParams(window.location.search).get('cropPortrait') === 'true') {
+      setTimeout(() => {
+        (window as any).openMediaCropper?.({
+          aspect: 'portrait',
+          targetEntity: { type: 'portrait' },
+          title: 'Faculty Portrait Adjuster',
+          applyLabel: 'Apply Portrait Asset ✓',
+        });
+      }, 150);
+      const cleanUrl = new URL(window.location.href);
+      cleanUrl.searchParams.delete('cropPortrait');
+      window.history.replaceState({}, '', cleanUrl.toString());
+    }
+
+    // Global Reactive Sync for Media Updates
+    window.addEventListener('drc:media-updated', (e: any) => {
+      const detail = e.detail;
+      if (detail?.imageUrl) {
+        document.querySelectorAll<HTMLImageElement>('img[src*="duncan-cordry-portrait"]').forEach((img) => {
+          img.src = `${detail.imageUrl}?t=${Date.now()}`;
+        });
+      }
+    });
+
+    // Admin Sovereign Theme & Accessibility Toggles
+    const a11yBtn = document.getElementById('btn-admin-a11y') as HTMLButtonElement | null;
+    const themeBtn = document.getElementById('btn-admin-theme') as HTMLButtonElement | null;
+    const sunIcon = themeBtn?.querySelector('.icon-admin-sun') as HTMLElement | null;
+    const moonIcon = themeBtn?.querySelector('.icon-admin-moon') as HTMLElement | null;
+    const metaColorScheme = document.querySelector('meta[name="color-scheme"]') as HTMLMetaElement | null;
+
+    function syncAdminToggles() {
+      const isA11y = document.documentElement.getAttribute('data-admin-a11y-mode') === 'true';
+      if (a11yBtn) {
+        a11yBtn.setAttribute('aria-pressed', String(isA11y));
+        a11yBtn.classList.toggle('is-active', isA11y);
+      }
+
+      const activeTheme = document.documentElement.getAttribute('data-theme') || 'dark';
+      if (sunIcon && moonIcon) {
+        if (activeTheme === 'dark') {
+          sunIcon.style.display = 'block';
+          moonIcon.style.display = 'none';
+        } else {
+          sunIcon.style.display = 'none';
+          moonIcon.style.display = 'block';
+        }
+      }
+    }
+    syncAdminToggles();
+
+    a11yBtn?.addEventListener('click', () => {
+      const current = document.documentElement.getAttribute('data-admin-a11y-mode') === 'true';
+      const target = !current;
+      if (target) {
+        document.documentElement.setAttribute('data-admin-a11y-mode', 'true');
+        try { localStorage.setItem('drc-admin-a11y-mode', 'true'); } catch {}
+        (window as any).notify?.('Admin Accessibility Mode: Enhanced Contrast active', 'info');
+      } else {
+        document.documentElement.removeAttribute('data-admin-a11y-mode');
+        try { localStorage.removeItem('drc-admin-a11y-mode'); } catch {}
+        (window as any).notify?.('Admin Accessibility Mode disabled', 'info');
+      }
+      syncAdminToggles();
+    });
+
+    themeBtn?.addEventListener('click', () => {
+      const currentTheme = document.documentElement.getAttribute('data-theme') || 'dark';
+      const targetTheme = currentTheme === 'dark' ? 'light' : 'dark';
+
+      document.documentElement.setAttribute('data-theme', targetTheme);
+      if (metaColorScheme) metaColorScheme.content = targetTheme;
+      try { localStorage.setItem('drc-admin-theme', targetTheme); } catch {}
+
+      (window as any).notify?.(`Admin Theme switched to ${targetTheme === 'dark' ? 'Observatory Dark' : 'Daylight Light'}`, 'info');
+      syncAdminToggles();
+    });
+
+    // Sidebar Pin / Recede Toggle Handler
+    const pinBtn = document.getElementById('btn-pin-sidebar') as HTMLButtonElement | null;
+    function syncPinBtn() {
+      const isPinned = document.documentElement.getAttribute('data-sidebar-pinned') === 'true';
+      if (pinBtn) {
+        pinBtn.setAttribute('aria-pressed', String(isPinned));
+        pinBtn.classList.toggle('is-pinned', isPinned);
+        pinBtn.title = isPinned ? 'Unpin navigation rail (recede into edge spine)' : 'Pin navigation rail open';
+      }
+    }
+    syncPinBtn();
+
+    pinBtn?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const current = document.documentElement.getAttribute('data-sidebar-pinned') === 'true';
+      const target = !current;
+      if (target) {
+        document.documentElement.setAttribute('data-sidebar-pinned', 'true');
+        try { localStorage.setItem('drc-admin-sidebar-pinned', 'true'); } catch {}
+        (window as any).notify?.('Navigation rail pinned open', 'info');
+      } else {
+        document.documentElement.removeAttribute('data-sidebar-pinned');
+        try { localStorage.setItem('drc-admin-sidebar-pinned', 'false'); } catch {}
+        (window as any).notify?.('Navigation rail receded into edge spine (hover to peek)', 'info');
+      }
+      syncPinBtn();
+    });
+
     // Session Expiry Telemetry
     const expiryTimestamp = Number(shell?.dataset.expiry || 0);
     const sessionDisplay = document.getElementById('session-time-display');
@@ -156,81 +494,435 @@ const navItems = [
         const hours = Math.floor(remainingMs / (1000 * 60 * 60));
         const minutes = Math.floor((remainingMs % (1000 * 60 * 60)) / (1000 * 60));
         if (sessionDisplay) {
-          sessionDisplay.textContent = `Session: ${hours}h ${minutes}m left`;
+          sessionDisplay.textContent = `${hours}h ${minutes}m left`;
         }
       }
       updateSessionTimer();
       setInterval(updateSessionTimer, 60000);
     }
+
+    // Breadcrumb Module Dropdown dismiss on outside click / escape
+    const moduleDropdown = document.getElementById('module-dropdown') as HTMLDetailsElement | null;
+    if (moduleDropdown) {
+      document.addEventListener('click', (e) => {
+        if (!moduleDropdown.contains(e.target as Node)) {
+          moduleDropdown.removeAttribute('open');
+        }
+      });
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && moduleDropdown.hasAttribute('open')) {
+          moduleDropdown.removeAttribute('open');
+        }
+      });
+    }
   </script>
 </BaseLayout>
 
 <style>
+  /* Native Cross-Document View Transitions (Smooth Page Morphing) */
+  @view-transition {
+    navigation: auto;
+  }
+
   .admin-shell {
-    max-width: 1360px;
+    max-width: 1480px;
     margin: 0 auto;
-    padding: 2rem 1.5rem 6rem;
+    padding: 0 1.5rem 6rem;
     color: var(--text-primary);
   }
 
-  /* Mission Control Header */
+  /* ==========================================================================
+     Sovereign Mission Control Header (Layered Depth & Optical Precision)
+     ========================================================================== */
   .admin-header {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    /* Pure Midnight Indigo Obsidian Glass — Zero Reddish Tint/Gradient */
+    background: color-mix(in srgb, var(--bg-canvas) 88%, transparent);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
     display: flex;
     justify-content: space-between;
-    align-items: flex-end;
-    flex-wrap: wrap;
+    align-items: center;
     gap: 1.25rem;
-    padding-bottom: 1.5rem;
+    padding: 0.85rem 0.5rem;
+    margin-bottom: 1.25rem;
     border-bottom: 1px solid var(--border-hairline);
+    box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.45);
+    transition: border-color 0.25s ease, background 0.25s ease;
   }
 
+  /* Left Lead: Cameo Avatar + Identity + Active Module */
   .admin-header-lead {
     display: flex;
-    flex-direction: column;
-    gap: 0.4rem;
+    align-items: center;
+    gap: 0.85rem;
+    min-width: 0;
   }
 
-  .telemetry-bar {
+  /* Faculty Cameo: Chamfered Jewelry Bezel Frame */
+  .header-avatar-btn {
+    width: 34px;
+    height: 42px;
+    border-radius: 5px;
+    overflow: hidden;
+    padding: 0;
+    border: 1px solid color-mix(in srgb, var(--accent-gold) 40%, var(--border-hairline));
+    background: var(--bg-surface);
+    cursor: pointer;
+    flex-shrink: 0;
+    position: relative;
+    box-shadow:
+      inset 0 1px 1px rgba(255, 255, 255, 0.12),
+      0 2px 6px -1px rgba(0, 0, 0, 0.35);
+    transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1),
+                border-color 0.22s ease,
+                box-shadow 0.22s ease;
+  }
+
+  .header-avatar-btn:hover {
+    border-color: var(--accent-gold);
+    transform: translateY(-1px) scale(1.04);
+    box-shadow:
+      inset 0 1px 2px rgba(255, 255, 255, 0.25),
+      0 0 0 2px color-mix(in srgb, var(--accent-gold) 35%, transparent),
+      0 6px 16px -2px rgba(0, 0, 0, 0.5);
+  }
+
+  .header-avatar-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+
+  .header-nav-station {
     display: flex;
     align-items: center;
-    flex-wrap: wrap;
-    gap: 0.65rem;
-    font-family: var(--font-mono);
-    font-size: var(--step--1);
-    letter-spacing: 0.12em;
+    gap: 0.75rem;
+    min-width: 0;
+  }
+
+  .header-identity-lockup {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.15;
+    view-transition-name: admin-identity;
+  }
+
+  .header-brand-name {
+    font-family: var(--font-display, serif);
+    font-size: 1.05rem;
+    font-weight: 500;
+    color: var(--text-primary);
+    letter-spacing: -0.01em;
+    white-space: nowrap;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+  }
+
+  .header-brand-tag {
+    font-family: var(--font-display);
+    font-variant-caps: all-small-caps;
+    font-size: 0.72rem;
+    letter-spacing: 0.1em;
     color: var(--text-tertiary);
   }
 
-  .telemetry-badge {
-    color: var(--accent);
+  .header-slash {
+    color: var(--border-hairline);
+    font-size: 1.15rem;
+    font-weight: 300;
+    user-select: none;
+    opacity: 0.6;
+  }
+
+  /* ==========================================================================
+     Breadcrumb Module Dropdown (Midnight Obsidian & Gold Wash - Zero Red)
+     ========================================================================== */
+  .header-module-dropdown {
+    position: relative;
+    display: inline-block;
+  }
+
+  .header-module-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.28rem 0.72rem;
+    border-radius: 4px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-hairline);
+    font-family: var(--font-display);
+    font-variant-caps: all-small-caps;
+    font-size: 0.88rem;
+    letter-spacing: 0.08em;
+    font-weight: 600;
+    color: var(--text-primary);
+    white-space: nowrap;
+    cursor: pointer;
+    user-select: none;
+    list-style: none;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.08),
+      0 1px 3px rgba(0, 0, 0, 0.25);
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    /* Physical Ink Soak-in transition on page navigation */
+    animation: breadcrumb-ink-soak 0.52s cubic-bezier(0.16, 1, 0.3, 1) both;
+    view-transition-name: admin-active-module;
+  }
+
+  .header-module-badge::-webkit-details-marker {
+    display: none;
+  }
+
+  .header-module-badge:hover {
+    border-color: var(--accent);
+    background: var(--bg-elevated);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.12),
+      0 3px 8px rgba(0, 0, 0, 0.3);
+    transform: translateY(-1px);
+  }
+
+  .header-module-dropdown[open] .header-module-badge {
+    border-color: var(--accent);
+    background: var(--bg-elevated);
+    box-shadow:
+      0 0 0 2px color-mix(in srgb, var(--accent) 30%, transparent),
+      inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  }
+
+  .module-code {
+    color: var(--accent-gold);
+    font-variant-numeric: tabular-nums;
+    font-weight: 700;
+  }
+
+  .module-active-pip {
+    color: var(--accent-gold);
+    font-size: 0.68rem;
+    line-height: 1;
+    animation: pip-shimmer 3.2s ease-in-out infinite;
+  }
+
+  .module-chevron {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-secondary);
+    transition: transform 0.24s cubic-bezier(0.16, 1, 0.3, 1), color 0.2s ease;
+  }
+
+  .header-module-dropdown[open] .module-chevron {
+    transform: rotate(180deg);
+    color: var(--accent-gold);
+  }
+
+  /* Ink Soak-in Animation for Breadcrumb Mount */
+  @keyframes breadcrumb-ink-soak {
+    0% {
+      opacity: 0;
+      transform: translateY(-3px) scale(0.97);
+      filter: blur(3px);
+    }
+    50% {
+      opacity: 0.9;
+      filter: blur(0.5px);
+    }
+    100% {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+      filter: blur(0);
+    }
+  }
+
+  /* Shimmer Pulse for Astrolabe Pip */
+  @keyframes pip-shimmer {
+    0%, 100% {
+      opacity: 0.75;
+      transform: scale(0.92);
+      filter: drop-shadow(0 0 0 transparent);
+    }
+    50% {
+      opacity: 1;
+      transform: scale(1.18);
+      filter: drop-shadow(0 0 5px color-mix(in srgb, var(--accent-gold) 60%, transparent));
+    }
+  }
+
+  /* Dropdown Picker Flyout Menu */
+  .picker-menu {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 0;
+    min-width: 275px;
+    padding: 0.45rem;
+    border-radius: 6px;
+    background: var(--bg-surface);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid var(--border-hairline);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.08),
+      0 16px 38px -6px rgba(0, 0, 0, 0.6),
+      0 2px 8px rgba(0, 0, 0, 0.3);
+    z-index: 60;
+    animation: dropdown-glide 0.24s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  @keyframes dropdown-glide {
+    0% {
+      opacity: 0;
+      transform: translateY(-6px) scale(0.97);
+      filter: blur(2px);
+    }
+    100% {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+      filter: blur(0);
+    }
+  }
+
+  .picker-header {
+    padding: 0.35rem 0.55rem 0.45rem;
+    border-bottom: 1px solid var(--border-hairline);
+    margin-bottom: 0.35rem;
+  }
+
+  .picker-kicker {
+    font-family: var(--font-display);
+    font-variant-caps: all-small-caps;
+    font-size: 0.7rem;
+    letter-spacing: 0.12em;
+    color: var(--accent-gold);
     font-weight: 600;
   }
 
-  .telemetry-sep {
-    opacity: 0.4;
+  .picker-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
   }
 
+  .picker-item {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    padding: 0.45rem 0.65rem;
+    border-radius: 4px;
+    text-decoration: none;
+    color: var(--text-primary);
+    transition: all 0.16s ease;
+    cursor: pointer;
+  }
+
+  .picker-item:hover {
+    background: var(--bg-elevated);
+    color: var(--text-primary);
+    transform: translateX(2px);
+  }
+
+  .picker-item.is-current {
+    background: var(--bg-elevated);
+    color: var(--text-primary);
+    font-weight: 500;
+  }
+
+  .picker-code {
+    font-family: var(--font-display);
+    font-variant-caps: all-small-caps;
+    font-weight: 700;
+    font-size: 0.8rem;
+    color: var(--accent-gold);
+    width: 1.5rem;
+    flex-shrink: 0;
+  }
+
+  .picker-info {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-width: 0;
+  }
+
+  .picker-title {
+    font-family: var(--font-display, serif);
+    font-size: 0.88rem;
+    line-height: 1.2;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+
+  .picker-modal-tag {
+    font-family: var(--font-mono);
+    font-size: 0.58rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 0.08rem 0.32rem;
+    border-radius: 3px;
+    background: color-mix(in srgb, var(--accent-gold) 15%, var(--bg-surface));
+    color: var(--accent-gold);
+    border: 1px solid color-mix(in srgb, var(--accent-gold) 35%, transparent);
+    font-weight: 600;
+  }
+
+  .picker-desc {
+    font-family: var(--font-serif);
+    font-size: 0.72rem;
+    color: var(--text-tertiary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .picker-pip {
+    color: var(--accent-gold);
+    font-size: 0.7rem;
+  }
+
+  /* ==========================================================================
+     Right Actions & Controls
+     ========================================================================== */
+  .admin-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    flex-shrink: 0;
+  }
+
+  /* Status Pill: Telemetry LED lens */
   .status-pill {
     display: inline-flex;
     align-items: center;
-    gap: 0.4rem;
-    padding: 0.2rem 0.55rem;
+    gap: 0.45rem;
+    padding: 0.26rem 0.65rem;
     border-radius: 9999px;
+    font-family: var(--font-mono, monospace);
     font-size: 0.72rem;
-    font-weight: 600;
-    letter-spacing: 0.08em;
+    font-weight: 500;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    box-shadow:
+      inset 0 1px 1px rgba(255, 255, 255, 0.12),
+      0 1px 3px rgba(0, 0, 0, 0.1);
+    transition: all 0.2s ease;
   }
 
   .status-pill-online {
-    background: color-mix(in oklch, oklch(75% 0.18 145) 15%, transparent);
-    color: oklch(78% 0.16 145);
+    background: color-mix(in oklch, oklch(75% 0.18 145) 12%, var(--bg-surface));
+    color: oklch(80% 0.16 145);
     border: 1px solid color-mix(in oklch, oklch(75% 0.18 145) 30%, transparent);
   }
 
   .status-pill-offline {
-    background: color-mix(in oklch, oklch(65% 0.22 30) 18%, transparent);
-    color: oklch(72% 0.2 30);
-    border: 1px solid color-mix(in oklch, oklch(65% 0.22 30) 40%, transparent);
+    background: color-mix(in oklch, oklch(65% 0.22 30) 14%, var(--bg-surface));
+    color: oklch(75% 0.2 30);
+    border: 1px solid color-mix(in oklch, oklch(65% 0.22 30) 35%, transparent);
   }
 
   .status-dot {
@@ -238,83 +930,389 @@ const navItems = [
     height: 6px;
     border-radius: 50%;
     background: currentColor;
-    animation: pulse-dot 2.4s infinite ease-in-out;
+    box-shadow: 0 0 0 2px color-mix(in oklch, currentColor 20%, transparent), 0 0 6px currentColor;
+    animation: status-pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
   }
 
-  @keyframes pulse-dot {
-    0%, 100% { opacity: 1; transform: scale(1); }
-    50% { opacity: 0.4; transform: scale(0.85); }
+  @keyframes status-pulse {
+    0%, 100% {
+      opacity: 1;
+      box-shadow: 0 0 0 2px color-mix(in oklch, currentColor 25%, transparent), 0 0 6px currentColor;
+    }
+    50% {
+      opacity: 0.55;
+      box-shadow: 0 0 0 1px color-mix(in oklch, currentColor 10%, transparent), 0 0 2px currentColor;
+    }
   }
 
-  .admin-headline {
-    margin: 0;
-    font-size: var(--step-2);
-    font-family: var(--font-display, serif);
-    font-weight: 500;
-    letter-spacing: -0.01em;
-  }
-
-  .admin-header-actions {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    flex-wrap: wrap;
-  }
-
-  .session-indicator {
-    font-family: var(--font-mono);
-    font-size: 0.78rem;
+  /* Session Pill: Chronometer Inset Dial */
+  .session-pill {
+    font-family: var(--font-mono, monospace);
+    font-variant-numeric: tabular-nums;
+    font-size: 0.74rem;
     color: var(--text-secondary);
-    padding: 0.35rem 0.65rem;
-    background: var(--bg-surface);
+    padding: 0.28rem 0.62rem;
+    background: color-mix(in srgb, var(--bg-surface) 65%, var(--bg-canvas));
     border: 1px solid var(--border-hairline);
-    border-radius: 0.375rem;
+    border-radius: 4px;
+    white-space: nowrap;
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.18), 0 1px 0 rgba(255, 255, 255, 0.05);
   }
 
-  .btn-control {
+  /* Display Controls: Sunken Tray Chassis */
+  .controls-group {
     display: inline-flex;
     align-items: center;
-    padding: 0.45rem 0.85rem;
-    border-radius: 0.375rem;
-    font-family: var(--font-mono);
-    font-size: 0.8rem;
-    letter-spacing: 0.05em;
-    cursor: pointer;
-    text-decoration: none;
-    transition: all 0.18s ease;
-  }
-
-  .btn-outline {
-    background: transparent;
-    color: var(--text-primary);
     border: 1px solid var(--border-hairline);
+    border-radius: 4px;
+    background: color-mix(in srgb, var(--bg-surface) 80%, black);
+    overflow: hidden;
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.22), 0 1px 0 rgba(255, 255, 255, 0.05);
   }
 
-  .btn-outline:hover {
+  .btn-icon-control {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    border: none;
+    border-right: 1px solid var(--border-hairline);
+    background: transparent;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: color 0.15s ease, background 0.15s ease, transform 0.1s ease;
+  }
+
+  .btn-icon-control:last-child {
+    border-right: none;
+  }
+
+  .btn-icon-control:hover {
+    color: var(--text-primary);
+    background: color-mix(in srgb, var(--accent) 15%, var(--bg-surface));
+  }
+
+  .btn-icon-control:active {
+    transform: scale(0.94);
+  }
+
+  .btn-icon-control.is-active {
+    color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 22%, var(--bg-surface));
+  }
+
+  /* Public Folio Link: Tactile Elevated Key */
+  .btn-folio-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.35rem 0.72rem;
+    border-radius: 4px;
+    border: 1px solid var(--border-hairline);
     background: var(--bg-surface);
+    color: var(--text-secondary);
+    font-family: var(--font-serif);
+    font-size: 0.82rem;
+    text-decoration: none;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 1px 2px rgba(0, 0, 0, 0.12);
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    white-space: nowrap;
+  }
+
+  .btn-folio-link:hover {
+    color: var(--text-primary);
     border-color: var(--accent);
+    background: var(--bg-elevated);
+    transform: translateY(-1px);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.15), 0 3px 8px -2px rgba(0, 0, 0, 0.22);
   }
 
-  .btn-lock {
-    background: color-mix(in oklch, oklch(62% 0.2 25) 12%, transparent);
-    color: oklch(76% 0.16 25);
-    border: 1px solid color-mix(in oklch, oklch(62% 0.2 25) 28%, transparent);
+  .btn-folio-link:active {
+    transform: translateY(1px);
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.2);
   }
 
-  .btn-lock:hover {
-    background: color-mix(in oklch, oklch(62% 0.2 25) 22%, transparent);
-    border-color: oklch(76% 0.16 25);
+  .folio-arrow {
+    font-size: 0.85rem;
+    opacity: 0.6;
+    transition: transform 0.18s ease;
   }
 
-  /* Modular Navigation Rail */
+  .btn-folio-link:hover .folio-arrow {
+    transform: translate(2px, -2px);
+    opacity: 1;
+  }
+
+  /* Sign Out Button */
+  .logout-form {
+    margin: 0;
+    display: inline-flex;
+  }
+
+  .btn-signout {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.35rem 0.72rem;
+    border-radius: 4px;
+    font-family: var(--font-serif);
+    font-size: 0.82rem;
+    cursor: pointer;
+    background: var(--bg-surface);
+    color: var(--text-secondary);
+    border: 1px solid var(--border-hairline);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 1px 2px rgba(0, 0, 0, 0.12);
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    white-space: nowrap;
+  }
+
+  .btn-signout:hover {
+    background: var(--bg-elevated);
+    color: #e57373;
+    border-color: color-mix(in srgb, #e57373 35%, transparent);
+    transform: translateY(-1px);
+    box-shadow: 0 3px 8px -2px rgba(0, 0, 0, 0.25);
+  }
+
+  .btn-signout:active {
+    transform: translateY(1px);
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.2);
+  }
+
+  @media (max-width: 900px) {
+    .admin-header {
+      flex-wrap: wrap;
+      gap: 0.75rem;
+    }
+    .header-brand-tag {
+      display: none;
+    }
+  }
+
+  @media (max-width: 600px) {
+    .header-slash, .header-brand-name {
+      display: none;
+    }
+    .session-pill {
+      display: none;
+    }
+  }
+
+  /* Main Workbench Layout: Receding Side Tabs + Content Stage */
+  .admin-workbench-layout {
+    display: grid;
+    grid-template-columns: 56px minmax(0, 1fr);
+    gap: 2rem;
+    align-items: start;
+    margin-top: 1rem;
+    transition: grid-template-columns 0.3s cubic-bezier(0.2, 0, 0, 1), gap 0.3s cubic-bezier(0.2, 0, 0, 1);
+  }
+
+  /* When Pinned: expands the grid column track */
+  :root[data-sidebar-pinned="true"] .admin-workbench-layout {
+    grid-template-columns: 280px minmax(0, 1fr);
+    gap: 2.25rem;
+  }
+
+  .admin-sidebar-track {
+    width: 56px;
+    min-width: 56px;
+    position: relative;
+    transition: width 0.3s cubic-bezier(0.2, 0, 0, 1);
+  }
+
+  :root[data-sidebar-pinned="true"] .admin-sidebar-track {
+    width: 280px;
+    min-width: 280px;
+  }
+
+  /* Floating / Sticky Sidebar Container (Fades into background when idle) */
+  .admin-sidebar {
+    position: sticky;
+    top: 4.85rem;
+    width: 56px;
+    padding: 0.75rem 0;
+    border-radius: 8px;
+    border: 1px solid transparent;
+    background: transparent;
+    box-shadow: none;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    transition: width 0.32s cubic-bezier(0.16, 1, 0.3, 1),
+                background 0.25s ease,
+                border-color 0.25s ease,
+                box-shadow 0.25s ease;
+    z-index: 40;
+    box-sizing: border-box;
+    overflow: hidden;
+  }
+
+  /* Hover to Peek: Solidifies and expands into elevated lapis panel */
+  :root:not([data-sidebar-pinned="true"]) .admin-sidebar:hover {
+    width: 280px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    box-shadow: 0 16px 44px -8px rgba(0, 0, 0, 0.7);
+    overflow: hidden;
+  }
+
+  /* Pinned State */
+  :root[data-sidebar-pinned="true"] .admin-sidebar {
+    width: 280px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-hairline);
+    box-shadow: none;
+    overflow: hidden;
+  }
+
+  /* Continuous Golden Trim Line (Always glowing between numbers on recession/idle) */
+  .spine-golden-axis {
+    position: absolute;
+    top: calc(0.75rem + 36px + 6px);
+    bottom: calc(0.75rem + 40px + 6px);
+    left: 28px;
+    width: 1.5px;
+    transform: translateX(-50%);
+    background: linear-gradient(
+      180deg,
+      transparent 0%,
+      var(--accent) 12%,
+      var(--accent) 88%,
+      transparent 100%
+    );
+    box-shadow: 0 0 4px color-mix(in srgb, var(--accent) 50%, transparent);
+    pointer-events: none;
+    z-index: 1;
+    animation: golden-pulse 4s ease-in-out infinite;
+  }
+
+  @keyframes golden-pulse {
+    0%, 100% {
+      box-shadow: 0 0 3px color-mix(in srgb, var(--accent) 35%, transparent);
+      opacity: 0.75;
+    }
+    50% {
+      box-shadow: 0 0 6px color-mix(in srgb, var(--accent) 55%, transparent);
+      opacity: 0.95;
+    }
+  }
+
+  /* Header of Rail (Height strictly locked at 36px to prevent ducking/shifting) */
+  .sidebar-header {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 36px;
+    min-height: 36px;
+    max-height: 36px;
+    width: 56px;
+    position: relative;
+    z-index: 2;
+    box-sizing: border-box;
+    border-bottom: 1px solid transparent;
+    padding: 0 0.65rem;
+    transition: border-color 0.2s ease;
+  }
+
+  :root[data-sidebar-pinned="true"] .sidebar-header,
+  .admin-sidebar:hover .sidebar-header {
+    width: 100%;
+    justify-content: space-between;
+    border-bottom-color: var(--border-hairline);
+  }
+
+  .sidebar-kicker {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    font-family: var(--font-display);
+    font-variant-caps: all-small-caps;
+    font-size: 0.75rem;
+    letter-spacing: 0.12em;
+    font-weight: 600;
+    color: var(--accent);
+    opacity: 0;
+    pointer-events: none;
+    white-space: nowrap;
+    overflow: hidden;
+    transition: opacity 0.08s ease 0s;
+  }
+
+  :root[data-sidebar-pinned="true"] .sidebar-kicker,
+  .admin-sidebar:hover .sidebar-kicker {
+    opacity: 1;
+    pointer-events: auto;
+    transition: opacity 0.26s cubic-bezier(0.16, 1, 0.3, 1) 0.12s;
+  }
+
+  .sidebar-kicker .fleuron {
+    font-size: 0.9rem;
+    color: var(--accent);
+  }
+
+  /* Pin Toggle Button */
+  .sidebar-pin-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    padding: 0;
+    border-radius: 50%;
+    border: 1px solid color-mix(in oklch, var(--accent) 35%, transparent);
+    background: var(--bg-canvas);
+    color: var(--accent);
+    box-shadow: 0 0 8px color-mix(in oklch, var(--accent) 30%, transparent);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+    margin: 0 auto;
+    z-index: 3;
+  }
+
+  :root[data-sidebar-pinned="true"] .sidebar-pin-btn,
+  .admin-sidebar:hover .sidebar-pin-btn {
+    margin: 0;
+  }
+
+  .sidebar-pin-btn:hover {
+    color: #ffffff;
+    border-color: var(--accent);
+    box-shadow: 0 0 12px var(--accent);
+    background: color-mix(in oklch, var(--accent) 25%, var(--bg-surface));
+  }
+
+  .sidebar-pin-btn.is-pinned,
+  :root[data-sidebar-pinned="true"] .sidebar-pin-btn {
+    color: #ffffff;
+    background: var(--accent);
+    border-color: var(--accent);
+    box-shadow: 0 0 10px var(--accent);
+  }
+
+  :root[data-sidebar-pinned="true"] .sidebar-pin-btn .icon-pin {
+    fill: currentColor;
+    stroke: var(--bg-canvas);
+    transform: rotate(0deg);
+  }
+
+  :root:not([data-sidebar-pinned="true"]) .sidebar-pin-btn .icon-pin {
+    transform: rotate(-35deg);
+  }
+
+  /* Nav List & Centered Nodes */
   .admin-nav {
-    margin: 1.5rem 0 2.5rem;
+    margin: 0;
+    position: relative;
+    z-index: 2;
   }
 
   .admin-nav-list {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-    gap: 0.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
     list-style: none;
     padding: 0;
     margin: 0;
@@ -322,47 +1320,277 @@ const navItems = [
 
   .admin-nav-item {
     display: flex;
+    width: 100%;
+    height: 56px;
+    min-height: 56px;
+    max-height: 56px;
+    position: relative;
+    justify-content: flex-start;
   }
 
   .admin-nav-link {
     width: 100%;
+    height: 56px;
+    min-height: 56px;
+    max-height: 56px;
     display: flex;
-    flex-direction: column;
-    gap: 0.25rem;
-    padding: 0.85rem 1rem;
-    border-radius: 0.5rem;
-    border: 1px solid var(--border-hairline);
-    background: var(--bg-surface);
+    align-items: center;
+    padding: 0;
+    margin: 0;
+    border-radius: 4px;
+    border: none;
+    background: transparent;
     text-decoration: none;
-    transition: all 0.18s ease;
+    transition: background 0.18s ease;
+    position: relative;
+    overflow: hidden;
+    box-sizing: border-box;
+  }
+
+  :root[data-sidebar-pinned="true"] .admin-nav-link,
+  .admin-sidebar:hover .admin-nav-link {
+    border-radius: 4px;
+    overflow: visible;
   }
 
   .admin-nav-link:hover {
-    border-color: var(--accent);
-    transform: translateY(-1px);
+    background: color-mix(in oklch, var(--accent) 8%, transparent);
   }
 
   .admin-nav-link.is-active {
-    background: var(--bg-elevated);
+    background: color-mix(in oklch, var(--bg-elevated) 45%, transparent);
+  }
+
+  /* Node Anchor: Exactly 56px wide, centered on x = 28px */
+  .nav-node-anchor {
+    width: 56px;
+    min-width: 56px;
+    height: 56px;
+    min-height: 56px;
+    max-height: 56px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    z-index: 2;
+    flex-shrink: 0;
+  }
+
+  /* Number Node: Circular celestial cabochon with glowing numbers */
+  .nav-node {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    background: var(--bg-canvas);
+    border: 1.5px solid color-mix(in oklch, var(--accent) 45%, var(--border-hairline));
+    box-shadow: 0 0 8px color-mix(in oklch, var(--accent) 35%, transparent);
+    transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .nav-code {
+    font-family: var(--font-display);
+    font-size: 0.88rem;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    color: var(--accent);
+    text-shadow: 0 0 8px var(--accent);
+    line-height: 1;
+    transition: color 0.18s ease, text-shadow 0.18s ease;
+  }
+
+  .admin-nav-link:hover .nav-node {
+    transform: scale(1.08);
     border-color: var(--accent);
-    box-shadow: 0 0 0 1px var(--accent), 0 4px 12px rgba(0, 0, 0, 0.15);
+    box-shadow: 0 0 14px var(--accent);
+  }
+
+  .admin-nav-link.is-active .nav-node {
+    border-color: var(--accent);
+    background: var(--bg-surface);
+    box-shadow: 0 0 10px color-mix(in srgb, var(--accent) 40%, transparent), inset 0 0 6px color-mix(in srgb, var(--accent) 25%, transparent);
+  }
+
+  .admin-nav-link.is-active .nav-code {
+    color: var(--accent);
+    text-shadow: 0 0 10px color-mix(in srgb, var(--accent) 70%, transparent);
+  }
+
+  /* Active Node Halo Ring */
+  .nav-node-halo {
+    position: absolute;
+    inset: -4px;
+    border-radius: 50%;
+    border: 1px dashed var(--accent);
+    box-shadow: 0 0 8px var(--accent);
+    animation: halo-rotate 16s linear infinite;
+    pointer-events: none;
+    opacity: 0.8;
+  }
+
+  @keyframes halo-rotate {
+    from {
+      transform: rotate(0deg);
+    }
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  /* Fixed-Width Text Group: Serene Calligraphic Reveal (Zero Motion Scramble) */
+  .nav-text-group {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 0.18rem;
+    width: 214px;
+    min-width: 214px;
+    max-width: 214px;
+    padding-left: 0.4rem;
+    padding-right: 0.6rem;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.08s ease 0s;
+    box-sizing: border-box;
+  }
+
+  :root[data-sidebar-pinned="true"] .nav-text-group,
+  .admin-sidebar:hover .nav-text-group {
+    opacity: 1;
+    pointer-events: auto;
+    transition: opacity 0.26s cubic-bezier(0.16, 1, 0.3, 1) 0.14s;
+  }
+
+  /* Staggered serene reveal for each chapter node */
+  .admin-sidebar:hover .admin-nav-item:nth-child(1) .nav-text-group {
+    transition-delay: 0.12s;
+  }
+  .admin-sidebar:hover .admin-nav-item:nth-child(2) .nav-text-group {
+    transition-delay: 0.16s;
+  }
+  .admin-sidebar:hover .admin-nav-item:nth-child(3) .nav-text-group {
+    transition-delay: 0.20s;
+  }
+  .admin-sidebar:hover .admin-nav-item:nth-child(4) .nav-text-group {
+    transition-delay: 0.24s;
+  }
+
+  /* Instant exit transition on unhover to prevent clip flicker */
+  :root:not([data-sidebar-pinned="true"]) .admin-sidebar:not(:hover) .nav-text-group {
+    opacity: 0;
+    transition: opacity 0.08s ease 0s;
   }
 
   .nav-label {
-    font-family: var(--font-mono);
-    font-size: 0.82rem;
-    font-weight: 600;
-    letter-spacing: 0.06em;
+    font-family: var(--font-display);
+    font-size: 0.92rem;
+    font-weight: 500;
+    letter-spacing: 0.02em;
     color: var(--text-primary);
+    line-height: 1.2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   .admin-nav-link.is-active .nav-label {
     color: var(--accent);
+    font-weight: 600;
   }
 
   .nav-desc {
-    font-size: 0.75rem;
+    font-family: var(--font-serif);
+    font-size: 0.73rem;
+    line-height: 1.28;
     color: var(--text-secondary);
+    white-space: normal;
+    word-break: normal;
+    overflow-wrap: break-word;
+  }
+
+  /* Marginal Colophon (Height strictly locked at 40px to prevent ducking/shifting) */
+  .sidebar-colophon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 40px;
+    min-height: 40px;
+    max-height: 40px;
+    width: 56px;
+    margin-top: auto;
+    position: relative;
+    z-index: 2;
+    box-sizing: border-box;
+    border-top: 1px solid transparent;
+    padding: 0 0.65rem;
+    transition: border-color 0.2s ease;
+  }
+
+  :root[data-sidebar-pinned="true"] .sidebar-colophon,
+  .admin-sidebar:hover .sidebar-colophon {
+    width: 100%;
+    justify-content: flex-start;
+    border-top-color: var(--border-hairline);
+    gap: 0.65rem;
+  }
+
+  .colophon-seal {
+    font-size: 1.1rem;
+    color: var(--accent);
+    text-shadow: 0 0 8px var(--accent);
+    flex-shrink: 0;
+    width: 56px;
+    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  :root[data-sidebar-pinned="true"] .colophon-seal,
+  .admin-sidebar:hover .colophon-seal {
+    width: 24px;
+  }
+
+  .colophon-meta {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 0.1rem;
+    width: 190px;
+    min-width: 190px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.08s ease 0s;
+  }
+
+  :root[data-sidebar-pinned="true"] .colophon-meta,
+  .admin-sidebar:hover .colophon-meta {
+    opacity: 1;
+    pointer-events: auto;
+    transition: opacity 0.24s cubic-bezier(0.16, 1, 0.3, 1) 0.22s;
+  }
+
+  :root:not([data-sidebar-pinned="true"]) .admin-sidebar:not(:hover) .colophon-meta {
+    opacity: 0;
+    transition: opacity 0.08s ease 0s;
+  }
+
+  .colophon-title {
+    font-family: var(--font-display);
+    font-size: 0.76rem;
+    font-weight: 500;
+    color: var(--text-primary);
+    letter-spacing: 0.02em;
+  }
+
+  .colophon-author {
+    font-family: var(--font-serif);
+    font-size: 0.7rem;
+    color: var(--text-secondary);
+    font-style: italic;
   }
 
   /* Content Stage */
@@ -370,6 +1598,101 @@ const navItems = [
     display: flex;
     flex-direction: column;
     gap: 2rem;
+    min-width: 0;
+  }
+
+  /* Responsive Breakpoints */
+  @media (max-width: 1024px) {
+    .admin-workbench-layout {
+      grid-template-columns: 1fr !important;
+      gap: 1.5rem;
+    }
+
+    .admin-sidebar-track {
+      width: 100% !important;
+      min-width: 0 !important;
+    }
+
+    .admin-sidebar {
+      position: static !important;
+      top: auto !important;
+      width: 100% !important;
+      padding: 0.85rem 1rem !important;
+      background: var(--bg-surface) !important;
+      border: 1px solid var(--border-hairline) !important;
+      box-shadow: none !important;
+    }
+
+    .spine-golden-axis {
+      display: none !important;
+    }
+
+    .sidebar-pin-btn {
+      display: none !important;
+    }
+
+    .sidebar-header {
+      width: 100% !important;
+      border-bottom: 1px solid var(--border-hairline) !important;
+    }
+
+    .sidebar-kicker {
+      opacity: 1 !important;
+      position: static !important;
+      pointer-events: auto !important;
+    }
+
+    .nav-node-anchor {
+      width: 44px !important;
+      min-width: 44px !important;
+    }
+
+    .nav-text-group,
+    .colophon-meta {
+      opacity: 1 !important;
+      transform: none !important;
+      pointer-events: auto !important;
+      width: auto !important;
+      min-width: 0 !important;
+      max-width: none !important;
+    }
+
+    .sidebar-colophon {
+      display: none;
+    }
+
+    .admin-nav-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 0.6rem;
+    }
+
+    .admin-nav-link {
+      padding: 0.75rem 0.9rem !important;
+      border: 1px solid var(--border-hairline) !important;
+      background: var(--bg-surface) !important;
+    }
+
+    .admin-nav-link.is-active {
+      border-color: var(--accent) !important;
+      border-top: 3.5px solid var(--accent) !important;
+    }
+  }
+
+  @media (max-width: 640px) {
+    .admin-nav-list {
+      display: flex;
+      flex-direction: row;
+      overflow-x: auto;
+      scroll-snap-type: x mandatory;
+      padding-bottom: 0.5rem;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .admin-nav-item {
+      flex: 0 0 220px;
+      scroll-snap-align: start;
+    }
   }
 
   /* Native Top-Layer Toast Notification (popover="manual") */

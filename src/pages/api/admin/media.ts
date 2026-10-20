@@ -67,13 +67,40 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     );
   }
 
-  // 2. Target: Faculty ID Portrait & Office Telemetry
-  const patch: Record<string, string> = {};
-  if (body.office) patch.office = String(body.office).trim();
-  if (body.officeHours) patch.officeHours = String(body.officeHours).trim();
-  if (body.phone) patch.phone = String(body.phone).trim();
-  if (body.email) patch.email = String(body.email).trim();
-  if (body.bio) patch.bio = String(body.bio).trim();
+  // 2. Target: Faculty Identity Profile & Portrait
+  const patch: Record<string, any> = {};
+  if (body.name !== undefined) patch.name = String(body.name).trim();
+  if (body.monogram !== undefined) patch.monogram = String(body.monogram).trim();
+  if (body.credentialId !== undefined) patch.credentialId = String(body.credentialId).trim();
+  if (body.title !== undefined) patch.title = String(body.title).trim();
+  if (body.department !== undefined) patch.department = String(body.department).trim();
+  if (body.education !== undefined) patch.education = String(body.education).trim();
+  if (body.institution !== undefined) patch.institution = String(body.institution).trim();
+  if (body.office !== undefined) patch.office = String(body.office).trim();
+  if (body.officeHours !== undefined) patch.officeHours = String(body.officeHours).trim();
+  if (body.phone !== undefined) patch.phone = String(body.phone).trim();
+  if (body.email !== undefined) patch.email = String(body.email).trim();
+  if (body.bio !== undefined) patch.bio = String(body.bio).trim();
+  if (body.ashokaProfileUrl !== undefined) patch.ashokaProfileUrl = String(body.ashokaProfileUrl).trim();
+  if (body.philPeopleUrl !== undefined) patch.philPeopleUrl = String(body.philPeopleUrl).trim();
+
+  if (Array.isArray(body.aos)) {
+    patch.aos = body.aos.map((s: any) => String(s).trim()).filter(Boolean);
+  } else if (typeof body.aos === 'string') {
+    patch.aos = body.aos.split(',').map((s: string) => s.trim()).filter(Boolean);
+  }
+
+  if (Array.isArray(body.aoc)) {
+    patch.aoc = body.aoc.map((s: any) => String(s).trim()).filter(Boolean);
+  } else if (typeof body.aoc === 'string') {
+    patch.aoc = body.aoc.split(',').map((s: string) => s.trim()).filter(Boolean);
+  }
+
+  if (Array.isArray(body.awards)) {
+    patch.awards = body.awards.map((s: any) => String(s).trim()).filter(Boolean);
+  } else if (typeof body.awards === 'string') {
+    patch.awards = body.awards.split('\n').map((s: string) => s.trim()).filter(Boolean);
+  }
 
   if (dataUrl.startsWith('data:image/')) {
     const matches = dataUrl.match(/^data:image\/([a-zA-Z0-9+]+);base64,(.+)$/);
@@ -97,7 +124,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       ok: true,
       profile: updated,
       portraitUrl: updated.portraitUrl,
-      message: 'Faculty ID portrait and office telemetry successfully synchronized.',
+      message: 'Faculty Identity profile and portrait successfully synchronized.',
     }),
     { status: 200, headers: { 'Content-Type': 'application/json' } }
   );

@@ -232,41 +232,227 @@
     align-items: center;
     gap: 0.65rem;
     z-index: 2;
+    perspective: 1000px;
+  }
+
+  /* =====================================================================
+     TINY METALLIC MINECRAFT BLOCK (INSCRIBED PCB ORTHODOX CROSS EMBLEM)
+     ===================================================================== */
+  .mc-metallic-block-bar {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    inline-size: 28px;
+    block-size: 38px;
+    padding: 3px 2px;
+    box-sizing: border-box;
+
+    /* Miniature Minecraft Iron Block Pixel Borders & 3D Lighting */
+    border: 1.5px solid #101115;
+    border-radius: 0;
+    
+    /* 1px Minecraft Inset Bevel Steps with socket depth */
+    box-shadow:
+      inset 1px 1px 0 0 #f0f2f8,
+      inset -1px -1px 0 0 #181920,
+      inset 0 0 6px rgba(0, 0, 0, 0.45),
+      0 2px 8px rgba(0, 0, 0, 0.45);
+
+    /* Weathered iron metal slab */
+    background:
+      repeating-linear-gradient(45deg,
+        rgba(0, 0, 0, 0.04) 0px,
+        rgba(0, 0, 0, 0.04) 1px,
+        transparent 1px,
+        transparent 3px
+      ),
+      linear-gradient(180deg,
+        #8f929b 0%,
+        #797c85 50%,
+        #6e717a 100%
+      );
+
+    user-select: none;
+    overflow: hidden;
+    cursor: default;
+
+    /* 3D Flip Mechanics - High Speed Snappy Return */
+    transform-origin: 50% 0%;
+    transform-style: preserve-3d;
+    transition:
+      transform 0.18s cubic-bezier(0.16, 1, 0.3, 1),
+      opacity 0.15s ease,
+      visibility 0.18s;
+    will-change: transform, opacity;
+  }
+
+  /* 4 Tiny Corner Pixel Rivets (2px x 2px) */
+  .mc-pixel-rivet {
+    position: absolute;
+    inline-size: 2px;
+    block-size: 2px;
+    background: #3a3c44;
+    box-shadow:
+      inset -0.5px -0.5px 0 0 #f0f2f8,
+      inset 0.5px 0.5px 0 0 #101115;
+    pointer-events: none;
+    z-index: 4;
+  }
+
+  .mc-pixel-rivet--tl { inset-block-start: 2px; inset-inline-start: 2px; }
+  .mc-pixel-rivet--tr { inset-block-start: 2px; inset-inline-end: 2px; }
+  .mc-pixel-rivet--bl { inset-block-end: 2px; inset-inline-start: 2px; }
+  .mc-pixel-rivet--br { inset-block-end: 2px; inset-inline-end: 2px; }
+
+  /* Inscribed Circuit Cross Emblem Wrapper */
+  .mc-emblem-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    inline-size: 100%;
+    block-size: 100%;
+    overflow: hidden;
+    pointer-events: none;
+    z-index: 2;
+  }
+
+  .mc-emblem-img {
+    max-inline-size: 100%;
+    max-block-size: 100%;
+    inline-size: auto;
+    block-size: 100%;
+    object-fit: contain;
+    image-rendering: -webkit-optimize-contrast;
+    filter:
+      drop-shadow(0 1px 2px rgba(0, 0, 0, 0.9))
+      drop-shadow(0 0 1px rgba(220, 185, 110, 0.45));
+    animation: mc-transistor-idle-glow 4.2s ease-in-out infinite;
+    transition: filter 0.22s ease, transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  /* Gold Transistor Circuit Sheen Overlay - Sweeps strictly across the Cross Silhouette */
+  .mc-circuit-sheen {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 3;
+    -webkit-mask-image: url('/images/pcb-orthodox-cross.webp');
+    mask-image: url('/images/pcb-orthodox-cross.webp');
+    -webkit-mask-size: contain;
+    mask-size: contain;
+    -webkit-mask-position: center;
+    mask-position: center;
+    -webkit-mask-repeat: no-repeat;
+    mask-repeat: no-repeat;
+    mix-blend-mode: color-dodge;
+    opacity: 0;
+    animation: mc-gold-transistor-sheen 4.2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  }
+
+  .mc-circuit-sheen::after {
+    content: '';
+    position: absolute;
+    inset: -50%;
+    background: linear-gradient(
+      128deg,
+      transparent 0%,
+      rgba(255, 215, 0, 0) 36%,
+      rgba(255, 220, 100, 0.4) 44%,
+      rgba(255, 245, 180, 0.95) 50%,
+      rgba(255, 200, 60, 0.7) 56%,
+      rgba(255, 215, 0, 0) 64%,
+      transparent 100%
+    );
+    transform: translate3d(-100%, -100%, 0) rotate(20deg);
+    animation: mc-sheen-sweep 4.2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  }
+
+  /* Idle Transistor Sheen Cycle Animations */
+  @keyframes mc-gold-transistor-sheen {
+    0%, 48% {
+      opacity: 0;
+    }
+    51% {
+      opacity: 0.95;
+    }
+    70% {
+      opacity: 0.95;
+    }
+    76%, 100% {
+      opacity: 0;
+    }
+  }
+
+  @keyframes mc-sheen-sweep {
+    0%, 46% {
+      transform: translate3d(-125%, -125%, 0) rotate(20deg);
+    }
+    74%, 100% {
+      transform: translate3d(125%, 125%, 0) rotate(20deg);
+    }
+  }
+
+  @keyframes mc-transistor-idle-glow {
+    0%, 46% {
+      filter:
+        drop-shadow(0 1px 2px rgba(0, 0, 0, 0.9))
+        drop-shadow(0 0 1px rgba(220, 185, 110, 0.35));
+    }
+    60% {
+      filter:
+        drop-shadow(0 1px 2px rgba(0, 0, 0, 0.95))
+        drop-shadow(0 0 4.5px rgba(255, 215, 0, 0.85))
+        brightness(1.08);
+    }
+    74%, 100% {
+      filter:
+        drop-shadow(0 1px 2px rgba(0, 0, 0, 0.9))
+        drop-shadow(0 0 1px rgba(220, 185, 110, 0.35));
+    }
+  }
+
+  /* Interactive Hover Sheen on the Emblem Block */
+  .mc-metallic-block-bar:hover {
+    box-shadow:
+      inset 1px 1px 0 0 #ffffff,
+      inset -1px -1px 0 0 #121318,
+      inset 0 0 8px rgba(0, 0, 0, 0.55),
+      0 4px 12px rgba(0, 0, 0, 0.65);
+  }
+
+  .mc-metallic-block-bar:hover .mc-emblem-img {
+    filter:
+      drop-shadow(0 0 7px rgba(220, 185, 110, 0.9))
+      drop-shadow(0 1px 2px rgba(0, 0, 0, 0.95));
+    transform: scale(1.06);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .mc-emblem-img,
+    .mc-circuit-sheen,
+    .mc-circuit-sheen::after {
+      animation: none !important;
+    }
+  }
+
+  /* Then on Scroll Down: Snappy Flip and Completely Vanish */
+  .mc-metallic-block-bar.is-scrolled-flipped,
+  body[data-stage="stage-2"] .mc-metallic-block-bar,
+  body[data-stage="stage-3"] .mc-metallic-block-bar {
+    transform: perspective(600px) rotateX(102deg) translateY(-10px) scale(0.85);
+    opacity: 0;
+    pointer-events: none;
+    visibility: hidden;
+    transition:
+      transform 0.22s cubic-bezier(0.4, 0, 0.2, 1),
+      opacity 0.16s ease,
+      visibility 0.22s;
   }
 
   .header-folio-seal {
-    display: none;
-    align-items: center;
-    gap: 0.45rem;
-    padding: 0.22rem 0.65rem;
-    border-radius: 2px;
-    border: 1px solid var(--border-subtle);
-    background: color-mix(in oklab, var(--bg-surface) 88%, var(--paper-vellum, #f4efe6) 12%);
-    font-family: var(--font-mono);
-    font-size: 0.65rem;
-    letter-spacing: 0.14em;
-    color: var(--text-secondary);
-    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.05);
-  }
-
-  .header-folio-seal .seal-mark {
-    font-family: var(--font-serif);
-    font-size: 0.85rem;
-    color: var(--accent);
-    line-height: 1;
-    user-select: none;
-  }
-
-  .header-folio-seal .seal-text {
-    font-size: 0.62rem;
-    letter-spacing: 0.16em;
-    font-weight: 500;
-  }
-
-  @media (min-width: 900px) {
-    .header-folio-seal {
-      display: inline-flex;
-    }
+    display: none !important;
   }
 
   /* Scroll-Linked Horizontal Navigation Strip */
@@ -276,7 +462,7 @@
     background: color-mix(in oklab, var(--bg-canvas) 90%, transparent);
     backdrop-filter: blur(12px);
     border-block-end: 1px solid var(--border-subtle);
-    overflow: clip;
+    overflow: visible;
     display: flex;
     align-items: center;
     padding-inline: clamp(1.25rem, 3vw, 2.25rem);

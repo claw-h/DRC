@@ -1,0 +1,755 @@
+---
+export const prerender = false;
+
+import AdminLayout from '../../layouts/AdminLayout.astro';
+import FacultyVisitingCard from '../../components/chrome/FacultyVisitingCard.astro';
+import { getFacultyProfile } from '../../lib/system-state';
+
+const profile = await getFacultyProfile();
+---
+
+<AdminLayout title="Faculty Identity & Carte de Visite" activeModule="identity">
+  <div class="module-container">
+    <!-- Header with Telemetry & Primary Commit -->
+    <div class="module-header">
+      <div class="header-split">
+        <div>
+          <h2>Faculty Identity, Carte de Visite &amp; Colophon</h2>
+          <p class="module-sub">
+            Manage Professor Cordry’s institutional credentials, visiting card specifications, consultation telemetry, and scholarly biography.
+          </p>
+        </div>
+        <div class="header-actions-deck">
+          <button type="button" id="btn-save-identity" class="study-btn study-btn--seal btn-accent-glow">
+            <span class="btn-icon">✓</span>
+            <span>Synchronize Identity Folio</span>
+            <span class="btn-keycap">⌘S</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Dual-Column Master Stage -->
+    <div class="identity-workbench-grid">
+      <!-- LEFT COLUMN: Master Dossier & Schema Form -->
+      <section class="identity-form-pane" aria-label="Faculty Identity Specifications">
+        <form id="form-faculty-identity" class="identity-form" autocomplete="off">
+          <!-- 01 · Academic Coordinates -->
+          <fieldset class="identity-fieldset">
+            <legend class="fieldset-legend">01 · Academic Coordinates &amp; Institutional Affiliation</legend>
+            <div class="form-row-3">
+              <label class="form-field">
+                <span class="field-label">Full Academic Name *</span>
+                <input
+                  type="text"
+                  name="name"
+                  id="id-name"
+                  value={profile.name}
+                  required
+                />
+              </label>
+              <label class="form-field">
+                <span class="field-label">Monogram</span>
+                <input
+                  type="text"
+                  name="monogram"
+                  id="id-monogram"
+                  value={profile.monogram}
+                  placeholder="DRC"
+                  class="mono"
+                />
+              </label>
+              <label class="form-field">
+                <span class="field-label">Credential Folio ID *</span>
+                <input
+                  type="text"
+                  name="credentialId"
+                  id="id-credentialId"
+                  value={profile.credentialId}
+                  placeholder="ASHOKA-PHIL-DRC"
+                  class="mono"
+                  required
+                />
+              </label>
+            </div>
+
+            <div class="form-row-2">
+              <label class="form-field">
+                <span class="field-label">Academic Title *</span>
+                <input
+                  type="text"
+                  name="title"
+                  id="id-title"
+                  value={profile.title}
+                  required
+                />
+              </label>
+              <label class="form-field">
+                <span class="field-label">Department *</span>
+                <input
+                  type="text"
+                  name="department"
+                  id="id-department"
+                  value={profile.department}
+                  required
+                />
+              </label>
+            </div>
+
+            <div class="form-row-2">
+              <label class="form-field">
+                <span class="field-label">Highest Degree &amp; Alma Mater</span>
+                <input
+                  type="text"
+                  name="education"
+                  id="id-education"
+                  value={profile.education || 'Ph.D. in Philosophy, Purdue University'}
+                />
+              </label>
+              <label class="form-field">
+                <span class="field-label">Host Institution *</span>
+                <input
+                  type="text"
+                  name="institution"
+                  id="id-institution"
+                  value={profile.institution}
+                  required
+                />
+              </label>
+            </div>
+          </fieldset>
+
+          <!-- 02 · Consultation & Office Telemetry -->
+          <fieldset class="identity-fieldset">
+            <legend class="fieldset-legend">02 · Consultation &amp; Physical Office Telemetry</legend>
+            <div class="form-row-2">
+              <label class="form-field">
+                <span class="field-label">Office Location</span>
+                <input
+                  type="text"
+                  name="office"
+                  id="id-office"
+                  value={profile.office}
+                  placeholder="AC04 312"
+                />
+              </label>
+              <label class="form-field">
+                <span class="field-label">Consultation / Office Hours *</span>
+                <input
+                  type="text"
+                  name="officeHours"
+                  id="id-officeHours"
+                  value={profile.officeHours}
+                  placeholder="Tuesdays & Thursdays, 14:00 – 16:30 IST"
+                  required
+                />
+              </label>
+            </div>
+
+            <div class="form-row-2">
+              <label class="form-field">
+                <span class="field-label">Office Telephone</span>
+                <input
+                  type="tel"
+                  name="phone"
+                  id="id-phone"
+                  value={profile.phone}
+                  placeholder="+91 (0)130 230 0000"
+                />
+              </label>
+              <label class="form-field">
+                <span class="field-label">Official Academic Email *</span>
+                <input
+                  type="email"
+                  name="email"
+                  id="id-email"
+                  value={profile.email}
+                  placeholder="duncan.cordry@ashoka.edu.in"
+                  class="mono"
+                  required
+                />
+              </label>
+            </div>
+          </fieldset>
+
+          <!-- 03 · Scholarly Biography & Editorial Statement -->
+          <fieldset class="identity-fieldset">
+            <legend class="fieldset-legend">03 · Scholarly Biography &amp; Narrative</legend>
+            <label class="form-field">
+              <span class="field-label">Biographical &amp; Research Statement</span>
+              <textarea
+                name="bio"
+                id="id-bio"
+                rows="4"
+                placeholder="Duncan Cordry specializes in continental philosophy..."
+              >{profile.bio}</textarea>
+            </label>
+          </fieldset>
+
+          <!-- 04 · Areas of Inquiry & Honors -->
+          <fieldset class="identity-fieldset">
+            <legend class="fieldset-legend">04 · Areas of Inquiry &amp; Academic Honors</legend>
+            <div class="form-row-2">
+              <label class="form-field">
+                <span class="field-label">Areas of Specialization (AOS, comma-separated)</span>
+                <input
+                  type="text"
+                  name="aos"
+                  id="id-aos"
+                  value={(profile.aos || []).join(', ')}
+                  placeholder="Continental Philosophy, Social & Political Philosophy, Philosophy of Technology"
+                />
+              </label>
+              <label class="form-field">
+                <span class="field-label">Areas of Competence (AOC, comma-separated)</span>
+                <input
+                  type="text"
+                  name="aoc"
+                  id="id-aoc"
+                  value={(profile.aoc || []).join(', ')}
+                  placeholder="Phenomenology, Insurrectionist Ethics, American Pragmatism, Philosophies of Liberation"
+                />
+              </label>
+            </div>
+
+            <label class="form-field">
+              <span class="field-label">Fellowships, Honors &amp; Awards (one per line)</span>
+              <textarea
+                name="awards"
+                id="id-awards"
+                rows="3"
+                placeholder="Claudia Jones Award for Best Graduate Paper, Caribbean Philosophical Association&#10;Ross-Lynn Research Fellowship, Purdue University"
+              >{(profile.awards || []).join('\n')}</textarea>
+            </label>
+          </fieldset>
+
+          <!-- 05 · External Academic Folios -->
+          <fieldset class="identity-fieldset">
+            <legend class="fieldset-legend">05 · Colophon External Academic Links</legend>
+            <div class="form-row-2">
+              <label class="form-field">
+                <span class="field-label">Ashoka University Faculty Profile URL</span>
+                <input
+                  type="url"
+                  name="ashokaProfileUrl"
+                  id="id-ashokaProfileUrl"
+                  value={profile.ashokaProfileUrl || ''}
+                  placeholder="https://www.ashoka.edu.in/profile/duncan-cordry/"
+                  class="mono"
+                />
+              </label>
+              <label class="form-field">
+                <span class="field-label">PhilPeople Archive URL</span>
+                <input
+                  type="url"
+                  name="philPeopleUrl"
+                  id="id-philPeopleUrl"
+                  value={profile.philPeopleUrl || ''}
+                  placeholder="https://philpeople.org/profiles/duncan-r-cordry"
+                  class="mono"
+                />
+              </label>
+            </div>
+          </fieldset>
+        </form>
+      </section>
+
+      <!-- RIGHT COLUMN: Co-Present ID Card Studio with Live Mirror -->
+      <aside class="identity-preview-pane" aria-label="Live Faculty Carte de Visite Mirror">
+        <div class="preview-sticky-deck">
+          <!-- Kicker & Telemetry Status -->
+          <div class="preview-deck-header">
+            <div class="deck-title-group">
+              <span class="preview-kicker">02 · AUTHENTIC LIVE VISITING CARD</span>
+              <h3 class="preview-heading">Production Carte de Visite</h3>
+            </div>
+            <span class="live-pulse-badge">
+              <span class="pulse-dot"></span>
+              Live Mirror
+            </span>
+          </div>
+
+          <!-- THE AUTHENTIC PRODUCTION CARD COMPONENT (Single Source of Truth) -->
+          <div class="visiting-card-stage" id="card-stage-container">
+            <FacultyVisitingCard profile={profile} isDialog={false} editablePortrait={true} />
+          </div>
+
+          <!-- PFP Portrait Studio Toolstrip -->
+          <div class="pfp-toolstrip-box">
+            <div class="pfp-toolstrip-head">
+              <span class="mini-kicker">FACULTY PORTRAIT CONTROLS</span>
+              <span class="ratio-pill mono">4:5 STANDARD</span>
+            </div>
+            <p class="pfp-hint-text">
+              Click the photo on the card above, or use the precision tools below to adjust framing, zoom, or upload a replacement.
+            </p>
+            <div class="pfp-button-row">
+              <button type="button" id="btn-launch-portrait-cropper" class="study-btn study-btn--ignite study-btn--sm">
+                <span class="btn-icon">✎</span>
+                <span>Adjust / Crop Portrait</span>
+              </button>
+              <label class="study-btn study-btn--instrument study-btn--sm btn-upload-portrait">
+                <span class="btn-icon">✚</span>
+                <span>Upload File</span>
+                <input type="file" id="pfp-direct-file-input" accept="image/*" class="sr-only" />
+              </label>
+            </div>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </div>
+</AdminLayout>
+
+<script>
+  // =========================================================================
+  // Identity Page Controller: Two-Way Live Mirror & PFP Cropper Integration
+  // =========================================================================
+
+  const form = document.getElementById('form-faculty-identity') as HTMLFormElement | null;
+  const saveBtn = document.getElementById('btn-save-identity') as HTMLButtonElement | null;
+  const portraitTrigger = document.getElementById('card-photo-trigger-zone');
+  const launchCropperBtn = document.getElementById('btn-launch-portrait-cropper');
+  const directFileInput = document.getElementById('pfp-direct-file-input') as HTMLInputElement | null;
+  const cardPortraitImg = document.querySelector('[data-id-field="portrait"]') as HTMLImageElement | null;
+
+  // 1. Instantaneous Typing Sync to Live Carte de Visite
+  const bindField = (inputId: string, fieldKey: string, transform?: (val: string) => string) => {
+    const input = document.getElementById(inputId) as HTMLInputElement | HTMLTextAreaElement | null;
+    const targets = document.querySelectorAll(`[data-id-field="${fieldKey}"]`);
+    if (!input || targets.length === 0) return;
+
+    input.addEventListener('input', () => {
+      let val = input.value.trim();
+      if (!val && input.placeholder) val = input.placeholder;
+      if (transform) val = transform(val);
+      targets.forEach((t) => (t.textContent = val));
+    });
+  };
+
+  bindField('id-name', 'name');
+  bindField('id-name', 'firstName', (val) => val.split(' ')[0] || val);
+  bindField('id-title', 'title');
+  bindField('id-department', 'dept');
+  bindField('id-education', 'education');
+  bindField('id-institution', 'institution');
+  bindField('id-credentialId', 'credentialId');
+  bindField('id-officeHours', 'officeHours');
+  bindField('id-email', 'email');
+
+  // Sync Email Button Link
+  const emailInput = document.getElementById('id-email') as HTMLInputElement | null;
+  const emailBtn = document.querySelector('[data-id-field="emailBtn"]') as HTMLAnchorElement | null;
+  emailInput?.addEventListener('input', () => {
+    const email = emailInput.value.trim();
+    if (emailBtn) {
+      emailBtn.href = `mailto:${email}?subject=Academic%20Inquiry%20for%20Prof.%20Duncan%20Cordry`;
+    }
+  });
+
+  // Sync Registry links
+  const ashokaUrlInput = document.getElementById('id-ashokaProfileUrl') as HTMLInputElement | null;
+  const ashokaBtn = document.querySelector('[data-id-field="ashokaProfileUrl"]') as HTMLAnchorElement | null;
+  ashokaUrlInput?.addEventListener('input', () => {
+    if (ashokaBtn) ashokaBtn.href = ashokaUrlInput.value.trim() || '#';
+  });
+
+  const philPeopleUrlInput = document.getElementById('id-philPeopleUrl') as HTMLInputElement | null;
+  const philPeopleBtn = document.querySelector('[data-id-field="philPeopleUrl"]') as HTMLAnchorElement | null;
+  philPeopleUrlInput?.addEventListener('input', () => {
+    if (philPeopleBtn) philPeopleBtn.href = philPeopleUrlInput.value.trim() || '#';
+  });
+
+  // 2. Portrait Precision Cropper Triggering
+  const openPortraitStudio = (initialUrl?: string) => {
+    const activeUrl = initialUrl || cardPortraitImg?.src || '/images/duncan-cordry-portrait.webp';
+    (window as any).openMediaCropper?.({
+      aspect: 'portrait',
+      targetEntity: { type: 'portrait' },
+      title: 'Faculty Portrait Adjuster (4:5)',
+      kicker: '01 · FACULTY IDENTITY ATELIER',
+      initialImageUrl: activeUrl,
+      applyLabel: 'Apply Portrait to Carte de Visite ✓',
+      onApply: (res: any) => {
+        if (res?.imageUrl && cardPortraitImg) {
+          cardPortraitImg.src = `${res.imageUrl}?t=${Date.now()}`;
+        } else if (res?.dataUrl && cardPortraitImg) {
+          cardPortraitImg.src = res.dataUrl;
+        }
+      },
+    });
+  };
+
+  portraitTrigger?.addEventListener('click', () => openPortraitStudio());
+  portraitTrigger?.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      openPortraitStudio();
+    }
+  });
+  launchCropperBtn?.addEventListener('click', () => openPortraitStudio());
+
+  // Direct File Upload into Cropper
+  directFileInput?.addEventListener('change', (e) => {
+    const file = (e.currentTarget as HTMLInputElement).files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (evt) => {
+        const dataUrl = evt.target?.result as string;
+        if (dataUrl) openPortraitStudio(dataUrl);
+      };
+      reader.readAsDataURL(file);
+    }
+  });
+
+  // Drag and drop image directly onto ID Card portrait frame
+  portraitTrigger?.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    portraitTrigger.classList.add('is-drag-hover');
+  });
+
+  portraitTrigger?.addEventListener('dragleave', () => {
+    portraitTrigger.classList.remove('is-drag-hover');
+  });
+
+  portraitTrigger?.addEventListener('drop', (e) => {
+    e.preventDefault();
+    portraitTrigger.classList.remove('is-drag-hover');
+    const file = e.dataTransfer?.files?.[0];
+    if (file && file.type.startsWith('image/')) {
+      const reader = new FileReader();
+      reader.onload = (evt) => {
+        const dataUrl = evt.target?.result as string;
+        if (dataUrl) openPortraitStudio(dataUrl);
+      };
+      reader.readAsDataURL(file);
+    }
+  });
+
+  // Listen for global media update events (e.g. from header cameo or other triggers)
+  window.addEventListener('drc:media-updated', (e: any) => {
+    const detail = e.detail;
+    if (detail?.imageUrl && cardPortraitImg) {
+      cardPortraitImg.src = `${detail.imageUrl}?t=${Date.now()}`;
+    }
+  });
+
+  // 3. Save & Synchronize Entire Identity Folio
+  const saveIdentity = async () => {
+    if (!form) return;
+    if (saveBtn) saveBtn.disabled = true;
+    (window as any).notify?.('Synchronizing faculty identity folio…', 'info');
+
+    const formData = new FormData(form);
+    const payload: Record<string, any> = {
+      target: 'portrait',
+      name: formData.get('name'),
+      monogram: formData.get('monogram'),
+      credentialId: formData.get('credentialId'),
+      title: formData.get('title'),
+      department: formData.get('department'),
+      education: formData.get('education'),
+      institution: formData.get('institution'),
+      office: formData.get('office'),
+      officeHours: formData.get('officeHours'),
+      phone: formData.get('phone'),
+      email: formData.get('email'),
+      bio: formData.get('bio'),
+      aos: formData.get('aos'),
+      aoc: formData.get('aoc'),
+      awards: formData.get('awards'),
+      ashokaProfileUrl: formData.get('ashokaProfileUrl'),
+      philPeopleUrl: formData.get('philPeopleUrl'),
+    };
+
+    try {
+      const res = await (window as any).postAdmin?.('/api/admin/media', payload);
+      if (saveBtn) saveBtn.disabled = false;
+
+      if (res?.ok) {
+        (window as any).notify?.('Faculty identity folio successfully synchronized!', 'success');
+      } else {
+        (window as any).notify?.(res?.error || 'Failed to save identity changes.', 'error');
+      }
+    } catch (err: any) {
+      if (saveBtn) saveBtn.disabled = false;
+      (window as any).notify?.(`Network error: ${err.message}`, 'error');
+    }
+  };
+
+  saveBtn?.addEventListener('click', saveIdentity);
+  form?.addEventListener('submit', (e) => {
+    e.preventDefault();
+    saveIdentity();
+  });
+
+  // Keyboard shortcut: Cmd+S / Ctrl+S saves identity folio
+  window.addEventListener('keydown', (e) => {
+    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 's') {
+      e.preventDefault();
+      saveIdentity();
+    }
+  });
+</script>
+
+<style>
+  .module-container {
+    padding: 1.75rem 2.25rem 3.5rem;
+    max-inline-size: 1480px;
+    margin: 0 auto;
+  }
+
+  .module-header {
+    margin-block-end: 2rem;
+    padding-block-end: 1.25rem;
+    border-block-end: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.08));
+  }
+
+  .header-split {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+  }
+
+  .module-header h2 {
+    font-family: var(--font-serif, serif);
+    font-size: 1.6rem;
+    font-weight: 500;
+    color: var(--text-primary);
+    margin-block-end: 0.35rem;
+  }
+
+  .module-sub {
+    font-size: 0.88rem;
+    color: var(--text-secondary);
+    max-inline-size: 640px;
+    line-height: 1.5;
+  }
+
+  .header-actions-deck {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  /* Workbench Split Grid */
+  .identity-workbench-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 420px;
+    gap: 2.25rem;
+    align-items: start;
+  }
+
+  @media (max-width: 1080px) {
+    .identity-workbench-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  /* Form Fieldsets */
+  .identity-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1.75rem;
+  }
+
+  .identity-fieldset {
+    border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.08));
+    border-radius: 8px;
+    padding: 1.25rem 1.45rem;
+    background: var(--bg-surface, #0b0f20);
+    display: flex;
+    flex-direction: column;
+    gap: 1.15rem;
+  }
+
+  .fieldset-legend {
+    font-family: var(--font-mono, monospace);
+    font-size: 0.68rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--accent, #c9a84e);
+    padding: 0 0.5rem;
+    font-weight: 600;
+  }
+
+  .form-row-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+  }
+
+  .form-row-3 {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1.5fr;
+    gap: 1rem;
+  }
+
+  @media (max-width: 640px) {
+    .form-row-2,
+    .form-row-3 {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .form-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+  }
+
+  .field-label {
+    font-family: var(--font-mono, monospace);
+    font-size: 0.72rem;
+    color: var(--text-secondary);
+    letter-spacing: 0.04em;
+  }
+
+  .form-field input,
+  .form-field textarea {
+    padding: 0.55rem 0.75rem;
+    border-radius: 5px;
+    border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.1));
+    background: var(--bg-canvas, #070a16);
+    color: var(--text-primary);
+    font-family: var(--font-serif, serif);
+    font-size: 0.88rem;
+    line-height: 1.45;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  }
+
+  .form-field input.mono {
+    font-family: var(--font-mono, monospace);
+    font-size: 0.82rem;
+  }
+
+  .form-field input:focus,
+  .form-field textarea:focus {
+    outline: none;
+    border-color: var(--accent, #c9a84e);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 20%, transparent);
+  }
+
+  /* Right Sticky Preview Pane */
+  .identity-preview-pane {
+    position: relative;
+  }
+
+  .preview-sticky-deck {
+    position: sticky;
+    top: 5.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+  }
+
+  .preview-deck-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-block-end: 0.75rem;
+    border-block-end: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.08));
+  }
+
+  .preview-kicker {
+    font-family: var(--font-mono, monospace);
+    font-size: 0.62rem;
+    letter-spacing: 0.14em;
+    color: var(--accent, #c9a84e);
+    display: block;
+    margin-block-end: 0.15rem;
+  }
+
+  .preview-heading {
+    font-family: var(--font-serif, serif);
+    font-size: 1rem;
+    font-weight: 500;
+    margin: 0;
+  }
+
+  .live-pulse-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-family: var(--font-mono, monospace);
+    font-size: 0.65rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #4ade80;
+    background: rgba(74, 222, 128, 0.1);
+    border: 1px solid rgba(74, 222, 128, 0.25);
+    padding: 0.2rem 0.5rem;
+    border-radius: 999px;
+  }
+
+  .pulse-dot {
+    inline-size: 6px;
+    block-size: 6px;
+    border-radius: 50%;
+    background: #4ade80;
+    box-shadow: 0 0 8px #4ade80;
+    animation: pulseGlow 2s infinite ease-in-out;
+  }
+
+  @keyframes pulseGlow {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.4; transform: scale(0.85); }
+  }
+
+  .visiting-card-stage {
+    display: flex;
+    justify-content: center;
+  }
+
+  /* PFP Toolstrip Box */
+  .pfp-toolstrip-box {
+    border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.08));
+    border-radius: 8px;
+    padding: 1rem 1.15rem;
+    background: var(--bg-surface, #0b0f20);
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+  }
+
+  .pfp-toolstrip-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .mini-kicker {
+    font-family: var(--font-mono, monospace);
+    font-size: 0.62rem;
+    letter-spacing: 0.12em;
+    color: var(--text-muted);
+  }
+
+  .ratio-pill {
+    font-size: 0.62rem;
+    letter-spacing: 0.08em;
+    padding: 0.15rem 0.4rem;
+    border-radius: 3px;
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--text-secondary);
+  }
+
+  .pfp-hint-text {
+    font-size: 0.78rem;
+    color: var(--text-secondary);
+    line-height: 1.45;
+  }
+
+  .pfp-button-row {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    margin-block-start: 0.25rem;
+  }
+
+  .btn-upload-portrait {
+    cursor: pointer;
+  }
+</style>

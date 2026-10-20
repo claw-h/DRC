@@ -1,0 +1,3883 @@
+---
+// src/components/admin/ContentEditorModal.astro
+// Unified Persistent In-Situ Content Atelier Modal (Papers, Monographs & Seminars)
+// Authentic Public Reader Fidelity, Greyed-Out Scholarly Sample Data & Auto-Split Curation
+---
+
+<dialog
+  id="content-editor-modal"
+  class="content-editor-dialog persistent-content-studio"
+  closedby="any"
+  aria-labelledby="content-modal-title"
+>
+  <div class="content-studio-shell" id="content-modal-shell">
+    <!-- Top Instrument Header Bar -->
+    <header class="studio-header">
+      <div class="header-lead">
+        <span class="seal-mark" aria-hidden="true">❧</span>
+        <div class="header-titles">
+          <nav class="studio-breadcrumb" id="atelier-breadcrumb" aria-label="Atelier Hierarchy Breadcrumb">
+            <span class="crumb-segment crumb-root">Atelier</span>
+            <span class="crumb-separator" aria-hidden="true">/</span>
+            <span class="crumb-segment crumb-type" id="atelier-breadcrumb-type">01 · Publication</span>
+            <span class="crumb-separator" aria-hidden="true">/</span>
+            <span class="crumb-segment crumb-state" id="atelier-breadcrumb-state">New Intake</span>
+            <span class="crumb-file-tag" id="atelier-file-tag" hidden></span>
+            <span class="status-chip" id="editor-mode-chip">READY</span>
+            <span class="studio-kicker sr-only" id="atelier-domain-kicker" aria-hidden="true">ARTICLE &amp; MANUSCRIPT ATELIER</span>
+          </nav>
+          <h3 id="content-modal-title" class="studio-title">New Manuscript Dispatch</h3>
+        </div>
+      </div>
+
+      <!-- Center: Type Switcher Tabs (Publications | Monographs | Syllabi) -->
+      <nav class="type-pill-nav" id="atelier-type-pill-nav" role="tablist" aria-label="Content Collection Switcher">
+        <button
+          type="button"
+          class="type-pill is-active"
+          id="type-pill-publications"
+          data-type="publications"
+          role="tab"
+          aria-selected="true"
+        >
+          <span class="type-pill-num">01</span>
+          <span class="type-pill-label">Publication</span>
+        </button>
+        <button
+          type="button"
+          class="type-pill"
+          id="type-pill-books"
+          data-type="books"
+          role="tab"
+          aria-selected="false"
+        >
+          <span class="type-pill-num">02</span>
+          <span class="type-pill-label">Monograph</span>
+        </button>
+        <button
+          type="button"
+          class="type-pill"
+          id="type-pill-classes"
+          data-type="classes"
+          role="tab"
+          aria-selected="false"
+        >
+          <span class="type-pill-num">03</span>
+          <span class="type-pill-label">Syllabus</span>
+        </button>
+      </nav>
+
+      <div class="header-controls">
+        <!-- Single Live Preview Toggle Button -->
+        <button
+          type="button"
+          id="btn-header-preview-toggle"
+          class="study-btn study-btn--instrument study-btn--sm header-preview-btn"
+          aria-pressed="false"
+          title="Toggle Live Public Reader Preview (⌘P)"
+        >
+          <span class="preview-btn-icon">👁</span>
+          <span class="preview-btn-label" id="header-preview-label">Preview</span>
+          <span class="btn-keycap">⌘P</span>
+        </button>
+
+        <button
+          type="button"
+          id="btn-close-content-modal"
+          class="study-btn study-btn--ghost study-btn--icon-only study-btn--sm modal-close-btn"
+          aria-label="Close Content Atelier (Esc)"
+          title="Close (Esc)"
+        >
+          ✕
+        </button>
+      </div>
+    </header>
+
+    <!-- Main Studio Stage: Split or Focus -->
+    <main class="studio-main-stage is-focus-mode" id="studio-main-stage">
+      
+      <!-- ========================================================
+           LEFT STAGE: INTAKE & SCHEMATIC CURATION WORKBENCH
+           ======================================================== -->
+      <section class="stage-workbench-pane" id="stage-workbench-pane" aria-label="Content Schema Workbench">
+        <div class="workbench-scroll-area">
+          
+          <!-- 1. PUBLICATIONS FORM -->
+          <div id="form-container-publications" class="type-form-container is-active">
+            <!-- Dedicated Intake Header -->
+            <div class="intake-hub-card">
+              <div class="intake-hub-header">
+                <span class="hub-kicker">✦ ONE-STOP MANUSCRIPT INTAKE</span>
+                <span class="hub-hint">DOI, BibTeX or PDF Auto-Extraction</span>
+              </div>
+
+              <!-- Universal Dropzone -->
+              <div class="universal-dropzone" id="dropzone-pub">
+                <input type="file" id="file-input-pub" accept=".pdf,.bib" hidden />
+                <div class="dropzone-visual">
+                  <span class="dropzone-icon">📄</span>
+                  <div class="dropzone-text">
+                    <strong class="dropzone-label">Drop Manuscript PDF or .bib File Here</strong>
+                    <span class="dropzone-sub">Uploads to repository and auto-extracts bibliographic fields</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- DOI Auto-Resolver Lockup -->
+              <div class="intake-quick-row">
+                <div class="resolver-input-wrap">
+                  <input
+                    type="text"
+                    id="ingest-doi-input"
+                    placeholder="Paste DOI identifier (e.g. 10.5195/jffp.2021.995 or https://doi.org/...)"
+                    aria-label="DOI Identifier"
+                  />
+                </div>
+                <button type="button" id="btn-ingest-doi" class="study-btn study-btn--ignite study-btn--sm">
+                  ✦ Auto-Resolve DOI
+                </button>
+              </div>
+
+              <!-- Collapsible BibTeX parser -->
+              <details class="bibtex-details">
+                <summary class="bibtex-summary">Or paste raw BibTeX cartouche snippet ▾</summary>
+                <div class="bibtex-expand-box">
+                  <textarea
+                    id="ingest-bibtex-input"
+                    rows="3"
+                    placeholder={"@article{cordry2024, author = {Cordry, Duncan R.}, title = {...}, year = {2024}}"}
+                  ></textarea>
+                  <button type="button" id="btn-ingest-bibtex" class="study-btn study-btn--ledger study-btn--sm">
+                    Parse BibTeX Snippet →
+                  </button>
+                </div>
+              </details>
+            </div>
+
+            <!-- Publications Form Inputs -->
+            <form id="form-pub-workbench" class="workbench-form">
+              <!-- Fieldset 1: Publication Identity -->
+              <fieldset class="workbench-fieldset">
+                <legend class="fieldset-legend">01 · Scholarly Identity &amp; Venue</legend>
+                <div class="form-row-2">
+                  <label>
+                    <span>Article Title *</span>
+                    <input
+                      type="text"
+                      name="title"
+                      id="wb-pub-title"
+                      placeholder="Epistemic Horizons: Insurrectionist Empiricism and Critical Pragmatism"
+                      required
+                    />
+                  </label>
+                  <label>
+                    <span>Publication Year *</span>
+                    <input
+                      type="number"
+                      name="year"
+                      id="wb-pub-year"
+                      placeholder="2024"
+                      required
+                    />
+                  </label>
+                </div>
+
+                <label>
+                  <span>Subtitle / Secondary Heading</span>
+                  <input
+                    type="text"
+                    name="subtitle"
+                    id="wb-pub-subtitle"
+                    placeholder="Philosophy Born of Struggle, Necro-Being, and the Imperative of Liberation"
+                  />
+                </label>
+
+                <div class="form-row-2">
+                  <label>
+                    <span>Journal / Refereed Venue *</span>
+                    <input
+                      type="text"
+                      name="venue"
+                      id="wb-pub-venue"
+                      placeholder="Journal of French and Francophone Philosophy"
+                      required
+                    />
+                  </label>
+                  <label>
+                    <span>Volume &amp; Issue</span>
+                    <input
+                      type="text"
+                      name="volumeIssue"
+                      id="wb-pub-volume"
+                      placeholder="Vol. 32, No. 1–2, pp. 142–168"
+                    />
+                  </label>
+                </div>
+              </fieldset>
+
+              <!-- Fieldset 2: Authorship & Academic Identifiers -->
+              <fieldset class="workbench-fieldset">
+                <legend class="fieldset-legend">02 · Authorship &amp; Identifiers</legend>
+                <div class="form-row-2">
+                  <label>
+                    <span>DOI Identifier</span>
+                    <input
+                      type="text"
+                      name="doi"
+                      id="wb-pub-doi"
+                      placeholder="10.5195/jffp.2024.1102"
+                    />
+                  </label>
+                  <label>
+                    <span>Co-Authors (comma-separated)</span>
+                    <input
+                      type="text"
+                      name="coAuthors"
+                      id="wb-pub-authors"
+                      placeholder="Wynter, S., Harris, L."
+                    />
+                  </label>
+                </div>
+
+                <div class="asset-dropzone-lockup">
+                  <label>
+                    <span>PDF Manuscript Asset Route</span>
+                    <div class="asset-input-row">
+                      <input
+                        type="text"
+                        name="pdfUrl"
+                        id="wb-pub-pdf"
+                        placeholder="/papers/cordry-2024-epistemic-horizons.pdf"
+                        class="mono"
+                      />
+                      <div class="asset-drop-inline" id="drop-inline-pub-pdf">
+                        <input type="file" id="inline-file-pub" accept=".pdf" hidden />
+                        <span>⇩ Drop PDF to link</span>
+                      </div>
+                    </div>
+                  </label>
+                </div>
+              </fieldset>
+
+              <!-- Fieldset 3: Abstract & Archival Cartouche -->
+              <fieldset class="workbench-fieldset">
+                <legend class="fieldset-legend">03 · Abstract &amp; Archival Cartouche</legend>
+                <label>
+                  <span>Abstract / Executive Summary *</span>
+                  <textarea
+                    name="abstract"
+                    id="wb-pub-abstract"
+                    rows="4"
+                    placeholder="This paper articulates an insurrectionist epistemology situated at the intersection of Leonard Harris's philosophy born of struggle and Alain Locke's critical pragmatism. Investigating how normative categories of epistemic agency emerge within contested terrains of racialized violence and social survival, the essay demonstrates why melioristic consensus often masks structural necro-being."
+                    required
+                  ></textarea>
+                </label>
+
+                <label>
+                  <span>Archival BibTeX Cartouche</span>
+                  <textarea
+                    name="citationBibtex"
+                    id="wb-pub-bibtex"
+                    rows="5"
+                    class="mono-code"
+                    placeholder={"@article{cordry_2024_epistemic,\n  author = {Cordry, Duncan R. and Wynter, Sylvia and Harris, Leonard},\n  title = {Epistemic Horizons: Insurrectionist Empiricism and Critical Pragmatism},\n  journal = {Journal of French and Francophone Philosophy},\n  year = {2024},\n  volume = {32},\n  number = {1-2},\n  pages = {142--168},\n  doi = {10.5195/jffp.2024.1102}\n}"}
+                  ></textarea>
+                </label>
+              </fieldset>
+            </form>
+          </div>
+
+          <!-- 2. BOOKS & MONOGRAPHS FORM -->
+          <div id="form-container-books" class="type-form-container" hidden>
+            <!-- Dedicated Intake Header -->
+            <div class="intake-hub-card">
+              <div class="intake-hub-header">
+                <span class="hub-kicker">✦ ONE-STOP MONOGRAPH INTAKE</span>
+                <span class="hub-hint">ISBN Catalog Resolution &amp; 2:3 Cover Staging</span>
+              </div>
+
+              <!-- Universal Dropzone for Covers -->
+              <div class="universal-dropzone" id="dropzone-book">
+                <input type="file" id="file-input-book" accept="image/*,.pdf" hidden />
+                <div class="dropzone-visual">
+                  <span class="dropzone-icon">🖼</span>
+                  <div class="dropzone-text">
+                    <strong class="dropzone-label">Drop Monograph Cover Artwork (2:3) or PDF Here</strong>
+                    <span class="dropzone-sub">Accepts .webp, .svg, .png, .jpg (auto-scales to 2:3 book ratio)</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- ISBN Auto-Resolver Lockup -->
+              <div class="intake-quick-row">
+                <div class="resolver-input-wrap">
+                  <input
+                    type="text"
+                    id="ingest-isbn-input"
+                    placeholder="Paste ISBN (e.g. 978-0-262-52936-5 or catalog code)"
+                    aria-label="ISBN Identifier"
+                  />
+                </div>
+                <button type="button" id="btn-ingest-isbn" class="study-btn study-btn--ignite study-btn--sm">
+                  ✦ Auto-Resolve Book
+                </button>
+              </div>
+            </div>
+
+            <!-- Monograph Form Inputs -->
+            <form id="form-book-workbench" class="workbench-form">
+              <!-- Fieldset 1: Specification -->
+              <fieldset class="workbench-fieldset">
+                <legend class="fieldset-legend">01 · Monograph Specification</legend>
+                <div class="form-row-2">
+                  <label>
+                    <span>Monograph Title *</span>
+                    <input
+                      type="text"
+                      name="title"
+                      id="wb-book-title"
+                      placeholder="Technical Objects &amp; Spiritual Practices"
+                      required
+                    />
+                  </label>
+                  <label>
+                    <span>Publication Year *</span>
+                    <input
+                      type="number"
+                      name="year"
+                      id="wb-book-year"
+                      placeholder="2025"
+                      required
+                    />
+                  </label>
+                </div>
+
+                <label>
+                  <span>Subtitle</span>
+                  <input
+                    type="text"
+                    name="subtitle"
+                    id="wb-book-subtitle"
+                    placeholder="Organology, the Organic &amp; Inorganic, and Social Cohesion"
+                  />
+                </label>
+
+                <div class="form-row-3">
+                  <label>
+                    <span>Publisher Imprint *</span>
+                    <input
+                      type="text"
+                      name="publisher"
+                      id="wb-book-publisher"
+                      placeholder="Ashoka University · Philosophy Working Monograph"
+                      required
+                    />
+                  </label>
+                  <label>
+                    <span>ISBN / Catalog ID *</span>
+                    <input
+                      type="text"
+                      name="isbn"
+                      id="wb-book-isbn"
+                      placeholder="ASHOKA-PHIL-2025-DRC"
+                      required
+                    />
+                  </label>
+                  <label>
+                    <span>Pages</span>
+                    <input
+                      type="number"
+                      name="pages"
+                      id="wb-book-pages"
+                      placeholder="214"
+                    />
+                  </label>
+                </div>
+              </fieldset>
+
+              <!-- Fieldset 2: Monograph Cover Artwork -->
+              <fieldset class="workbench-fieldset">
+                <legend class="fieldset-legend">02 · Monograph Cover Artwork (2:3 Aspect)</legend>
+                <div class="cover-picker-field">
+                  <div class="cover-picker-lockup">
+                    <div class="cover-thumb-box">
+                      <img
+                        id="wb-book-cover-thumb"
+                        src="/images/books/monograph-cover-0080.webp"
+                        alt="Cover Preview"
+                        class="cover-thumb-img"
+                      />
+                    </div>
+                    <div class="cover-picker-details">
+                      <label>
+                        <span>Cover Image Path</span>
+                        <input
+                          type="text"
+                          name="coverImage"
+                          id="wb-book-cover"
+                          placeholder="/images/books/monograph-cover-0080.webp"
+                          class="cover-path-readonly mono"
+                          readonly
+                        />
+                      </label>
+                      <div class="cover-actions-row">
+                        <div class="asset-drop-inline" id="drop-inline-book-cover">
+                          <input type="file" id="inline-file-book-cover" accept="image/*" hidden />
+                          <span>⇩ Drop replacement image</span>
+                        </div>
+                        <button
+                          type="button"
+                          id="wb-btn-launch-cover-cropper"
+                          class="btn-cover-edit"
+                        >
+                          ✎ Fine-Tune in Media Cropper
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </fieldset>
+
+              <!-- Fieldset 3: Synopsis -->
+              <fieldset class="workbench-fieldset">
+                <legend class="fieldset-legend">03 · Monograph Synopsis</legend>
+                <label>
+                  <span>Monograph Synopsis *</span>
+                  <textarea
+                    name="synopsis"
+                    id="wb-book-synopsis"
+                    rows="4"
+                    placeholder="An ongoing research project investigating how technical objects and systems support specific spiritual practices, traditions, and forms of social cohesion. Examining the ontological boundary between the organic and the inorganic across continental philosophy of technology—from Georges Canguilhem and Gilbert Simondon to Bernard Stiegler and Yuk Hui—this work explores how technical milieus sustain liturgical, contemplative, and liberatory forms of life."
+                    required
+                  ></textarea>
+                </label>
+              </fieldset>
+
+              <!-- Fieldset 4: Chapters Repeater -->
+              <fieldset class="workbench-fieldset">
+                <legend class="fieldset-legend">04 · Table of Contents</legend>
+                <div class="repeater-section">
+                  <div class="repeater-head">
+                    <span class="mini-label">Monograph Chapters Table of Contents</span>
+                    <button type="button" id="wb-add-chapter-btn" class="study-btn study-btn--ignite study-btn--sm btn-outline-sm">+ Add Chapter</button>
+                  </div>
+                  <div id="wb-chapters-container" class="repeater-list">
+                    <div class="repeater-item repeater-card chapter-row">
+                      <div class="repeater-card-header">
+                        <div class="repeater-card-lead">
+                          <span class="repeater-card-tag">CH.</span>
+                          <input type="text" class="ch-num" placeholder="01" value="" aria-label="Chapter Number" />
+                        </div>
+                        <div class="repeater-card-main">
+                          <input type="text" class="ch-title" placeholder="Between the Organic and the Inorganic" value="" aria-label="Chapter Title" />
+                        </div>
+                        <button type="button" class="btn-remove-row" title="Remove chapter" aria-label="Remove chapter">✕</button>
+                      </div>
+                      <div class="repeater-card-body">
+                        <textarea class="ch-summary" rows="2" placeholder="Investigates ontological continuity between living organisms and technical artifacts." aria-label="Chapter Summary"></textarea>
+                      </div>
+                    </div>
+                    <div class="repeater-item repeater-card chapter-row">
+                      <div class="repeater-card-header">
+                        <div class="repeater-card-lead">
+                          <span class="repeater-card-tag">CH.</span>
+                          <input type="text" class="ch-num" placeholder="02" value="" aria-label="Chapter Number" />
+                        </div>
+                        <div class="repeater-card-main">
+                          <input type="text" class="ch-title" placeholder="Technical Milieus &amp; Ritual Cohesion" value="" aria-label="Chapter Title" />
+                        </div>
+                        <button type="button" class="btn-remove-row" title="Remove chapter" aria-label="Remove chapter">✕</button>
+                      </div>
+                      <div class="repeater-card-body">
+                        <textarea class="ch-summary" rows="2" placeholder="Shows how spiritual traditions rely upon material inscriptions and calendar instruments." aria-label="Chapter Summary"></textarea>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </fieldset>
+            </form>
+          </div>
+
+          <!-- 3. CLASSES & SEMINARS FORM -->
+          <div id="form-container-classes" class="type-form-container" hidden>
+            <!-- Dedicated Intake Header -->
+            <div class="intake-hub-card">
+              <div class="intake-hub-header">
+                <span class="hub-kicker">✦ ONE-STOP SYLLABUS INTAKE</span>
+                <span class="hub-hint">Syllabus PDF Staging &amp; Course Code Initializer</span>
+              </div>
+
+              <!-- Universal Dropzone for Syllabi -->
+              <div class="universal-dropzone" id="dropzone-class">
+                <input type="file" id="file-input-class" accept=".pdf,.md,.txt" hidden />
+                <div class="dropzone-visual">
+                  <span class="dropzone-icon">📋</span>
+                  <div class="dropzone-text">
+                    <strong class="dropzone-label">Drop Course Syllabus PDF or Markdown File</strong>
+                    <span class="dropzone-sub">Uploads to repository and sets up reading modules</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Course Code Initializer Lockup -->
+              <div class="intake-quick-row">
+                <div class="resolver-input-wrap">
+                  <input
+                    type="text"
+                    id="ingest-class-code-input"
+                    placeholder="Enter Course Code (e.g. PHIL 3042 or PHIL 2040)"
+                    aria-label="Course Code"
+                  />
+                </div>
+                <button type="button" id="btn-ingest-class-code" class="study-btn study-btn--ignite study-btn--sm">
+                  Initialize Course →
+                </button>
+              </div>
+            </div>
+
+            <!-- Syllabus Form Inputs -->
+            <form id="form-class-workbench" class="workbench-form">
+              <!-- Fieldset 1: Course Identity -->
+              <fieldset class="workbench-fieldset">
+                <legend class="fieldset-legend">01 · Course Identity &amp; Logistics</legend>
+                <div class="form-row-3">
+                  <label>
+                    <span>Course Code *</span>
+                    <input
+                      type="text"
+                      name="code"
+                      id="wb-class-code"
+                      placeholder="PHIL 3042"
+                      required
+                    />
+                  </label>
+                  <label>
+                    <span>Academic Term *</span>
+                    <input
+                      type="text"
+                      name="term"
+                      id="wb-class-term"
+                      placeholder="Monsoon"
+                      required
+                    />
+                  </label>
+                  <label>
+                    <span>Academic Year *</span>
+                    <input
+                      type="text"
+                      name="academicYear"
+                      id="wb-class-year"
+                      placeholder="2025–2026"
+                      required
+                    />
+                  </label>
+                </div>
+
+                <div class="form-row-2">
+                  <label>
+                    <span>Seminar Title *</span>
+                    <input
+                      type="text"
+                      name="title"
+                      id="wb-class-title"
+                      placeholder="Philosophy of Technology: Organology, the Organic &amp; the Inorganic"
+                      required
+                    />
+                  </label>
+                  <label>
+                    <span>Pedagogical Level *</span>
+                    <select name="level" id="wb-class-level" class="admin-select">
+                      <option value="Graduate">Graduate</option>
+                      <option value="Undergraduate">Undergraduate</option>
+                      <option value="Seminar" selected>Seminar</option>
+                    </select>
+                  </label>
+                </div>
+
+                <div class="form-row-2">
+                  <label>
+                    <span>Location / Schedule *</span>
+                    <input
+                      type="text"
+                      name="location"
+                      id="wb-class-location"
+                      placeholder="Ashoka University · Department of Philosophy"
+                      required
+                    />
+                  </label>
+                  <label>
+                    <span>Syllabus PDF Route</span>
+                    <div class="asset-input-row">
+                      <input
+                        type="text"
+                        name="syllabusPdf"
+                        id="wb-class-pdf"
+                        placeholder="/syllabi/phil-3042.pdf"
+                        class="mono"
+                      />
+                      <div class="asset-drop-inline" id="drop-inline-class-pdf">
+                        <input type="file" id="inline-file-class" accept=".pdf" hidden />
+                        <span>⇩ Drop PDF</span>
+                      </div>
+                    </div>
+                  </label>
+                </div>
+              </fieldset>
+
+              <!-- Fieldset 2: Description -->
+              <fieldset class="workbench-fieldset">
+                <legend class="fieldset-legend">02 · Course Summary &amp; Objectives</legend>
+                <label>
+                  <span>Course Summary &amp; Objectives *</span>
+                  <textarea
+                    name="description"
+                    id="wb-class-desc"
+                    rows="4"
+                    placeholder="An upper-level seminar examining continental philosophies of technology and how technical objects and systems support specific spiritual practices, traditions, and forms of social cohesion. Tracing the relation between the organic and the inorganic from Georges Canguilhem and Gilbert Simondon to Bernard Stiegler, Sylvia Wynter, and Yuk Hui, students investigate technical exteriorization, tertiary retention, and pharmacology."
+                    required
+                  ></textarea>
+                </label>
+              </fieldset>
+
+              <!-- Fieldset 3: Weekly Modules -->
+              <fieldset class="workbench-fieldset">
+                <legend class="fieldset-legend">03 · Weekly Modules &amp; Reading List</legend>
+                <div class="repeater-section">
+                  <div class="repeater-head">
+                    <span class="mini-label">Syllabus Weekly Modules &amp; Reading List</span>
+                    <button type="button" id="wb-add-week-btn" class="study-btn study-btn--ignite study-btn--sm btn-outline-sm">+ Add Week</button>
+                  </div>
+                  <div id="wb-weeks-container" class="repeater-list">
+                    <div class="repeater-item repeater-card week-row">
+                      <div class="repeater-card-header">
+                        <div class="repeater-card-lead">
+                          <span class="repeater-card-tag">SEMINAR</span>
+                          <input type="text" class="wk-num" placeholder="WK 01" value="" aria-label="Week Number" />
+                        </div>
+                        <div class="repeater-card-main">
+                          <input type="text" class="wk-topic" placeholder="The Organic &amp; The Inorganic: Vital Norms and Technical Life" value="" aria-label="Weekly Topic" />
+                        </div>
+                        <button type="button" class="btn-remove-row" title="Remove week" aria-label="Remove week">✕</button>
+                      </div>
+                      <div class="repeater-card-body">
+                        <div class="repeater-card-subhead">
+                          <span class="subhead-label">Required Readings &amp; Sources (one entry per line)</span>
+                        </div>
+                        <textarea class="wk-readings" rows="2" placeholder="Georges Canguilhem (1952), Machine and Organism&#10;André Leroi-Gourhan (1964), Gesture and Speech" aria-label="Required Readings"></textarea>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </fieldset>
+            </form>
+          </div>
+        </div>
+      </section>
+
+      <!-- ========================================================
+           RIGHT STAGE: IN-SITU LIVE MIRROR (Authentic Public Reader)
+           ======================================================== -->
+      <section class="stage-mirror-pane" id="stage-mirror-pane" aria-label="In-Situ Live Mirror Preview">
+        <div class="mirror-toolbar">
+          <div class="mirror-status">
+            <span class="status-pulse-dot" aria-hidden="true"></span>
+            <span class="mirror-status-text">LIVE PUBLIC MIRROR</span>
+          </div>
+          <span class="mirror-mode-tag" id="mirror-type-tag">ARTICLE PREVIEW</span>
+        </div>
+
+        <div class="mirror-viewport-scroll">
+          
+          <!-- ==========================================
+               PREVIEW 1: PUBLICATION READER MIRROR
+               Matches PublicationsWorkspace.astro exactly
+               ========================================== -->
+          <article id="preview-box-publications" class="public-preview-card is-active reader-article-real">
+            <header class="reader-header-real">
+              <div class="reader-eyebrow-row">
+                <span class="fascicle-tag tabular" id="pv-pub-eyebrow">
+                  FOLIO CORDRY-2024-EPISTEMIC · 2024
+                </span>
+                <span class="colophon-stamp scholarly-caps">PEER-REVIEWED PUBLICATION</span>
+              </div>
+
+              <h3 class="reader-main-title" id="pv-pub-title">
+                Epistemic Horizons: Insurrectionist Empiricism and Critical Pragmatism
+              </h3>
+
+              <p class="reader-subtitle" id="pv-pub-subtitle">
+                Philosophy Born of Struggle, Necro-Being, and the Imperative of Liberation
+              </p>
+
+              <p class="reader-authors">
+                <strong>Authors:</strong> Duncan R. Cordry<span id="pv-pub-coauthors">, Sylvia Wynter, Leonard Harris</span>
+              </p>
+
+              <p class="reader-venue tabular">
+                <em id="pv-pub-venue">Journal of French and Francophone Philosophy</em> <span id="pv-pub-volume">· Vol. 32, No. 1–2, pp. 142–168</span>
+              </p>
+
+              <div class="reader-pill-mock-bar">
+                <span class="pill-mock">⌖ Standalone Permalink ↗</span>
+                <span class="pill-mock" id="pv-pub-doi-pill">DOI Record ↗</span>
+                <span class="pill-mock">⎘ Copy BibTeX</span>
+                <span class="pill-mock pill-accent">⎘ Archival Citation &amp; BibTeX</span>
+              </div>
+            </header>
+
+            <!-- Bookplate Vellum Abstract Frame with Fleurons -->
+            <section class="manuscript-abstract-vellum bookplate-frame">
+              <div class="bookplate-corner bookplate-corner--tl" aria-hidden="true">❦</div>
+              <div class="bookplate-corner bookplate-corner--tr" aria-hidden="true">❦</div>
+              <div class="bookplate-corner bookplate-corner--bl" aria-hidden="true">❦</div>
+              <div class="bookplate-corner bookplate-corner--br" aria-hidden="true">❦</div>
+              <h4 class="scholarly-caps abstract-kicker">
+                SYNOPSIS · MANUSCRIPT ABSTRACT
+              </h4>
+              <p id="pv-pub-abstract-text" class="abstract-body-real">
+                This paper articulates an insurrectionist epistemology situated at the intersection of Leonard Harris's philosophy born of struggle and Alain Locke's critical pragmatism. Investigating how normative categories of epistemic agency emerge within contested terrains of racialized violence and social survival, the essay demonstrates why melioristic consensus often masks structural necro-being.
+              </p>
+            </section>
+
+            <!-- Archival BibTeX Cartouche Slab -->
+            <div class="preview-bibtex-box">
+              <div class="bibtex-label scholarly-caps">ARCHIVAL CITATION &amp; BIBTEX CARTOUCHE</div>
+              <pre class="bibtex-code-pre"><code id="pv-pub-bibtex-text">{'@article{cordry_2024_epistemic,\n  author = {Cordry, Duncan R. and Wynter, Sylvia and Harris, Leonard},\n  title = {Epistemic Horizons: Insurrectionist Empiricism and Critical Pragmatism},\n  journal = {Journal of French and Francophone Philosophy},\n  year = {2024},\n  volume = {32},\n  number = {1-2},\n  pages = {142--168},\n  doi = {10.5195/jffp.2024.1102}\n}'}</code></pre>
+            </div>
+          </article>
+
+          <!-- ==========================================
+               PREVIEW 2: MONOGRAPH DOSSIER MIRROR
+               Matches BooksWorkspace.astro exactly
+               ========================================== -->
+          <article id="preview-box-books" class="public-preview-card reader-article-real" hidden>
+            <header class="dossier-hero-real">
+              <div class="dossier-cover-showcase-real">
+                <img
+                  id="pv-book-cover"
+                  src="/images/books/monograph-cover-0080.webp"
+                  alt="Monograph Cover"
+                  class="real-book-cover-img"
+                />
+                <span class="book-slot-tag tabular">VOL.01 · 2:3</span>
+              </div>
+
+              <div class="dossier-meta-lockup-real">
+                <div class="reader-eyebrow-row">
+                  <span class="fascicle-tag tabular" id="pv-book-eyebrow">
+                    FOLIO BOOK-TECHNICAL-OBJECTS-2025 · 2025
+                  </span>
+                  <span class="colophon-stamp scholarly-caps">PUBLISHED MONOGRAPH</span>
+                </div>
+
+                <h3 class="reader-main-title" id="pv-book-title">
+                  Technical Objects &amp; Spiritual Practices
+                </h3>
+
+                <p class="reader-subtitle" id="pv-book-subtitle">
+                  Organology, the Organic &amp; Inorganic, and Social Cohesion
+                </p>
+
+                <dl class="colophon-specs-grid tabular">
+                  <div>
+                    <dt>PUBLISHER</dt>
+                    <dd id="pv-book-publisher">Ashoka University · Philosophy Working Monograph</dd>
+                  </div>
+                  <div>
+                    <dt>ISBN-13</dt>
+                    <dd><code id="pv-book-isbn">ASHOKA-PHIL-2025-DRC</code></dd>
+                  </div>
+                  <div>
+                    <dt>EXTENT</dt>
+                    <dd id="pv-book-pages">214 Pages</dd>
+                  </div>
+                </dl>
+
+                <div class="reader-pill-mock-bar">
+                  <span class="pill-mock">Ashoka Faculty Profile ↗</span>
+                  <span class="pill-mock">PhilPeople Archive ↗</span>
+                  <span class="pill-mock pill-accent">📖 Monograph Colophon &amp; Chapters</span>
+                </div>
+              </div>
+            </header>
+
+            <!-- Bookplate Vellum Synopsis Frame -->
+            <section class="manuscript-abstract-vellum bookplate-frame">
+              <div class="bookplate-corner bookplate-corner--tl" aria-hidden="true">❦</div>
+              <div class="bookplate-corner bookplate-corner--tr" aria-hidden="true">❦</div>
+              <div class="bookplate-corner bookplate-corner--bl" aria-hidden="true">❦</div>
+              <div class="bookplate-corner bookplate-corner--br" aria-hidden="true">❦</div>
+              <h4 class="scholarly-caps abstract-kicker">
+                SYNOPSIS · EDITORIAL DOSSIER
+              </h4>
+              <p id="pv-book-synopsis-text" class="abstract-body-real">
+                An ongoing research project investigating how technical objects and systems support specific spiritual practices, traditions, and forms of social cohesion. Examining the ontological boundary between the organic and the inorganic across continental philosophy of technology—from Georges Canguilhem and Gilbert Simondon to Bernard Stiegler and Yuk Hui—this work explores how technical milieus sustain liturgical, contemplative, and liberatory forms of life.
+              </p>
+            </section>
+
+            <!-- Table of Contents -->
+            <section class="toc-preview-section">
+              <h4 class="scholarly-caps toc-heading">
+                TABLE OF CONTENTS &amp; CHAPTER SUMMARIES (<span id="pv-book-chapter-count">3</span> CHAPTERS)
+              </h4>
+              <div class="preview-chapters-list" id="pv-book-chapters-list">
+                <div class="pv-chapter-item">
+                  <span class="pv-ch-num mono">CH 01</span>
+                  <div class="pv-ch-body">
+                    <strong class="pv-ch-title">Between the Organic and the Inorganic</strong>
+                    <p class="pv-ch-desc">Investigates ontological continuity between living organisms and technical artifacts as organized inorganic matter.</p>
+                  </div>
+                </div>
+                <div class="pv-chapter-item">
+                  <span class="pv-ch-num mono">CH 02</span>
+                  <div class="pv-ch-body">
+                    <strong class="pv-ch-title">Technical Milieus &amp; Ritual Cohesion</strong>
+                    <p class="pv-ch-desc">Shows how spiritual traditions rely upon material inscriptions, calendar instruments, and spatial architectures.</p>
+                  </div>
+                </div>
+                <div class="pv-chapter-item">
+                  <span class="pv-ch-num mono">CH 03</span>
+                  <div class="pv-ch-body">
+                    <strong class="pv-ch-title">Cosmotechnics, Pharmacology &amp; Care</strong>
+                    <p class="pv-ch-desc">Dialogues with Bernard Stiegler's general organology and Yuk Hui's cosmotechnics to theorize plural technical-spiritual orientations.</p>
+                  </div>
+                </div>
+              </div>
+            </section>
+          </article>
+
+          <!-- ==========================================
+               PREVIEW 3: SEMINAR DOSSIER MIRROR
+               Matches ClassesWorkspace.astro exactly
+               ========================================== -->
+          <article id="preview-box-classes" class="public-preview-card reader-article-real" hidden>
+            <header class="reader-header-real">
+              <div class="reader-eyebrow-row">
+                <span class="fascicle-tag tabular" id="pv-class-eyebrow">
+                  CURRICULUM · PHIL 3042
+                </span>
+                <span class="colophon-stamp scholarly-caps" id="pv-class-level">SEMINAR</span>
+              </div>
+
+              <h3 class="reader-main-title" id="pv-class-title">
+                Philosophy of Technology: Organology, the Organic &amp; the Inorganic
+              </h3>
+
+              <dl class="colophon-specs-grid tabular">
+                <div>
+                  <dt>TERM &amp; YEAR</dt>
+                  <dd id="pv-class-term-year">Monsoon (2025–2026)</dd>
+                </div>
+                <div>
+                  <dt>LEVEL</dt>
+                  <dd id="pv-class-level-val">Seminar</dd>
+                </div>
+                <div>
+                  <dt>MEETING &amp; LOCATION</dt>
+                  <dd id="pv-class-location">Ashoka University · Department of Philosophy</dd>
+                </div>
+                <div>
+                  <dt>PRINTABLE SYLLABUS</dt>
+                  <dd><span class="pill-mock" style="padding: 0.15rem 0.45rem; font-size: 0.6875rem;">Download PDF ↗</span></dd>
+                </div>
+              </dl>
+            </header>
+
+            <!-- Vellum Synopsis Frame -->
+            <section class="manuscript-abstract-vellum bookplate-frame">
+              <div class="bookplate-corner bookplate-corner--tl" aria-hidden="true">❦</div>
+              <div class="bookplate-corner bookplate-corner--tr" aria-hidden="true">❦</div>
+              <div class="bookplate-corner bookplate-corner--bl" aria-hidden="true">❦</div>
+              <div class="bookplate-corner bookplate-corner--br" aria-hidden="true">❦</div>
+              <h4 class="scholarly-caps abstract-kicker">
+                CURRICULUM SYNOPSIS &amp; PEDAGOGICAL OBJECTIVES
+              </h4>
+              <p id="pv-class-summary-text" class="abstract-body-real">
+                An upper-level seminar examining continental philosophies of technology and how technical objects and systems support specific spiritual practices, traditions, and forms of social cohesion. Tracing the relation between the organic and the inorganic from Georges Canguilhem and Gilbert Simondon to Bernard Stiegler, Sylvia Wynter, and Yuk Hui, students investigate technical exteriorization, tertiary retention, and pharmacology.
+              </p>
+            </section>
+
+            <!-- Weekly Schedule List -->
+            <section class="weeks-preview-section">
+              <h4 class="scholarly-caps toc-heading">
+                14-WEEK CURRICULUM &amp; REQUIRED READINGS (<span id="pv-class-week-count">3</span> MODULES)
+              </h4>
+              <div class="preview-weeks-list" id="pv-class-weeks-list">
+                <div class="pv-week-item">
+                  <div class="pv-wk-head">
+                    <span class="pv-wk-num mono">WK 01</span>
+                    <strong class="pv-wk-topic">The Organic &amp; The Inorganic: Vital Norms and Technical Life</strong>
+                  </div>
+                  <ul class="pv-wk-readings">
+                    <li>Georges Canguilhem (1952), Machine and Organism</li>
+                    <li>André Leroi-Gourhan (1964), Gesture and Speech, Part I</li>
+                  </ul>
+                </div>
+                <div class="pv-week-item">
+                  <div class="pv-wk-head">
+                    <span class="pv-wk-num mono">WK 02</span>
+                    <strong class="pv-wk-topic">Concretization, Transindividuation &amp; Technical Objects</strong>
+                  </div>
+                  <ul class="pv-wk-readings">
+                    <li>Gilbert Simondon (1958), On the Mode of Existence of Technical Objects</li>
+                    <li>Muriel Combes (2013), Gilbert Simondon and the Transindividual</li>
+                  </ul>
+                </div>
+                <div class="pv-week-item">
+                  <div class="pv-wk-head">
+                    <span class="pv-wk-num mono">WK 03</span>
+                    <strong class="pv-wk-topic">Epiphylogenesis, Tertiary Retention &amp; Pharmacology</strong>
+                  </div>
+                  <ul class="pv-wk-readings">
+                    <li>Bernard Stiegler (1998), Technics and Time, 1: The Fault of Epimetheus</li>
+                    <li>Bernard Stiegler (2010), Taking Care of Youth and the Generations</li>
+                  </ul>
+                </div>
+              </div>
+            </section>
+          </article>
+        </div>
+      </section>
+    </main>
+
+    <!-- Bottom Action Dock Bar -->
+    <footer class="studio-dock">
+      <div class="dock-left">
+        <span class="slug-indicator mono">
+          <span class="dock-label">ARCHIVE TARGET:</span>
+          <span id="editor-slug-display" class="dock-slug-val">src/data/publications/...</span>
+        </span>
+        <span class="sync-indicator" id="editor-sync-indicator">✓ Ready to commit</span>
+      </div>
+
+      <div class="dock-actions">
+        <button type="button" id="btn-cancel-content-modal" class="study-btn study-btn--ledger btn-dock-cancel">
+          <span>Cancel</span>
+          <span class="btn-keycap">Esc</span>
+        </button>
+        <button type="button" id="btn-toggle-view-mode" class="study-btn study-btn--instrument btn-dock-preview" title="Toggle Live Preview Mirror (⌘P)">
+          <span class="preview-btn-icon">👁</span>
+          <span id="btn-view-toggle-label">Preview</span>
+          <span class="btn-keycap">⌘P</span>
+        </button>
+        <button type="button" id="btn-save-content-modal" class="study-btn study-btn--seal study-btn--lg btn-dock-primary">
+          <span class="save-icon">✓</span>
+          <span id="btn-save-label">Save Article</span>
+          <span class="btn-keycap">⌘S</span>
+        </button>
+      </div>
+    </footer>
+  </div>
+</dialog>
+
+<script>
+  interface OpenContentEditorOptions {
+    type?: 'publications' | 'books' | 'classes';
+    mode?: 'create' | 'edit';
+    id?: string;
+    initialData?: Record<string, any>;
+    onSaved?: (item: any) => void;
+  }
+
+  const dialog = document.getElementById('content-editor-modal') as HTMLDialogElement | null;
+  const modalShell = document.getElementById('content-modal-shell');
+  const crumbType = document.getElementById('atelier-breadcrumb-type');
+  const crumbState = document.getElementById('atelier-breadcrumb-state');
+  const domainKicker = document.getElementById('atelier-domain-kicker');
+  const titleDisplay = document.getElementById('content-modal-title');
+  const modeChip = document.getElementById('editor-mode-chip');
+  const slugDisplay = document.getElementById('editor-slug-display');
+  const syncIndicator = document.getElementById('editor-sync-indicator');
+  const saveBtn = document.getElementById('btn-save-content-modal') as HTMLButtonElement | null;
+  const saveLabel = document.getElementById('btn-save-label');
+  const closeBtn = document.getElementById('btn-close-content-modal');
+  const cancelBtn = document.getElementById('btn-cancel-content-modal');
+  const toggleViewBtn = document.getElementById('btn-toggle-view-mode');
+  const toggleViewLabel = document.getElementById('btn-view-toggle-label');
+  const headerPreviewBtn = document.getElementById('btn-header-preview-toggle') as HTMLButtonElement | null;
+  const headerPreviewLabel = document.getElementById('header-preview-label');
+
+  // Stage Panes
+  const stageWorkbench = document.getElementById('stage-workbench-pane');
+  const stageMirror = document.getElementById('stage-mirror-pane');
+  const mainStage = document.getElementById('studio-main-stage');
+
+  // Segmented Type Switcher Pills & Nav
+  const typePillNav = document.getElementById('atelier-type-pill-nav');
+  const typePills = document.querySelectorAll<HTMLButtonElement>('.type-pill');
+
+  // Ingestion & Form Containers
+  const formContainers = document.querySelectorAll<HTMLElement>('.type-form-container');
+  const previewBoxes = document.querySelectorAll<HTMLElement>('.public-preview-card');
+  const mirrorTypeTag = document.getElementById('mirror-type-tag');
+
+  // Active Atelier State
+  const ATELIER_STATE = {
+    activeType: 'publications' as 'publications' | 'books' | 'classes',
+    activeMode: 'create' as 'create' | 'edit',
+    showPreview: false,
+    activeId: '',
+    originalEditType: '' as 'publications' | 'books' | 'classes' | '',
+    originalEditId: '',
+    isDirty: false,
+    savedCallback: null as ((item: any) => void) | null,
+    lastFocused: null as HTMLElement | null,
+  };
+
+  // Helper to slugify
+  function slugify(input: string): string {
+    return input
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-|-$/g, '')
+      .slice(0, 72);
+  }
+
+  function setDirty(dirty: boolean) {
+    ATELIER_STATE.isDirty = dirty;
+    if (syncIndicator) {
+      if (dirty) {
+        syncIndicator.textContent = '● Unsaved changes';
+        syncIndicator.className = 'sync-indicator is-dirty';
+      } else {
+        syncIndicator.textContent = '✓ Ready to commit';
+        syncIndicator.className = 'sync-indicator';
+      }
+    }
+  }
+
+  // Close Studio with Smooth Cubic Bezier Transition
+  function closeStudio() {
+    if (!dialog || !dialog.open) return;
+    dialog.setAttribute('data-closing', 'true');
+    setTimeout(() => {
+      dialog.close();
+      dialog.removeAttribute('data-closing');
+      if (ATELIER_STATE.lastFocused) {
+        ATELIER_STATE.lastFocused.focus();
+        ATELIER_STATE.lastFocused = null;
+      }
+    }, 320);
+  }
+
+  closeBtn?.addEventListener('click', closeStudio);
+  cancelBtn?.addEventListener('click', closeStudio);
+
+  dialog?.addEventListener('cancel', (e) => {
+    e.preventDefault();
+    closeStudio();
+  });
+
+  dialog?.addEventListener('click', (e) => {
+    if (e.target === dialog) {
+      closeStudio();
+    }
+  });
+
+  // ==========================================
+  // PREVIEW TOGGLE (Live Reader Mirror)
+  // Replaces the 2-button Focus/Split View segmented group
+  // ==========================================
+
+  function setPreviewState(show: boolean) {
+    ATELIER_STATE.showPreview = show;
+
+    // Synchronize Header Preview Button
+    if (headerPreviewBtn) {
+      headerPreviewBtn.classList.toggle('is-active', show);
+      headerPreviewBtn.setAttribute('aria-pressed', show ? 'true' : 'false');
+    }
+    if (headerPreviewLabel) {
+      headerPreviewLabel.textContent = show ? 'Hide Preview' : 'Preview';
+    }
+
+    // Synchronize Dock Preview Button
+    if (toggleViewBtn) {
+      toggleViewBtn.classList.toggle('is-active', show);
+      toggleViewBtn.setAttribute('aria-pressed', show ? 'true' : 'false');
+    }
+    if (toggleViewLabel) {
+      toggleViewLabel.textContent = show ? 'Hide Preview' : 'Preview';
+    }
+
+    // Synchronize Stage Layout
+    if (!mainStage) return;
+    mainStage.classList.toggle('is-split-mode', show);
+    mainStage.classList.toggle('is-focus-mode', !show);
+
+    if (show) {
+      if (stageWorkbench) stageWorkbench.hidden = false;
+      if (stageMirror) stageMirror.hidden = false;
+      updateLiveMirror();
+    } else {
+      if (stageWorkbench) stageWorkbench.hidden = false;
+      if (stageMirror) stageMirror.hidden = true;
+    }
+  }
+
+  function togglePreview() {
+    setPreviewState(!ATELIER_STATE.showPreview);
+  }
+
+  // Backward compatibility alias for auto-switching callers
+  function setViewMode(mode: 'focus' | 'split') {
+    setPreviewState(mode === 'split');
+  }
+
+  headerPreviewBtn?.addEventListener('click', togglePreview);
+  toggleViewBtn?.addEventListener('click', togglePreview);
+
+  // ==========================================
+  // BREADCRUMBS & TYPE SWITCHER (Publication | Monograph | Syllabus)
+  // ==========================================
+
+  function updateHeaderBreadcrumbs() {
+    const type = ATELIER_STATE.activeType;
+    const isEdit = ATELIER_STATE.activeMode === 'edit' && Boolean(ATELIER_STATE.activeId);
+
+    // 1. Breadcrumb Type Segment
+    if (crumbType) {
+      if (type === 'publications') crumbType.textContent = '01 · Publication';
+      else if (type === 'books') crumbType.textContent = '02 · Monograph';
+      else crumbType.textContent = '03 · Syllabus';
+    }
+
+    // 2. Breadcrumb State Segment & File Tag
+    const fileTagEl = document.getElementById('atelier-file-tag');
+    if (crumbState) {
+      if (isEdit) {
+        crumbState.textContent = 'Edit Record';
+      } else {
+        if (type === 'publications') crumbState.textContent = 'New Manuscript';
+        else if (type === 'books') crumbState.textContent = 'New Volume';
+        else crumbState.textContent = 'New Course';
+      }
+    }
+
+    if (fileTagEl) {
+      if (isEdit && ATELIER_STATE.activeId) {
+        fileTagEl.hidden = false;
+        fileTagEl.textContent = `#${ATELIER_STATE.activeId}`;
+        fileTagEl.title = `File Identifier: ${ATELIER_STATE.activeId}`;
+      } else {
+        fileTagEl.hidden = true;
+        fileTagEl.textContent = '';
+      }
+    }
+
+    // 3. Backward-Compatible Domain Kicker
+    if (domainKicker) {
+      if (type === 'publications') domainKicker.textContent = 'ARTICLE & MANUSCRIPT ATELIER';
+      else if (type === 'books') domainKicker.textContent = 'MONOGRAPH ATELIER';
+      else domainKicker.textContent = 'SEMINAR SYLLABUS ATELIER';
+    }
+
+    // 4. Modal Header Title Display
+    if (titleDisplay) {
+      if (isEdit) {
+        if (type === 'publications') titleDisplay.textContent = 'Edit Manuscript Record';
+        else if (type === 'books') titleDisplay.textContent = 'Edit Monograph Volume';
+        else titleDisplay.textContent = 'Edit Course Syllabus';
+      } else {
+        if (type === 'publications') titleDisplay.textContent = 'New Manuscript Dispatch';
+        else if (type === 'books') titleDisplay.textContent = 'New Monograph Volume';
+        else titleDisplay.textContent = 'New Course Syllabus';
+      }
+    }
+
+    // 5. Mode Status Chip
+    if (modeChip) {
+      if (isEdit) {
+        modeChip.textContent = 'EDIT MODE';
+        modeChip.className = 'status-chip is-edit';
+      } else {
+        modeChip.textContent = 'READY';
+        modeChip.className = 'status-chip';
+      }
+    }
+
+    // 6. Save Button Label
+    if (saveLabel) {
+      if (isEdit) {
+        saveLabel.textContent = 'Save Changes';
+      } else {
+        saveLabel.textContent = type === 'publications' ? 'Save Article' : type === 'books' ? 'Save Monograph' : 'Save Syllabus';
+      }
+    }
+
+    // 7. Mirror Reader Mode Tag
+    if (mirrorTypeTag) {
+      if (type === 'publications') mirrorTypeTag.textContent = 'ARTICLE PREVIEW';
+      else if (type === 'books') mirrorTypeTag.textContent = 'MONOGRAPH PREVIEW';
+      else mirrorTypeTag.textContent = 'SYLLABUS PREVIEW';
+    }
+
+    // 8. Context-Aware Type Switcher Visibility:
+    // Only display the 3-button switcher when CREATING new records.
+    // When EDITING an existing publication, monograph, or syllabus, hide the switcher completely
+    // so the atelier is strictly context-aware and dedicated solely to that category.
+    if (typePillNav) {
+      typePillNav.hidden = isEdit;
+      typePillNav.classList.toggle('is-hidden', isEdit);
+    }
+  }
+
+  function setDomainType(type: 'publications' | 'books' | 'classes') {
+    // If switching types from an active edit session of a different type
+    if (ATELIER_STATE.activeMode === 'edit' && ATELIER_STATE.activeType !== type) {
+      if (ATELIER_STATE.originalEditType === type && ATELIER_STATE.originalEditId) {
+        ATELIER_STATE.activeMode = 'edit';
+        ATELIER_STATE.activeId = ATELIER_STATE.originalEditId;
+      } else {
+        ATELIER_STATE.activeMode = 'create';
+        ATELIER_STATE.activeId = '';
+      }
+    }
+
+    ATELIER_STATE.activeType = type;
+
+    // Update Type Pills
+    typePills.forEach((p) => {
+      const match = p.dataset.type === type;
+      p.classList.toggle('is-active', match);
+      p.setAttribute('aria-selected', match ? 'true' : 'false');
+    });
+
+    // Update Breadcrumbs & Labels across the modal
+    updateHeaderBreadcrumbs();
+
+    // Toggle Forms: STRICTLY SHOW ONLY ACTIVE FORM
+    formContainers.forEach((fc) => {
+      const isMatch = fc.id === `form-container-${type}`;
+      fc.classList.toggle('is-active', isMatch);
+      fc.hidden = !isMatch;
+    });
+
+    // Toggle Previews: STRICTLY SHOW ONLY ACTIVE PREVIEW
+    previewBoxes.forEach((pv) => {
+      const isMatch = pv.id === `preview-box-${type}`;
+      pv.classList.toggle('is-active', isMatch);
+      pv.hidden = !isMatch;
+    });
+
+    updateTargetSlugDisplay();
+    updateLiveMirror();
+  }
+
+  typePills.forEach((pill) => {
+    pill.addEventListener('click', () => {
+      if (ATELIER_STATE.activeMode === 'edit') return;
+      const t = pill.dataset.type as any;
+      if (t && t !== ATELIER_STATE.activeType) {
+        setDomainType(t);
+      }
+    });
+  });
+
+  // ==========================================
+  // REAL-TIME MIRROR SYNC (60 FPS)
+  // Read typed value OR fallback to placeholder sample!
+  // ==========================================
+
+  function getFieldVal(id: string, fallback: string): string {
+    const el = document.getElementById(id) as HTMLInputElement | HTMLTextAreaElement | null;
+    const val = el?.value.trim();
+    return val ? val : (el?.placeholder || fallback);
+  }
+
+  function updateTargetSlugDisplay() {
+    if (!slugDisplay) return;
+    const type = ATELIER_STATE.activeType;
+    let slug = ATELIER_STATE.activeId;
+
+    if (!slug) {
+      if (type === 'publications') {
+        const title = getFieldVal('wb-pub-title', 'epistemic-horizons');
+        const year = getFieldVal('wb-pub-year', '2024');
+        slug = slugify(`cordry-${year}-${title}`);
+      } else if (type === 'books') {
+        const title = getFieldVal('wb-book-title', 'technical-objects');
+        const year = getFieldVal('wb-book-year', '2025');
+        slug = slugify(`book-${title}-${year}`);
+      } else {
+        const code = getFieldVal('wb-class-code', 'PHIL-3042');
+        const title = getFieldVal('wb-class-title', 'philosophy-of-technology');
+        slug = slugify(`${code}-${title}`);
+      }
+    }
+
+    slugDisplay.textContent = `src/data/${type}/${slug}.md`;
+  }
+
+  function updateLiveMirror() {
+    const type = ATELIER_STATE.activeType;
+
+    if (type === 'publications') {
+      const title = getFieldVal('wb-pub-title', 'Epistemic Horizons: Insurrectionist Empiricism and Critical Pragmatism');
+      const subtitle = getFieldVal('wb-pub-subtitle', 'Philosophy Born of Struggle, Necro-Being, and the Imperative of Liberation');
+      const year = getFieldVal('wb-pub-year', '2024');
+      const venue = getFieldVal('wb-pub-venue', 'Journal of French and Francophone Philosophy');
+      const volume = getFieldVal('wb-pub-volume', 'Vol. 32, No. 1–2, pp. 142–168');
+      const authors = getFieldVal('wb-pub-authors', 'Wynter, S., Harris, L.');
+      const doi = getFieldVal('wb-pub-doi', '10.5195/jffp.2024.1102');
+      const abstract = getFieldVal('wb-pub-abstract', 'This paper articulates an insurrectionist epistemology situated at the intersection of Leonard Harris\'s philosophy born of struggle and Alain Locke\'s critical pragmatism. Investigating how normative categories of epistemic agency emerge within contested terrains of racialized violence and social survival, the essay demonstrates why melioristic consensus often masks structural necro-being.');
+      const bibtex = getFieldVal('wb-pub-bibtex', `@article{cordry_2024_epistemic,\n  author = {Cordry, Duncan R. and Wynter, Sylvia and Harris, Leonard},\n  title = {${title}},\n  journal = {${venue}},\n  year = {${year}},\n  volume = {32},\n  number = {1-2},\n  pages = {142--168},\n  doi = {${doi}}\n}`);
+
+      const slug = ATELIER_STATE.activeId || slugify(`cordry-${year}-${title}`);
+
+      const eyebrow = document.getElementById('pv-pub-eyebrow');
+      if (eyebrow) eyebrow.textContent = `FOLIO ${slug.toUpperCase()} · ${year}`;
+
+      const titleEl = document.getElementById('pv-pub-title');
+      if (titleEl) titleEl.textContent = title;
+
+      const subEl = document.getElementById('pv-pub-subtitle');
+      if (subEl) {
+        subEl.textContent = subtitle;
+        subEl.hidden = !subtitle.trim();
+      }
+
+      const authorsEl = document.getElementById('pv-pub-coauthors');
+      if (authorsEl) {
+        authorsEl.textContent = authors.trim() ? `, ${authors}` : '';
+      }
+
+      const venueEl = document.getElementById('pv-pub-venue');
+      if (venueEl) venueEl.textContent = venue;
+
+      const volEl = document.getElementById('pv-pub-volume');
+      if (volEl) volEl.textContent = volume ? `· ${volume}` : '';
+
+      const doiPill = document.getElementById('pv-pub-doi-pill');
+      if (doiPill) doiPill.hidden = !doi.trim();
+
+      const absText = document.getElementById('pv-pub-abstract-text');
+      if (absText) absText.textContent = abstract;
+
+      const bibCode = document.getElementById('pv-pub-bibtex-text');
+      if (bibCode) bibCode.textContent = bibtex;
+    } else if (type === 'books') {
+      const title = getFieldVal('wb-book-title', 'Technical Objects & Spiritual Practices');
+      const subtitle = getFieldVal('wb-book-subtitle', 'Organology, the Organic & Inorganic, and Social Cohesion');
+      const year = getFieldVal('wb-book-year', '2025');
+      const publisher = getFieldVal('wb-book-publisher', 'Ashoka University · Philosophy Working Monograph');
+      const isbn = getFieldVal('wb-book-isbn', 'ASHOKA-PHIL-2025-DRC');
+      const pages = getFieldVal('wb-book-pages', '214');
+      const cover = getFieldVal('wb-book-cover', '/images/books/monograph-cover-0080.webp');
+      const synopsis = getFieldVal('wb-book-synopsis', 'An ongoing research project investigating how technical objects and systems support specific spiritual practices, traditions, and forms of social cohesion. Examining the ontological boundary between the organic and the inorganic across continental philosophy of technology—from Georges Canguilhem and Gilbert Simondon to Bernard Stiegler and Yuk Hui—this work explores how technical milieus sustain liturgical, contemplative, and liberatory forms of life.');
+
+      const slug = ATELIER_STATE.activeId || slugify(`book-${title}-${year}`);
+
+      const eyebrow = document.getElementById('pv-book-eyebrow');
+      if (eyebrow) eyebrow.textContent = `FOLIO ${slug.toUpperCase()} · ${year}`;
+
+      const titleEl = document.getElementById('pv-book-title');
+      if (titleEl) titleEl.textContent = title;
+
+      const subEl = document.getElementById('pv-book-subtitle');
+      if (subEl) {
+        subEl.textContent = subtitle;
+        subEl.hidden = !subtitle.trim();
+      }
+
+      const pubEl = document.getElementById('pv-book-publisher');
+      if (pubEl) pubEl.textContent = publisher;
+
+      const isbnEl = document.getElementById('pv-book-isbn');
+      if (isbnEl) isbnEl.textContent = isbn;
+
+      const pagesEl = document.getElementById('pv-book-pages');
+      if (pagesEl) pagesEl.textContent = `${pages} Pages`;
+
+      const coverEl = document.getElementById('pv-book-cover') as HTMLImageElement | null;
+      if (coverEl) coverEl.src = cover;
+
+      const synText = document.getElementById('pv-book-synopsis-text');
+      if (synText) synText.textContent = synopsis;
+
+      // Chapters
+      const chapterRows = document.querySelectorAll<HTMLElement>('#wb-chapters-container .chapter-row');
+      const countEl = document.getElementById('pv-book-chapter-count');
+      if (countEl) countEl.textContent = String(chapterRows.length);
+
+      const chaptersList = document.getElementById('pv-book-chapters-list');
+      if (chaptersList) {
+        chaptersList.innerHTML = '';
+        if (chapterRows.length === 0) {
+          chaptersList.innerHTML = `
+            <div class="pv-empty-notice">
+              <span class="pv-empty-seal">❦</span>
+              <span>No monograph chapters cataloged yet.</span>
+            </div>
+          `;
+        } else {
+          chapterRows.forEach((row) => {
+            const numInput = row.querySelector('.ch-num') as HTMLInputElement | null;
+            const titleInput = row.querySelector('.ch-title') as HTMLInputElement | null;
+            const sumInput = row.querySelector('.ch-summary') as HTMLInputElement | HTMLTextAreaElement | null;
+
+            const num = numInput?.value.trim() || numInput?.placeholder || '01';
+            const t = titleInput?.value.trim() || titleInput?.placeholder || 'Chapter Title';
+            const s = sumInput?.value.trim() || (sumInput?.placeholder && !sumInput.placeholder.includes('synopsis') && !sumInput.placeholder.includes('summary') ? sumInput.placeholder : '');
+
+            const item = document.createElement('div');
+            item.className = 'pv-chapter-item';
+            item.innerHTML = `
+              <span class="pv-ch-num mono">CH ${num}</span>
+              <div class="pv-ch-body">
+                <strong class="pv-ch-title">${t}</strong>
+                ${s ? `<p class="pv-ch-desc">${s}</p>` : ''}
+              </div>
+            `;
+            chaptersList.appendChild(item);
+          });
+        }
+      }
+    } else if (type === 'classes') {
+      const code = getFieldVal('wb-class-code', 'PHIL 3042');
+      const title = getFieldVal('wb-class-title', 'Philosophy of Technology: Organology, the Organic & the Inorganic');
+      const term = getFieldVal('wb-class-term', 'Monsoon');
+      const year = getFieldVal('wb-class-year', '2025–2026');
+      const level = (document.getElementById('wb-class-level') as HTMLSelectElement)?.value || 'Seminar';
+      const location = getFieldVal('wb-class-location', 'Ashoka University · Department of Philosophy');
+      const desc = getFieldVal('wb-class-desc', 'An upper-level seminar examining continental philosophies of technology and how technical objects and systems support specific spiritual practices, traditions, and forms of social cohesion. Tracing the relation between the organic and the inorganic from Georges Canguilhem and Gilbert Simondon to Bernard Stiegler, Sylvia Wynter, and Yuk Hui, students investigate technical exteriorization, tertiary retention, and pharmacology.');
+
+      const eyebrow = document.getElementById('pv-class-eyebrow');
+      if (eyebrow) eyebrow.textContent = `CURRICULUM · ${code}`;
+
+      const levelEl = document.getElementById('pv-class-level');
+      if (levelEl) levelEl.textContent = `${level.toUpperCase()} SEMINAR`;
+
+      const titleEl = document.getElementById('pv-class-title');
+      if (titleEl) titleEl.textContent = title;
+
+      const termYearEl = document.getElementById('pv-class-term-year');
+      if (termYearEl) termYearEl.textContent = `${term} (${year})`;
+
+      const levelValEl = document.getElementById('pv-class-level-val');
+      if (levelValEl) levelValEl.textContent = level;
+
+      const locEl = document.getElementById('pv-class-location');
+      if (locEl) locEl.textContent = location;
+
+      const sumEl = document.getElementById('pv-class-summary-text');
+      if (sumEl) sumEl.textContent = desc;
+
+      // Weeks
+      const weekRows = document.querySelectorAll<HTMLElement>('#wb-weeks-container .week-row');
+      const countEl = document.getElementById('pv-class-week-count');
+      if (countEl) countEl.textContent = String(weekRows.length);
+
+      const weeksList = document.getElementById('pv-class-weeks-list');
+      if (weeksList) {
+        weeksList.innerHTML = '';
+        if (weekRows.length === 0) {
+          weeksList.innerHTML = `
+            <div class="pv-empty-notice">
+              <span class="pv-empty-seal">❦</span>
+              <span>No weekly syllabus modules cataloged yet.</span>
+            </div>
+          `;
+        } else {
+          weekRows.forEach((row) => {
+            const numInput = row.querySelector('.wk-num') as HTMLInputElement | null;
+            const topicInput = row.querySelector('.wk-topic') as HTMLInputElement | null;
+            const readingsInput = row.querySelector('.wk-readings') as HTMLTextAreaElement | null;
+
+            const num = numInput?.value.trim() || numInput?.placeholder || 'WK 01';
+            const t = topicInput?.value.trim() || topicInput?.placeholder || 'Weekly Seminar Topic';
+            const rawReadings = readingsInput?.value.trim() || (readingsInput?.placeholder && !readingsInput.placeholder.includes('one entry per line') && !readingsInput.placeholder.includes('one per line') ? readingsInput.placeholder : '');
+            const readings = rawReadings ? rawReadings.split('\n').map((r) => r.trim()).filter(Boolean) : [];
+
+            const item = document.createElement('div');
+            item.className = 'pv-week-item';
+            item.innerHTML = `
+              <div class="pv-wk-head">
+                <span class="pv-wk-num mono">${num}</span>
+                <strong class="pv-wk-topic">${t}</strong>
+              </div>
+              ${readings.length > 0 ? `<ul class="pv-wk-readings">${readings.map((r) => `<li>${r}</li>`).join('')}</ul>` : ''}
+            `;
+            weeksList.appendChild(item);
+          });
+        }
+      }
+    }
+  }
+
+  // Bind live input listeners across all workbench fields
+  function bindLiveListeners() {
+    modalShell?.addEventListener('input', (e) => {
+      const target = e.target as HTMLElement;
+      if (target.matches('input, textarea, select')) {
+        setDirty(true);
+        updateTargetSlugDisplay();
+        updateLiveMirror();
+      }
+    });
+  }
+  bindLiveListeners();
+
+  // ==========================================
+  // INGESTION RESOLVERS (DOI, ISBN, BIBTEX)
+  // Auto-transitions to Split View upon completion!
+  // ==========================================
+
+  // 1. DOI Resolver
+  const btnIngestDoi = document.getElementById('btn-ingest-doi') as HTMLButtonElement | null;
+  btnIngestDoi?.addEventListener('click', async () => {
+    const input = document.getElementById('ingest-doi-input') as HTMLInputElement | null;
+    const doi = input?.value.trim() || '';
+    if (!doi) {
+      (window as any).notify?.('Please paste a DOI identifier first.', 'warn');
+      input?.focus();
+      return;
+    }
+
+    if (btnIngestDoi) {
+      btnIngestDoi.disabled = true;
+      btnIngestDoi.textContent = 'Resolving…';
+    }
+
+    (window as any).notify?.('Querying Crossref metadata index…', 'info');
+    const res = await (window as any).postAdmin?.('/api/admin/content', {
+      action: 'import-doi',
+      doi,
+    });
+
+    if (btnIngestDoi) {
+      btnIngestDoi.disabled = false;
+      btnIngestDoi.textContent = '✦ Auto-Resolve DOI';
+    }
+
+    if (res?.ok && res?.metadata) {
+      const m = res.metadata;
+      (document.getElementById('wb-pub-title') as HTMLInputElement).value = m.title || '';
+      (document.getElementById('wb-pub-subtitle') as HTMLInputElement).value = m.subtitle || '';
+      (document.getElementById('wb-pub-year') as HTMLInputElement).value = String(m.year || 2026);
+      (document.getElementById('wb-pub-venue') as HTMLInputElement).value = m.venue || '';
+      (document.getElementById('wb-pub-volume') as HTMLInputElement).value = m.volumeIssue || '';
+      (document.getElementById('wb-pub-doi') as HTMLInputElement).value = m.doi || '';
+      (document.getElementById('wb-pub-authors') as HTMLInputElement).value = (m.coAuthors || []).join(', ');
+      (document.getElementById('wb-pub-abstract') as HTMLTextAreaElement).value = m.abstract || '';
+      (document.getElementById('wb-pub-bibtex') as HTMLTextAreaElement).value = m.citationBibtex || '';
+
+      setDirty(true);
+      updateTargetSlugDisplay();
+      updateLiveMirror();
+      setViewMode('split'); // Auto-parse into Split View!
+      (window as any).notify?.(`Resolved manuscript: "${m.title}"`, 'success');
+    } else {
+      (window as any).notify?.(res?.error || 'Failed to resolve DOI.', 'error');
+    }
+  });
+
+  // 2. BibTeX Parser
+  document.getElementById('btn-ingest-bibtex')?.addEventListener('click', async () => {
+    const textarea = document.getElementById('ingest-bibtex-input') as HTMLTextAreaElement | null;
+    const raw = textarea?.value.trim() || '';
+    if (!raw) {
+      (window as any).notify?.('Please paste BibTeX snippet first.', 'warn');
+      textarea?.focus();
+      return;
+    }
+
+    (window as any).notify?.('Parsing BibTeX snippet…', 'info');
+    const res = await (window as any).postAdmin?.('/api/admin/content', {
+      action: 'parse-bibtex',
+      bibtex: raw,
+    });
+
+    if (res?.ok && res?.metadata) {
+      const m = res.metadata;
+      (document.getElementById('wb-pub-title') as HTMLInputElement).value = m.title || '';
+      (document.getElementById('wb-pub-year') as HTMLInputElement).value = String(m.year || 2026);
+      (document.getElementById('wb-pub-venue') as HTMLInputElement).value = m.venue || '';
+      (document.getElementById('wb-pub-volume') as HTMLInputElement).value = m.volumeIssue || '';
+      (document.getElementById('wb-pub-doi') as HTMLInputElement).value = m.doi || '';
+      (document.getElementById('wb-pub-authors') as HTMLInputElement).value = (m.coAuthors || []).join(', ');
+      (document.getElementById('wb-pub-abstract') as HTMLTextAreaElement).value = m.abstract || '';
+      (document.getElementById('wb-pub-bibtex') as HTMLTextAreaElement).value = m.citationBibtex || raw;
+
+      setDirty(true);
+      updateTargetSlugDisplay();
+      updateLiveMirror();
+      setViewMode('split'); // Auto-parse into Split View!
+      (window as any).notify?.('Populated fields from BibTeX snippet.', 'success');
+    } else {
+      (window as any).notify?.(res?.error || 'Unable to parse BibTeX.', 'error');
+    }
+  });
+
+  // 3. ISBN Resolver
+  const btnIngestIsbn = document.getElementById('btn-ingest-isbn') as HTMLButtonElement | null;
+  btnIngestIsbn?.addEventListener('click', async () => {
+    const input = document.getElementById('ingest-isbn-input') as HTMLInputElement | null;
+    const isbn = input?.value.trim() || '';
+    if (!isbn) {
+      (window as any).notify?.('Please paste an ISBN first.', 'warn');
+      input?.focus();
+      return;
+    }
+
+    if (btnIngestIsbn) {
+      btnIngestIsbn.disabled = true;
+      btnIngestIsbn.textContent = 'Resolving…';
+    }
+
+    (window as any).notify?.('Querying OpenLibrary catalog index…', 'info');
+    const res = await (window as any).postAdmin?.('/api/admin/content', {
+      action: 'resolve-isbn',
+      isbn,
+    });
+
+    if (btnIngestIsbn) {
+      btnIngestIsbn.disabled = false;
+      btnIngestIsbn.textContent = '✦ Auto-Resolve Book';
+    }
+
+    if (res?.ok && res?.metadata) {
+      const m = res.metadata;
+      (document.getElementById('wb-book-title') as HTMLInputElement).value = m.title || '';
+      (document.getElementById('wb-book-subtitle') as HTMLInputElement).value = m.subtitle || '';
+      (document.getElementById('wb-book-year') as HTMLInputElement).value = String(m.year || 2026);
+      (document.getElementById('wb-book-publisher') as HTMLInputElement).value = m.publisher || '';
+      (document.getElementById('wb-book-isbn') as HTMLInputElement).value = m.isbn || '';
+      (document.getElementById('wb-book-pages') as HTMLInputElement).value = String(m.pages || 200);
+      (document.getElementById('wb-book-synopsis') as HTMLTextAreaElement).value = m.synopsis || '';
+
+      setDirty(true);
+      updateTargetSlugDisplay();
+      updateLiveMirror();
+      setViewMode('split'); // Auto-parse into Split View!
+      (window as any).notify?.(`Resolved monograph: "${m.title}"`, 'success');
+    } else {
+      (window as any).notify?.(res?.error || 'Could not resolve ISBN.', 'error');
+    }
+  });
+
+  // 4. Course Code Initializer
+  document.getElementById('btn-ingest-class-code')?.addEventListener('click', () => {
+    const input = document.getElementById('ingest-class-code-input') as HTMLInputElement | null;
+    const code = input?.value.trim() || '';
+    if (code) {
+      (document.getElementById('wb-class-code') as HTMLInputElement).value = code;
+      setDirty(true);
+      updateTargetSlugDisplay();
+      updateLiveMirror();
+      setViewMode('split');
+    }
+  });
+
+  // ==========================================
+  // NATIVE FILE DRAG-AND-DROP UPLOAD PIPELINE
+  // ==========================================
+
+  function setupFileUploader(
+    dropzoneEl: HTMLElement | null,
+    fileInputEl: HTMLInputElement | null,
+    onFileReady: (file: File) => Promise<void>
+  ) {
+    if (!dropzoneEl) return;
+
+    dropzoneEl.addEventListener('click', () => fileInputEl?.click());
+
+    fileInputEl?.addEventListener('change', async () => {
+      const file = fileInputEl.files?.[0];
+      if (file) await onFileReady(file);
+    });
+
+    ['dragenter', 'dragover'].forEach((eventName) => {
+      dropzoneEl.addEventListener(eventName, (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        dropzoneEl.classList.add('is-drag-over');
+      });
+    });
+
+    ['dragleave', 'drop'].forEach((eventName) => {
+      dropzoneEl.addEventListener(eventName, (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        dropzoneEl.classList.remove('is-drag-over');
+      });
+    });
+
+    dropzoneEl.addEventListener('drop', async (e: DragEvent) => {
+      const file = e.dataTransfer?.files?.[0];
+      if (file) await onFileReady(file);
+    });
+  }
+
+  // Publication Dropzone
+  setupFileUploader(
+    document.getElementById('dropzone-pub'),
+    document.getElementById('file-input-pub') as HTMLInputElement,
+    async (file: File) => {
+      if (file.name.endsWith('.bib')) {
+        const text = await file.text();
+        const res = await (window as any).postAdmin?.('/api/admin/content', {
+          action: 'parse-bibtex',
+          bibtex: text,
+        });
+        if (res?.ok && res?.metadata) {
+          const m = res.metadata;
+          (document.getElementById('wb-pub-title') as HTMLInputElement).value = m.title || '';
+          (document.getElementById('wb-pub-year') as HTMLInputElement).value = String(m.year || 2026);
+          (document.getElementById('wb-pub-venue') as HTMLInputElement).value = m.venue || '';
+          (document.getElementById('wb-pub-volume') as HTMLInputElement).value = m.volumeIssue || '';
+          (document.getElementById('wb-pub-doi') as HTMLInputElement).value = m.doi || '';
+          (document.getElementById('wb-pub-authors') as HTMLInputElement).value = (m.coAuthors || []).join(', ');
+          (document.getElementById('wb-pub-abstract') as HTMLTextAreaElement).value = m.abstract || '';
+          (document.getElementById('wb-pub-bibtex') as HTMLTextAreaElement).value = m.citationBibtex || text;
+          setDirty(true);
+          updateTargetSlugDisplay();
+          updateLiveMirror();
+          setViewMode('split');
+          (window as any).notify?.('Populated fields from dropped BibTeX file!', 'success');
+        }
+        return;
+      }
+
+      // PDF Upload
+      (window as any).notify?.(`Uploading manuscript "${file.name}"…`, 'info');
+      const reader = new FileReader();
+      reader.onload = async () => {
+        const dataUrl = reader.result as string;
+        const res = await (window as any).postAdmin?.('/api/admin/content', {
+          action: 'upload-document',
+          type: 'publications',
+          fileName: file.name,
+          dataUrl,
+        });
+
+        if (res?.ok && res?.fileUrl) {
+          (document.getElementById('wb-pub-pdf') as HTMLInputElement).value = res.fileUrl;
+          const inferredTitle = file.name.replace(/\.[^/.]+$/, '').replace(/[-_]+/g, ' ');
+          const titleInput = document.getElementById('wb-pub-title') as HTMLInputElement;
+          if (!titleInput.value) titleInput.value = inferredTitle;
+
+          setDirty(true);
+          updateTargetSlugDisplay();
+          updateLiveMirror();
+          setViewMode('split');
+          (window as any).notify?.(`Manuscript attached: ${res.fileUrl}`, 'success');
+        } else {
+          (window as any).notify?.(res?.error || 'Document upload failed.', 'error');
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  );
+
+  // Inline Publication PDF Drop
+  setupFileUploader(
+    document.getElementById('drop-inline-pub-pdf'),
+    document.getElementById('inline-file-pub') as HTMLInputElement,
+    async (file: File) => {
+      (window as any).notify?.(`Uploading replacement PDF "${file.name}"…`, 'info');
+      const reader = new FileReader();
+      reader.onload = async () => {
+        const res = await (window as any).postAdmin?.('/api/admin/content', {
+          action: 'upload-document',
+          type: 'publications',
+          fileName: file.name,
+          dataUrl: reader.result as string,
+        });
+        if (res?.ok && res?.fileUrl) {
+          (document.getElementById('wb-pub-pdf') as HTMLInputElement).value = res.fileUrl;
+          setDirty(true);
+          (window as any).notify?.(`Updated manuscript file route: ${res.fileUrl}`, 'success');
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  );
+
+  // Book Ingest Dropzone (Cover Art or PDF)
+  setupFileUploader(
+    document.getElementById('dropzone-book'),
+    document.getElementById('file-input-book') as HTMLInputElement,
+    async (file: File) => {
+      if (file.type.startsWith('image/')) {
+        (window as any).notify?.(`Uploading monograph cover "${file.name}"…`, 'info');
+        const reader = new FileReader();
+        reader.onload = async () => {
+          const res = await (window as any).postAdmin?.('/api/admin/content', {
+            action: 'upload-book-cover',
+            customFileName: file.name.replace(/\.[^/.]+$/, ''),
+            dataUrl: reader.result as string,
+          });
+          if (res?.ok && res?.imageUrl) {
+            (document.getElementById('wb-book-cover') as HTMLInputElement).value = res.imageUrl;
+            (document.getElementById('wb-book-cover-thumb') as HTMLImageElement).src = res.imageUrl;
+            setDirty(true);
+            updateTargetSlugDisplay();
+            updateLiveMirror();
+            setViewMode('split');
+            (window as any).notify?.('Attached cover artwork to monograph draft.', 'success');
+          }
+        };
+        reader.readAsDataURL(file);
+      } else {
+        setViewMode('split');
+      }
+    }
+  );
+
+  // Inline Book Cover Drop
+  setupFileUploader(
+    document.getElementById('drop-inline-book-cover'),
+    document.getElementById('inline-file-book-cover') as HTMLInputElement,
+    async (file: File) => {
+      if (!file.type.startsWith('image/')) return;
+      (window as any).notify?.(`Uploading replacement cover "${file.name}"…`, 'info');
+      const reader = new FileReader();
+      reader.onload = async () => {
+        const res = await (window as any).postAdmin?.('/api/admin/content', {
+          action: 'upload-book-cover',
+          customFileName: file.name.replace(/\.[^/.]+$/, ''),
+          dataUrl: reader.result as string,
+        });
+        if (res?.ok && res?.imageUrl) {
+          (document.getElementById('wb-book-cover') as HTMLInputElement).value = res.imageUrl;
+          (document.getElementById('wb-book-cover-thumb') as HTMLImageElement).src = res.imageUrl;
+          setDirty(true);
+          updateLiveMirror();
+          (window as any).notify?.('Attached cover artwork to monograph.', 'success');
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  );
+
+  // Class Ingest Dropzone
+  setupFileUploader(
+    document.getElementById('dropzone-class'),
+    document.getElementById('file-input-class') as HTMLInputElement,
+    async (file: File) => {
+      (window as any).notify?.(`Uploading syllabus "${file.name}"…`, 'info');
+      const reader = new FileReader();
+      reader.onload = async () => {
+        const res = await (window as any).postAdmin?.('/api/admin/content', {
+          action: 'upload-document',
+          type: 'classes',
+          fileName: file.name,
+          dataUrl: reader.result as string,
+        });
+        if (res?.ok && res?.fileUrl) {
+          (document.getElementById('wb-class-pdf') as HTMLInputElement).value = res.fileUrl;
+          const codeMatch = file.name.match(/[A-Z]{2,4}[-\s]?\d{3,4}/i);
+          if (codeMatch) {
+            (document.getElementById('wb-class-code') as HTMLInputElement).value = codeMatch[0].toUpperCase();
+          }
+          setDirty(true);
+          updateTargetSlugDisplay();
+          updateLiveMirror();
+          setViewMode('split');
+          (window as any).notify?.(`Syllabus document linked: ${res.fileUrl}`, 'success');
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  );
+
+  // Inline Class Syllabus Drop
+  setupFileUploader(
+    document.getElementById('drop-inline-class-pdf'),
+    document.getElementById('inline-file-class') as HTMLInputElement,
+    async (file: File) => {
+      (window as any).notify?.(`Uploading replacement syllabus "${file.name}"…`, 'info');
+      const reader = new FileReader();
+      reader.onload = async () => {
+        const res = await (window as any).postAdmin?.('/api/admin/content', {
+          action: 'upload-document',
+          type: 'classes',
+          fileName: file.name,
+          dataUrl: reader.result as string,
+        });
+        if (res?.ok && res?.fileUrl) {
+          (document.getElementById('wb-class-pdf') as HTMLInputElement).value = res.fileUrl;
+          setDirty(true);
+          (window as any).notify?.(`Updated syllabus route: ${res.fileUrl}`, 'success');
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  );
+
+  // ==========================================
+  // DIRECT IN-CONTEXT COVER ATELIER LAUNCHER
+  // ==========================================
+
+  document.getElementById('wb-btn-launch-cover-cropper')?.addEventListener('click', () => {
+    const currentCover = (document.getElementById('wb-book-cover') as HTMLInputElement)?.value || '';
+    const bookTitle = (document.getElementById('wb-book-title') as HTMLInputElement)?.value || 'monograph';
+    const slug = slugify(bookTitle) || 'monograph-cover';
+
+    (window as any).openMediaCropper?.({
+      aspect: 'book-cover',
+      title: `Monograph Cover Adjuster (2:3)`,
+      kicker: '02 · MONOGRAPH COVER ATELIER',
+      initialImageUrl: currentCover,
+      fileNameSlug: slug,
+      applyLabel: 'Apply Cover Artwork to Monograph Draft ✓',
+      onApply: async (res: any) => {
+        let finalUrl = res?.imageUrl;
+        if (!finalUrl && res?.dataUrl) {
+          const uploadRes = await (window as any).postAdmin?.('/api/admin/content', {
+            action: 'upload-book-cover',
+            dataUrl: res.dataUrl,
+            customFileName: slug,
+          });
+          if (uploadRes?.ok && uploadRes?.imageUrl) {
+            finalUrl = uploadRes.imageUrl;
+          }
+        }
+
+        if (finalUrl) {
+          const input = document.getElementById('wb-book-cover') as HTMLInputElement;
+          const thumb = document.getElementById('wb-book-cover-thumb') as HTMLImageElement;
+          if (input) input.value = finalUrl;
+          if (thumb) thumb.src = finalUrl;
+
+          setDirty(true);
+          updateLiveMirror();
+          (window as any).notify?.('Attached cover artwork to monograph draft.', 'success');
+        }
+      },
+    });
+  });
+
+  // ==========================================
+  // DYNAMIC REPEATERS (CHAPTERS & WEEKS)
+  // ==========================================
+
+  document.getElementById('wb-add-chapter-btn')?.addEventListener('click', () => {
+    const container = document.getElementById('wb-chapters-container');
+    if (!container) return;
+    const count = container.querySelectorAll('.chapter-row').length + 1;
+    const num = String(count).padStart(2, '0');
+
+    const row = document.createElement('div');
+    row.className = 'repeater-item repeater-card chapter-row';
+    row.innerHTML = `
+      <div class="repeater-card-header">
+        <div class="repeater-card-lead">
+          <span class="repeater-card-tag">CH.</span>
+          <input type="text" class="ch-num" placeholder="${num}" value="${num}" aria-label="Chapter Number" />
+        </div>
+        <div class="repeater-card-main">
+          <input type="text" class="ch-title" placeholder="Chapter Title" value="" aria-label="Chapter Title" />
+        </div>
+        <button type="button" class="btn-remove-row" title="Remove chapter" aria-label="Remove chapter">✕</button>
+      </div>
+      <div class="repeater-card-body">
+        <textarea class="ch-summary" rows="2" placeholder="Chapter thesis, key arguments, or summary synopsis..." aria-label="Chapter Summary"></textarea>
+      </div>
+    `;
+    container.appendChild(row);
+    (row.querySelector('.ch-title') as HTMLInputElement)?.focus();
+    setDirty(true);
+    updateLiveMirror();
+  });
+
+  document.getElementById('wb-add-week-btn')?.addEventListener('click', () => {
+    const container = document.getElementById('wb-weeks-container');
+    if (!container) return;
+    const count = container.querySelectorAll('.week-row').length + 1;
+    const num = `WK ${String(count).padStart(2, '0')}`;
+
+    const row = document.createElement('div');
+    row.className = 'repeater-item repeater-card week-row';
+    row.innerHTML = `
+      <div class="repeater-card-header">
+        <div class="repeater-card-lead">
+          <span class="repeater-card-tag">SEMINAR</span>
+          <input type="text" class="wk-num" placeholder="${num}" value="${num}" aria-label="Week Number" />
+        </div>
+        <div class="repeater-card-main">
+          <input type="text" class="wk-topic" placeholder="Weekly Seminar Topic" value="" aria-label="Weekly Topic" />
+        </div>
+        <button type="button" class="btn-remove-row" title="Remove week" aria-label="Remove week">✕</button>
+      </div>
+      <div class="repeater-card-body">
+        <div class="repeater-card-subhead">
+          <span class="subhead-label">Required Readings &amp; Sources (one entry per line)</span>
+        </div>
+        <textarea class="wk-readings" rows="2" placeholder="Required readings (one per line)" aria-label="Required Readings"></textarea>
+      </div>
+    `;
+    container.appendChild(row);
+    (row.querySelector('.wk-topic') as HTMLInputElement)?.focus();
+    setDirty(true);
+    updateLiveMirror();
+  });
+
+  // Row removal handler
+  modalShell?.addEventListener('click', (e) => {
+    const btn = (e.target as HTMLElement).closest('.btn-remove-row');
+    if (btn) {
+      btn.closest('.repeater-item')?.remove();
+      setDirty(true);
+      updateLiveMirror();
+    }
+  });
+
+  // ==========================================
+  // SUBMIT / COMMIT WORKBENCH DATA
+  // ==========================================
+
+  saveBtn?.addEventListener('click', async () => {
+    const type = ATELIER_STATE.activeType;
+    const isEdit = ATELIER_STATE.activeMode === 'edit';
+    const existingId = isEdit ? ATELIER_STATE.activeId : undefined;
+
+    let payload: Record<string, any> = {};
+
+    if (type === 'publications') {
+      const title = (document.getElementById('wb-pub-title') as HTMLInputElement)?.value.trim();
+      if (!title) {
+        (window as any).notify?.('Publication title is required.', 'warn');
+        document.getElementById('wb-pub-title')?.focus();
+        return;
+      }
+
+      payload = {
+        action: 'create-publication',
+        existingId,
+        title,
+        subtitle: (document.getElementById('wb-pub-subtitle') as HTMLInputElement)?.value.trim(),
+        year: Number((document.getElementById('wb-pub-year') as HTMLInputElement)?.value) || 2026,
+        venue: (document.getElementById('wb-pub-venue') as HTMLInputElement)?.value.trim() || 'Philosophy of Technology',
+        volumeIssue: (document.getElementById('wb-pub-volume') as HTMLInputElement)?.value.trim(),
+        doi: (document.getElementById('wb-pub-doi') as HTMLInputElement)?.value.trim(),
+        coAuthors: (document.getElementById('wb-pub-authors') as HTMLInputElement)?.value.trim(),
+        pdfUrl: (document.getElementById('wb-pub-pdf') as HTMLInputElement)?.value.trim(),
+        abstract: (document.getElementById('wb-pub-abstract') as HTMLTextAreaElement)?.value.trim() || 'Abstract forthcoming.',
+        citationBibtex: (document.getElementById('wb-pub-bibtex') as HTMLTextAreaElement)?.value.trim(),
+      };
+    } else if (type === 'books') {
+      const title = (document.getElementById('wb-book-title') as HTMLInputElement)?.value.trim();
+      if (!title) {
+        (window as any).notify?.('Monograph title is required.', 'warn');
+        document.getElementById('wb-book-title')?.focus();
+        return;
+      }
+
+      const chapterRows = document.querySelectorAll<HTMLElement>('#wb-chapters-container .chapter-row');
+      const chapters: Array<{ number: string; title: string; summary: string }> = [];
+      chapterRows.forEach((row) => {
+        const num = (row.querySelector('.ch-num') as HTMLInputElement)?.value.trim() || '01';
+        const t = (row.querySelector('.ch-title') as HTMLInputElement)?.value.trim() || '';
+        const s = (row.querySelector('.ch-summary') as HTMLInputElement | HTMLTextAreaElement)?.value.trim() || '';
+        if (t) chapters.push({ number: num, title: t, summary: s });
+      });
+
+      payload = {
+        action: 'create-book',
+        existingId,
+        title,
+        subtitle: (document.getElementById('wb-book-subtitle') as HTMLInputElement)?.value.trim(),
+        year: Number((document.getElementById('wb-book-year') as HTMLInputElement)?.value) || 2026,
+        publisher: (document.getElementById('wb-book-publisher') as HTMLInputElement)?.value.trim(),
+        isbn: (document.getElementById('wb-book-isbn') as HTMLInputElement)?.value.trim(),
+        pages: Number((document.getElementById('wb-book-pages') as HTMLInputElement)?.value) || 200,
+        coverImage: (document.getElementById('wb-book-cover') as HTMLInputElement)?.value.trim(),
+        synopsis: (document.getElementById('wb-book-synopsis') as HTMLTextAreaElement)?.value.trim() || '',
+        chapters,
+      };
+    } else if (type === 'classes') {
+      const title = (document.getElementById('wb-class-title') as HTMLInputElement)?.value.trim();
+      const code = (document.getElementById('wb-class-code') as HTMLInputElement)?.value.trim();
+      if (!title || !code) {
+        (window as any).notify?.('Course code and seminar title are required.', 'warn');
+        return;
+      }
+
+      const weekRows = document.querySelectorAll<HTMLElement>('#wb-weeks-container .week-row');
+      const weeks: Array<{ weekNumber: string; topic: string; readings: string[] }> = [];
+      weekRows.forEach((row) => {
+        const wkNum = (row.querySelector('.wk-num') as HTMLInputElement)?.value.trim() || 'WK 01';
+        const topic = (row.querySelector('.wk-topic') as HTMLInputElement)?.value.trim() || '';
+        const readings = (row.querySelector('.wk-readings') as HTMLTextAreaElement)?.value.split('\n').map((r) => r.trim()).filter(Boolean) || [];
+        if (topic) weeks.push({ weekNumber: wkNum, topic, readings });
+      });
+
+      payload = {
+        action: 'create-class',
+        existingId,
+        code,
+        title,
+        term: (document.getElementById('wb-class-term') as HTMLInputElement)?.value.trim(),
+        academicYear: (document.getElementById('wb-class-year') as HTMLInputElement)?.value.trim(),
+        level: (document.getElementById('wb-class-level') as HTMLSelectElement)?.value || 'Seminar',
+        location: (document.getElementById('wb-class-location') as HTMLInputElement)?.value.trim(),
+        syllabusPdf: (document.getElementById('wb-class-pdf') as HTMLInputElement)?.value.trim(),
+        description: (document.getElementById('wb-class-desc') as HTMLTextAreaElement)?.value.trim(),
+        weeks,
+      };
+    }
+
+    if (saveBtn) saveBtn.disabled = true;
+    (window as any).notify?.('Committing record to sovereign repository…', 'info');
+
+    try {
+      const res = await (window as any).postAdmin?.('/api/admin/content', payload);
+      if (saveBtn) saveBtn.disabled = false;
+
+      if (res?.ok) {
+        setDirty(false);
+        (window as any).notify?.(res.message || 'Record committed successfully!', 'success');
+
+        window.dispatchEvent(
+          new CustomEvent('drc:content-updated', {
+            detail: {
+              type,
+              action: isEdit ? 'update' : 'create',
+              id: res.slug || existingId,
+              item: res.item,
+            },
+          })
+        );
+
+        if (ATELIER_STATE.savedCallback) {
+          ATELIER_STATE.savedCallback({ type, id: res.slug || existingId, item: res.item });
+        }
+
+        closeStudio();
+      } else {
+        (window as any).notify?.(res?.error || 'Failed to commit record.', 'error');
+      }
+    } catch (err: any) {
+      if (saveBtn) saveBtn.disabled = false;
+      (window as any).notify?.(`Network error: ${err.message}`, 'error');
+    }
+  });
+
+  // Keyboard Shortcuts (⌘P / ⌘2 Toggle Preview, ⌘1 Focus, ⌘S Save, Esc Close)
+  window.addEventListener('keydown', (e) => {
+    if (!dialog || !dialog.open) return;
+
+    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 's') {
+      e.preventDefault();
+      saveBtn?.click();
+    } else if ((e.metaKey || e.ctrlKey) && (e.key.toLowerCase() === 'p' || e.key === '2')) {
+      e.preventDefault();
+      togglePreview();
+    } else if ((e.metaKey || e.ctrlKey) && e.key === '1') {
+      e.preventDefault();
+      setPreviewState(false);
+    }
+  });
+
+  // ==========================================
+  // GLOBAL SINGLETON DISPATCHER
+  // ==========================================
+
+  (window as any).openContentEditor = async (options: OpenContentEditorOptions = {}) => {
+    ATELIER_STATE.lastFocused = document.activeElement as HTMLElement | null;
+    ATELIER_STATE.activeMode = options.mode || 'create';
+    ATELIER_STATE.savedCallback = options.onSaved || null;
+
+    const targetType = options.type || 'publications';
+    ATELIER_STATE.activeType = targetType;
+
+    // Reset dirty state
+    setDirty(false);
+
+    if (options.mode === 'edit' && options.id) {
+      // Edit Mode
+      ATELIER_STATE.activeId = options.id;
+      ATELIER_STATE.originalEditType = targetType;
+      ATELIER_STATE.originalEditId = options.id;
+
+      // Set Domain Archetype (Publications, Books, Classes) & sync breadcrumbs
+      setDomainType(targetType);
+
+      setViewMode('split'); // Open in Split View so they see form + preview immediately!
+
+      (window as any).notify?.(`Loading ${options.id} from ${targetType}…`, 'info');
+
+      try {
+        const res = await (window as any).postAdmin?.('/api/admin/content', {
+          action: 'get-content',
+          type: targetType,
+          id: options.id,
+        });
+
+        if (res?.ok && res?.data) {
+          const d = res.data;
+
+          if (targetType === 'publications') {
+            (document.getElementById('wb-pub-title') as HTMLInputElement).value = d.title || '';
+            (document.getElementById('wb-pub-subtitle') as HTMLInputElement).value = d.subtitle || '';
+            (document.getElementById('wb-pub-year') as HTMLInputElement).value = String(d.year || 2026);
+            (document.getElementById('wb-pub-venue') as HTMLInputElement).value = d.venue || '';
+            (document.getElementById('wb-pub-volume') as HTMLInputElement).value = d.volumeIssue || '';
+            (document.getElementById('wb-pub-doi') as HTMLInputElement).value = d.doi || '';
+            (document.getElementById('wb-pub-authors') as HTMLInputElement).value = (d.coAuthors || []).join(', ');
+            (document.getElementById('wb-pub-pdf') as HTMLInputElement).value = d.pdfUrl || '';
+            (document.getElementById('wb-pub-abstract') as HTMLTextAreaElement).value = d.abstract || res.body || '';
+            (document.getElementById('wb-pub-bibtex') as HTMLTextAreaElement).value = d.citationBibtex || '';
+          } else if (targetType === 'books') {
+            (document.getElementById('wb-book-title') as HTMLInputElement).value = d.title || '';
+            (document.getElementById('wb-book-subtitle') as HTMLInputElement).value = d.subtitle || '';
+            (document.getElementById('wb-book-year') as HTMLInputElement).value = String(d.year || 2026);
+            (document.getElementById('wb-book-publisher') as HTMLInputElement).value = d.publisher || '';
+            (document.getElementById('wb-book-isbn') as HTMLInputElement).value = d.isbn || '';
+            (document.getElementById('wb-book-pages') as HTMLInputElement).value = String(d.pages || 200);
+            (document.getElementById('wb-book-cover') as HTMLInputElement).value = d.coverImage || '';
+            (document.getElementById('wb-book-cover-thumb') as HTMLImageElement).src = d.coverImage || '/images/books/monograph-cover-0080.webp';
+            (document.getElementById('wb-book-synopsis') as HTMLTextAreaElement).value = d.synopsis || res.body || '';
+
+            // Populate chapters
+            const chContainer = document.getElementById('wb-chapters-container');
+            if (chContainer && Array.isArray(d.chapters)) {
+              chContainer.innerHTML = '';
+              d.chapters.forEach((ch: any) => {
+                const row = document.createElement('div');
+                row.className = 'repeater-item repeater-card chapter-row';
+                row.innerHTML = `
+                  <div class="repeater-card-header">
+                    <div class="repeater-card-lead">
+                      <span class="repeater-card-tag">CH.</span>
+                      <input type="text" class="ch-num" placeholder="${ch.number || '01'}" value="${ch.number || '01'}" aria-label="Chapter Number" />
+                    </div>
+                    <div class="repeater-card-main">
+                      <input type="text" class="ch-title" placeholder="Chapter Title" value="${ch.title || ''}" aria-label="Chapter Title" />
+                    </div>
+                    <button type="button" class="btn-remove-row" title="Remove chapter" aria-label="Remove chapter">✕</button>
+                  </div>
+                  <div class="repeater-card-body">
+                    <textarea class="ch-summary" rows="2" placeholder="Chapter argument or summary synopsis..." aria-label="Chapter Summary">${ch.summary || ''}</textarea>
+                  </div>
+                `;
+                chContainer.appendChild(row);
+              });
+            }
+          } else if (targetType === 'classes') {
+            (document.getElementById('wb-class-code') as HTMLInputElement).value = d.courseCode || '';
+            (document.getElementById('wb-class-title') as HTMLInputElement).value = d.title || '';
+            (document.getElementById('wb-class-term') as HTMLInputElement).value = d.term || '';
+            (document.getElementById('wb-class-year') as HTMLInputElement).value = d.academicYear || '';
+            (document.getElementById('wb-class-level') as HTMLSelectElement).value = d.level || 'Seminar';
+            (document.getElementById('wb-class-location') as HTMLInputElement).value = d.schedule || '';
+            (document.getElementById('wb-class-pdf') as HTMLInputElement).value = d.syllabusPdf || '';
+            (document.getElementById('wb-class-desc') as HTMLTextAreaElement).value = d.summary || res.body || '';
+
+            // Populate weeks
+            const wkContainer = document.getElementById('wb-weeks-container');
+            if (wkContainer && Array.isArray(d.weeks)) {
+              wkContainer.innerHTML = '';
+              d.weeks.forEach((w: any) => {
+                const row = document.createElement('div');
+                row.className = 'repeater-item repeater-card week-row';
+                const readingsStr = Array.isArray(w.readings) ? w.readings.join('\n') : '';
+                row.innerHTML = `
+                  <div class="repeater-card-header">
+                    <div class="repeater-card-lead">
+                      <span class="repeater-card-tag">SEMINAR</span>
+                      <input type="text" class="wk-num" placeholder="${w.weekNumber || 'WK 01'}" value="${w.weekNumber || 'WK 01'}" aria-label="Week Number" />
+                    </div>
+                    <div class="repeater-card-main">
+                      <input type="text" class="wk-topic" placeholder="Weekly Seminar Topic" value="${w.topic || ''}" aria-label="Weekly Topic" />
+                    </div>
+                    <button type="button" class="btn-remove-row" title="Remove week" aria-label="Remove week">✕</button>
+                  </div>
+                  <div class="repeater-card-body">
+                    <div class="repeater-card-subhead">
+                      <span class="subhead-label">Required Readings &amp; Sources (one entry per line)</span>
+                    </div>
+                    <textarea class="wk-readings" rows="2" placeholder="Required readings (one per line)" aria-label="Required Readings">${readingsStr}</textarea>
+                  </div>
+                `;
+                wkContainer.appendChild(row);
+              });
+            }
+          }
+
+          updateTargetSlugDisplay();
+          updateLiveMirror();
+        } else {
+          (window as any).notify?.('Could not load record details.', 'error');
+        }
+      } catch (err: any) {
+        (window as any).notify?.(`Failed to fetch record: ${err.message}`, 'error');
+      }
+    } else {
+      // Create New Record Mode
+      ATELIER_STATE.activeId = '';
+      ATELIER_STATE.originalEditType = '';
+      ATELIER_STATE.originalEditId = '';
+
+      // Set Domain Archetype (Publications, Books, Classes) & sync breadcrumbs
+      setDomainType(targetType);
+
+      // Reset form fields
+      const pubForm = document.getElementById('form-pub-workbench') as HTMLFormElement | null;
+      const bookForm = document.getElementById('form-book-workbench') as HTMLFormElement | null;
+      const classForm = document.getElementById('form-class-workbench') as HTMLFormElement | null;
+      pubForm?.reset();
+      bookForm?.reset();
+      classForm?.reset();
+
+      // Start in Focus Mode with clean intake
+      setViewMode('focus');
+
+      updateTargetSlugDisplay();
+      updateLiveMirror();
+    }
+
+    if (dialog && !dialog.open) {
+      dialog.removeAttribute('data-closing');
+      dialog.showModal();
+    }
+  };
+</script>
+
+<style>
+  /* =========================================================================
+     Strict Zero-Scroll Co-Present Content Atelier Modal
+     ========================================================================= */
+
+  /* Global HTML hidden safeguard: MUST BE !important to prevent CSS display rules from overriding hidden */
+  [hidden] {
+    display: none !important;
+  }
+
+  .persistent-content-studio {
+    position: fixed;
+    inset: 0;
+    margin: auto;
+    padding: 0;
+    border: none;
+    background: transparent;
+    color: var(--text-primary);
+    inline-size: min(1360px, calc(100dvw - 2.5rem));
+    block-size: min(94dvh, 920px);
+    max-block-size: 100dvh;
+    overflow: hidden;
+    z-index: 1000;
+
+    opacity: 0;
+    transform: scale(0.96) translateY(16px);
+    filter: blur(6px);
+    transition:
+      opacity 0.36s cubic-bezier(0.16, 1, 0.3, 1),
+      transform 0.36s cubic-bezier(0.16, 1, 0.3, 1),
+      filter 0.36s cubic-bezier(0.16, 1, 0.3, 1),
+      display 0.36s allow-discrete,
+      overlay 0.36s allow-discrete;
+  }
+
+  .persistent-content-studio[open] {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+    filter: blur(0);
+  }
+
+  @starting-style {
+    .persistent-content-studio[open] {
+      opacity: 0;
+      transform: scale(0.96) translateY(16px);
+      filter: blur(6px);
+    }
+  }
+
+  .persistent-content-studio[data-closing='true'] {
+    opacity: 0;
+    transform: scale(0.97) translateY(10px);
+    filter: blur(4px);
+    transition:
+      opacity 0.32s cubic-bezier(0.16, 1, 0.3, 1),
+      transform 0.32s cubic-bezier(0.16, 1, 0.3, 1),
+      filter 0.32s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .persistent-content-studio::backdrop {
+    background: rgba(7, 10, 22, 0.82);
+    backdrop-filter: blur(16px) saturate(140%);
+    -webkit-backdrop-filter: blur(16px) saturate(140%);
+    opacity: 0;
+    transition:
+      opacity 0.36s cubic-bezier(0.16, 1, 0.3, 1),
+      backdrop-filter 0.36s cubic-bezier(0.16, 1, 0.3, 1),
+      display 0.36s allow-discrete,
+      overlay 0.36s allow-discrete;
+  }
+
+  .persistent-content-studio[open]::backdrop {
+    opacity: 1;
+    backdrop-filter: blur(16px) saturate(140%);
+  }
+
+  @starting-style {
+    .persistent-content-studio[open]::backdrop {
+      opacity: 0;
+      backdrop-filter: blur(0px);
+    }
+  }
+
+  .persistent-content-studio[data-closing='true']::backdrop {
+    opacity: 0;
+    backdrop-filter: blur(0px);
+    transition:
+      opacity 0.32s cubic-bezier(0.16, 1, 0.3, 1),
+      backdrop-filter 0.32s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .content-studio-shell {
+    display: flex;
+    flex-direction: column;
+    inline-size: 100%;
+    block-size: 100%;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-lg, 14px);
+    box-shadow: 0 32px 90px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(255, 255, 255, 0.07);
+    overflow: hidden;
+  }
+
+  /* Header */
+  .studio-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem 1.75rem;
+    background: var(--bg-canvas);
+    border-block-end: 1px solid var(--border-subtle);
+    gap: 1.25rem;
+    flex-shrink: 0;
+  }
+
+  .header-lead {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+    min-width: 0;
+    flex: 1 1 auto;
+    overflow: hidden;
+  }
+
+  .header-titles {
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  .seal-mark {
+    font-size: 1.65rem;
+    color: var(--accent);
+    line-height: 1;
+    flex-shrink: 0;
+  }
+
+  /* Breadcrumb Trail */
+  .studio-breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-block-end: 0.25rem;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+  }
+
+  .crumb-segment {
+    font-family: var(--font-mono, monospace);
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    color: var(--text-tertiary, rgba(255, 255, 255, 0.45));
+    text-transform: uppercase;
+    flex-shrink: 0;
+  }
+
+  .crumb-segment.crumb-root {
+    color: var(--text-secondary);
+  }
+
+  .crumb-segment.crumb-type {
+    color: var(--accent);
+    font-weight: 700;
+    transition: color 0.24s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .crumb-segment.crumb-state {
+    color: var(--text-secondary);
+  }
+
+  .crumb-file-tag {
+    display: inline-flex;
+    align-items: center;
+    max-width: 140px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    padding: 0.12rem 0.5rem;
+    border-radius: 4px;
+    background: rgba(201, 168, 78, 0.08);
+    border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+    color: var(--accent);
+    font-family: var(--font-mono, monospace);
+    font-size: 0.65rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    cursor: default;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .crumb-file-tag:hover {
+    border-color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 15%, transparent);
+  }
+
+  .crumb-file-tag[hidden] {
+    display: none !important;
+  }
+
+  .crumb-separator {
+    font-size: 0.625rem;
+    color: var(--border-subtle, rgba(255, 255, 255, 0.25));
+    user-select: none;
+    flex-shrink: 0;
+  }
+
+  .status-chip {
+    font-family: var(--font-mono, monospace);
+    font-size: 0.625rem;
+    padding: 0.12rem 0.5rem;
+    border-radius: var(--radius-full, 9999px);
+    background: rgba(201, 168, 78, 0.12);
+    border: 1px solid rgba(201, 168, 78, 0.35);
+    color: var(--accent);
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    flex-shrink: 0;
+    transition: all 0.24s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .status-chip.is-edit {
+    background: rgba(56, 189, 248, 0.12);
+    border-color: rgba(56, 189, 248, 0.35);
+    color: #38bdf8;
+  }
+
+  .studio-title {
+    font-family: var(--font-serif, Georgia, serif);
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0;
+    letter-spacing: -0.015em;
+    transition: color 0.24s cubic-bezier(0.16, 1, 0.3, 1);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* Segmented Type Switcher Tabs */
+  .type-pill-nav {
+    display: flex;
+    align-items: center;
+    background: var(--bg-surface);
+    padding: 0.25rem;
+    border-radius: var(--radius-md, 8px);
+    border: 1px solid var(--border-subtle);
+    gap: 0.25rem;
+    flex-shrink: 0;
+    transition: opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .type-pill-nav[hidden],
+  .type-pill-nav.is-hidden {
+    display: none !important;
+  }
+
+  .type-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    font-size: 0.8125rem;
+    padding: 0.4rem 0.85rem;
+    border-radius: var(--radius-sm, 6px);
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--text-secondary);
+    cursor: pointer;
+    font-weight: 500;
+    transition:
+      background-color 0.24s cubic-bezier(0.16, 1, 0.3, 1),
+      border-color 0.24s cubic-bezier(0.16, 1, 0.3, 1),
+      color 0.24s cubic-bezier(0.16, 1, 0.3, 1),
+      box-shadow 0.24s cubic-bezier(0.16, 1, 0.3, 1),
+      transform 0.24s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .type-pill:hover {
+    color: var(--text-primary);
+    background: rgba(255, 255, 255, 0.04);
+    transform: translateY(-1px);
+  }
+
+  .type-pill:active {
+    transform: translateY(0);
+  }
+
+  .type-pill.is-active {
+    background: var(--bg-canvas);
+    color: var(--accent);
+    border-color: rgba(201, 168, 78, 0.35);
+    font-weight: 600;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+  }
+
+  .type-pill-num {
+    font-family: var(--font-mono, monospace);
+    font-size: 0.6875rem;
+    opacity: 0.8;
+  }
+
+  .header-controls {
+    display: flex;
+    align-items: center;
+    gap: 0.875rem;
+    flex-shrink: 0;
+  }
+
+  .modal-close-btn {
+    transition:
+      background-color 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+      color 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+      transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .modal-close-btn:hover {
+    transform: scale(1.08) rotate(90deg);
+  }
+
+  /* Single Preview Toggle Button in Header */
+  .header-preview-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.8125rem;
+    padding: 0.4rem 0.85rem;
+    border-radius: var(--radius-sm, 6px);
+    transition:
+      background-color 0.24s cubic-bezier(0.16, 1, 0.3, 1),
+      border-color 0.24s cubic-bezier(0.16, 1, 0.3, 1),
+      color 0.24s cubic-bezier(0.16, 1, 0.3, 1),
+      box-shadow 0.24s cubic-bezier(0.16, 1, 0.3, 1),
+      transform 0.24s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .header-preview-btn:hover,
+  .btn-dock-preview:hover {
+    transform: translateY(-1px);
+  }
+
+  .header-preview-btn:active,
+  .btn-dock-preview:active {
+    transform: translateY(0);
+  }
+
+  .header-preview-btn.is-active,
+  .btn-dock-preview.is-active {
+    background: var(--bg-canvas);
+    color: var(--accent);
+    border-color: rgba(201, 168, 78, 0.45);
+    box-shadow: 0 0 12px rgba(201, 168, 78, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  }
+
+  .preview-btn-icon {
+    font-size: 0.95rem;
+    line-height: 1;
+    opacity: 0.9;
+  }
+
+  /* ========================================================
+     MAIN STAGE & MODES
+     ======================================================== */
+  .studio-main-stage {
+    position: relative;
+    flex: 1;
+    overflow: hidden;
+    background: var(--bg-surface);
+  }
+
+  /* Focus Mode: Centered, Distraction-Free Column */
+  .studio-main-stage.is-focus-mode .stage-workbench-pane {
+    max-inline-size: 820px;
+    margin: 0 auto;
+    width: 100%;
+    border-inline-end: none;
+  }
+
+  .studio-main-stage.is-focus-mode .stage-mirror-pane {
+    display: none !important;
+  }
+
+  /* Split Mode: Proportional Co-Present Grid */
+  .studio-main-stage.is-split-mode {
+    display: grid;
+    grid-template-columns: 1.12fr 0.88fr;
+  }
+
+  .studio-main-stage.is-split-mode .stage-workbench-pane {
+    border-inline-end: 1px solid var(--border-subtle);
+    max-inline-size: none;
+  }
+
+  .studio-main-stage.is-split-mode .stage-mirror-pane {
+    display: flex !important;
+    animation: atelier-mirror-slide 0.36s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  @keyframes atelier-mirror-slide {
+    from {
+      opacity: 0;
+      transform: translateX(18px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  /* ========================================================
+     LEFT STAGE: WORKBENCH & INTAKE PANE
+     ======================================================== */
+  .stage-workbench-pane {
+    block-size: 100%;
+    overflow-y: auto;
+    padding: 2rem 2.25rem 4rem;
+    background: var(--bg-surface);
+  }
+
+  .workbench-scroll-area {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+  }
+
+  @keyframes atelier-pane-enter {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .type-form-container {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+  }
+
+  .type-form-container.is-active {
+    display: flex;
+    animation: atelier-pane-enter 0.32s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  .type-form-container:not(.is-active) {
+    display: none !important;
+  }
+
+  /* Dedicated Intake Hub Card at top of form */
+  .intake-hub-card {
+    background: var(--bg-canvas);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md, 12px);
+    padding: 1.5rem 1.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  }
+
+  .intake-hub-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .hub-kicker {
+    font-family: var(--font-mono, monospace);
+    font-size: 0.6875rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    color: var(--accent);
+  }
+
+  .hub-hint {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+  }
+
+  /* Universal Dropzone */
+  .universal-dropzone {
+    border: 2px dashed rgba(201, 168, 78, 0.4);
+    background: rgba(201, 168, 78, 0.03);
+    border-radius: var(--radius-md, 10px);
+    padding: 1.75rem 1.5rem;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .universal-dropzone:hover,
+  .universal-dropzone.is-drag-over {
+    border-color: var(--accent);
+    background: rgba(201, 168, 78, 0.08);
+    transform: translateY(-2px);
+  }
+
+  .dropzone-visual {
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+  }
+
+  .dropzone-icon {
+    font-size: 2.2rem;
+    line-height: 1;
+    color: var(--accent);
+    flex-shrink: 0;
+  }
+
+  .dropzone-text {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .dropzone-label {
+    font-size: 0.9375rem;
+    color: var(--text-primary);
+  }
+
+  .dropzone-sub {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+  }
+
+  .intake-quick-row {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+  }
+
+  .resolver-input-wrap {
+    flex: 1;
+  }
+
+  .resolver-input-wrap input {
+    width: 100%;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-sm, 7px);
+    padding: 0.65rem 0.875rem;
+    color: var(--text-primary);
+    font-size: 0.875rem;
+    transition: border-color 0.15s ease;
+  }
+
+  .resolver-input-wrap input:focus {
+    outline: none;
+    border-color: var(--accent);
+  }
+
+  .bibtex-details {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-sm, 7px);
+    padding: 0.625rem 0.875rem;
+  }
+
+  .bibtex-summary {
+    cursor: pointer;
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    font-weight: 500;
+  }
+
+  .bibtex-expand-box {
+    margin-top: 0.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.625rem;
+  }
+
+  .bibtex-expand-box textarea {
+    font-family: var(--font-mono, monospace);
+    font-size: 0.75rem;
+    background: var(--bg-canvas);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-sm, 6px);
+    padding: 0.625rem;
+    color: var(--text-primary);
+    resize: vertical;
+  }
+
+  /* Form Layout & Spacious Fieldsets */
+  .workbench-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1.75rem;
+  }
+
+  .workbench-fieldset {
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md, 12px);
+    background: var(--bg-canvas);
+    padding: 1.65rem 1.75rem 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+    margin: 0;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  }
+
+  .fieldset-legend {
+    font-family: var(--font-mono, monospace);
+    font-size: 0.6875rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    color: var(--accent);
+    text-transform: uppercase;
+    padding: 0 0.5rem;
+    background: var(--bg-canvas);
+  }
+
+  /* Form Inputs with Generous Padding & Greyed-Out Placeholders */
+  label {
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+    color: var(--text-secondary);
+    font-weight: 500;
+  }
+
+  label span {
+    font-size: 0.8125rem;
+    letter-spacing: 0.02em;
+    color: var(--text-secondary);
+  }
+
+  input,
+  select,
+  textarea {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-sm, 7px);
+    padding: 0.7rem 0.875rem;
+    color: var(--text-primary);
+    font-size: 0.9375rem;
+    font-family: inherit;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  }
+
+  input::placeholder,
+  textarea::placeholder {
+    color: var(--text-muted);
+    opacity: 0.55;
+    font-style: italic;
+  }
+
+  input:focus,
+  select:focus,
+  textarea:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px rgba(201, 168, 78, 0.18);
+  }
+
+  .mono,
+  .mono-code {
+    font-family: var(--font-mono, monospace);
+    font-size: 0.8125rem;
+  }
+
+  .form-row-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+  }
+
+  .form-row-3 {
+    display: grid;
+    grid-template-columns: 1.4fr 1.2fr 0.6fr;
+    gap: 1.25rem;
+  }
+
+  /* Inline Document Dropzones */
+  .asset-dropzone-lockup {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .asset-input-row {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+  }
+
+  .asset-input-row input {
+    flex: 1;
+  }
+
+  .asset-drop-inline {
+    border: 1.5px dashed rgba(201, 168, 78, 0.4);
+    background: rgba(201, 168, 78, 0.03);
+    border-radius: var(--radius-sm, 7px);
+    padding: 0.65rem 1rem;
+    cursor: pointer;
+    font-size: 0.75rem;
+    color: var(--accent);
+    white-space: nowrap;
+    transition: all 0.15s ease;
+  }
+
+  .asset-drop-inline:hover,
+  .asset-drop-inline.is-drag-over {
+    background: rgba(201, 168, 78, 0.1);
+    border-color: var(--accent);
+  }
+
+  /* Cover Picker Lockup */
+  .cover-picker-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .cover-picker-lockup {
+    display: flex;
+    gap: 1.5rem;
+    align-items: flex-start;
+  }
+
+  .cover-thumb-box {
+    inline-size: 100px;
+    block-size: 150px;
+    border-radius: var(--radius-sm, 8px);
+    border: 1px solid var(--border-subtle);
+    background: var(--bg-surface);
+    overflow: hidden;
+    flex-shrink: 0;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
+  }
+
+  .cover-thumb-img {
+    inline-size: 100%;
+    block-size: 100%;
+    object-fit: cover;
+  }
+
+  .cover-picker-details {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.875rem;
+  }
+
+  .cover-path-readonly {
+    background: var(--bg-surface);
+    color: var(--text-muted);
+    font-size: 0.75rem;
+  }
+
+  .cover-actions-row {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+  }
+
+  .btn-cover-edit {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    font-size: 0.75rem;
+    padding: 0.55rem 0.875rem;
+    border-radius: var(--radius-sm, 7px);
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+
+  .btn-cover-edit:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  /* Repeaters: Table of Contents & Weekly Modules */
+  .repeater-section {
+    display: flex;
+    flex-direction: column;
+    gap: 0.875rem;
+  }
+
+  .repeater-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding-bottom: 0.25rem;
+  }
+
+  .mini-label {
+    font-family: var(--font-serif);
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    font-weight: 500;
+  }
+
+  .repeater-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+  }
+
+  /* Universal Repeater Card (Global for dynamically injected rows) */
+  :global(.repeater-item.repeater-card),
+  :global(.repeater-item) {
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+    background: color-mix(in srgb, var(--bg-surface) 95%, black);
+    padding: 0.85rem 1rem;
+    border-radius: var(--radius-sm, 8px);
+    border: 1px solid color-mix(in srgb, var(--accent) 22%, var(--border-subtle));
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+    transition: border-color 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  :global(.repeater-item.repeater-card:hover),
+  :global(.repeater-item:hover) {
+    border-color: color-mix(in srgb, var(--accent) 45%, var(--border-subtle));
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+  }
+
+  :global(.repeater-card-header) {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    width: 100%;
+  }
+
+  :global(.repeater-card-lead) {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.2rem 0.5rem;
+    border-radius: 6px;
+    background: color-mix(in srgb, var(--accent) 10%, var(--bg-surface));
+    border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+    flex-shrink: 0;
+  }
+
+  :global(.repeater-card-tag) {
+    font-family: var(--font-mono, monospace);
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    color: var(--accent);
+    user-select: none;
+  }
+
+  :global(.repeater-card-lead input.ch-num),
+  :global(.repeater-card-lead input.wk-num),
+  :global(.ch-num),
+  :global(.wk-num) {
+    width: 54px;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0.1rem 0.2rem !important;
+    font-family: var(--font-mono, monospace) !important;
+    font-size: 0.78rem !important;
+    font-weight: 700 !important;
+    color: var(--text-primary) !important;
+    text-align: center !important;
+  }
+
+  :global(.repeater-card-main) {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  :global(.repeater-card-main input.ch-title),
+  :global(.repeater-card-main input.wk-topic),
+  :global(.ch-title),
+  :global(.wk-topic) {
+    width: 100%;
+    background: var(--bg-surface) !important;
+    border: 1px solid var(--border-subtle) !important;
+    border-radius: 6px !important;
+    padding: 0.45rem 0.75rem !important;
+    font-family: var(--font-serif) !important;
+    font-size: 0.88rem !important;
+    color: var(--text-primary) !important;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  }
+
+  :global(.repeater-card-main input:focus),
+  :global(.ch-title:focus),
+  :global(.wk-topic:focus) {
+    outline: none !important;
+    border-color: var(--accent) !important;
+    box-shadow: 0 0 0 2px rgba(201, 168, 78, 0.2) !important;
+  }
+
+  :global(.repeater-card-body) {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+  }
+
+  :global(.repeater-card-subhead) {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  :global(.subhead-label) {
+    font-family: var(--font-mono, monospace);
+    font-size: 0.68rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+
+  :global(.repeater-card-body textarea.ch-summary),
+  :global(.repeater-card-body textarea.wk-readings),
+  :global(.ch-summary),
+  :global(.wk-readings) {
+    width: 100%;
+    background: var(--bg-surface) !important;
+    border: 1px solid var(--border-subtle) !important;
+    border-radius: 6px !important;
+    padding: 0.5rem 0.75rem !important;
+    font-size: 0.82rem !important;
+    line-height: 1.5 !important;
+    color: var(--text-primary) !important;
+    resize: vertical !important;
+    min-height: 52px;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  }
+
+  :global(.repeater-card-body textarea.wk-readings),
+  :global(.wk-readings) {
+    font-family: var(--font-mono, monospace) !important;
+    font-size: 0.78rem !important;
+  }
+
+  :global(.repeater-card-body textarea:focus),
+  :global(.ch-summary:focus),
+  :global(.wk-readings:focus) {
+    outline: none !important;
+    border-color: var(--accent) !important;
+    box-shadow: 0 0 0 2px rgba(201, 168, 78, 0.2) !important;
+  }
+
+  :global(.btn-remove-row) {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    border-radius: 6px;
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  :global(.btn-remove-row:hover) {
+    background: rgba(239, 68, 68, 0.12);
+    border-color: rgba(239, 68, 68, 0.35);
+    color: #ef4444;
+    transform: scale(1.05);
+  }
+
+  /* ========================================================
+     RIGHT STAGE: IN-SITU LIVE MIRROR PREVIEW
+     EXACT SAME STYLING AS PUBLIC OBSERVATORY READER
+     ======================================================== */
+  .stage-mirror-pane {
+    block-size: 100%;
+    overflow-y: auto;
+    background: var(--bg-canvas);
+    display: flex;
+    flex-direction: column;
+  }
+
+  .mirror-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.875rem 1.75rem;
+    background: var(--bg-surface);
+    border-block-end: 1px solid var(--border-subtle);
+  }
+
+  .mirror-status {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+  }
+
+  .status-pulse-dot {
+    inline-size: 8px;
+    block-size: 8px;
+    border-radius: 50%;
+    background: #10b981;
+    box-shadow: 0 0 10px #10b981;
+  }
+
+  .mirror-status-text {
+    font-family: var(--font-mono, monospace);
+    font-size: 0.6875rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    color: var(--text-secondary);
+  }
+
+  .mirror-mode-tag {
+    font-family: var(--font-mono, monospace);
+    font-size: 0.625rem;
+    color: var(--accent);
+    border: 1px solid rgba(201, 168, 78, 0.35);
+    padding: 0.15rem 0.55rem;
+    border-radius: var(--radius-sm, 4px);
+  }
+
+  .mirror-viewport-scroll {
+    flex: 1;
+    overflow-y: auto;
+    padding: 2rem 2.25rem 4rem;
+  }
+
+  /* Public Preview Cards: EXACT PUBLIC ARTICLE FORMAT */
+  .public-preview-card {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md, 12px);
+    padding: 2.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    box-shadow: 0 14px 38px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  }
+
+  .public-preview-card.is-active {
+    display: flex;
+    animation: atelier-pane-enter 0.32s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  .public-preview-card:not(.is-active) {
+    display: none !important;
+  }
+
+  /* Reader Header */
+  .reader-header-real {
+    border-block-end: 1px solid var(--border-subtle);
+    padding-block-end: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+  }
+
+  .reader-eyebrow-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-block-end: 0.4rem;
+  }
+
+  .fascicle-tag {
+    font-family: var(--font-mono, monospace);
+    font-size: 0.72rem;
+    letter-spacing: 0.08em;
+    color: var(--accent);
+    font-weight: 600;
+  }
+
+  .colophon-stamp {
+    font-family: var(--font-mono, monospace);
+    font-size: 0.65rem;
+    letter-spacing: 0.12em;
+    color: var(--text-muted);
+  }
+
+  .reader-main-title {
+    font-family: var(--font-serif, Georgia, serif);
+    font-size: 1.7rem;
+    font-weight: 700;
+    line-height: 1.24;
+    color: var(--text-primary);
+    margin: 0.2rem 0;
+    letter-spacing: -0.015em;
+  }
+
+  .reader-subtitle {
+    font-family: var(--font-serif, Georgia, serif);
+    font-size: 1.05rem;
+    font-style: italic;
+    color: var(--text-secondary);
+    line-height: 1.45;
+    margin: 0.1rem 0 0.5rem;
+  }
+
+  .reader-authors {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    margin: 0.2rem 0;
+  }
+
+  .reader-venue {
+    font-size: 0.8125rem;
+    color: var(--text-muted);
+    margin: 0 0 0.75rem;
+  }
+
+  .reader-pill-mock-bar {
+    display: flex;
+    gap: 0.55rem;
+    flex-wrap: wrap;
+    margin-top: 0.4rem;
+  }
+
+  .pill-mock {
+    font-family: var(--font-mono, monospace);
+    font-size: 0.6875rem;
+    padding: 0.35rem 0.75rem;
+    border-radius: var(--radius-full, 9999px);
+    background: var(--bg-canvas);
+    border: 1px solid var(--border-subtle);
+    color: var(--text-secondary);
+    user-select: none;
+  }
+
+  .pill-mock.pill-accent {
+    color: var(--accent);
+    border-color: rgba(201, 168, 78, 0.4);
+    background: rgba(201, 168, 78, 0.05);
+  }
+
+  /* Manuscript Abstract Vellum Frame with Real Bookplate Fleurons */
+  .manuscript-abstract-vellum {
+    position: relative;
+    padding: 1.5rem 1.85rem;
+    border-radius: 6px;
+    background: radial-gradient(
+      480px circle at 85% 15%,
+      color-mix(in oklab, var(--bg-surface) 86%, #f4efe6 14%),
+      var(--bg-surface) 75%
+    );
+    border: 1px solid color-mix(in oklab, var(--accent) 35%, var(--border-subtle));
+    box-shadow:
+      inset 0 2px 5px rgba(0, 0, 0, 0.12),
+      inset 0 0 0 1px oklch(100% 0 0 / 0.05),
+      0 1px 0 oklch(100% 0 0 / 0.08);
+  }
+
+  .bookplate-corner {
+    position: absolute;
+    font-family: var(--font-serif, serif);
+    font-size: 1.05rem;
+    color: color-mix(in oklab, var(--accent) 65%, transparent);
+    user-select: none;
+    line-height: 1;
+    pointer-events: none;
+    z-index: 2;
+  }
+
+  .bookplate-corner--tl { inset-block-start: 0.6rem; inset-inline-start: 0.7rem; }
+  .bookplate-corner--tr { inset-block-start: 0.6rem; inset-inline-end: 0.7rem; }
+  .bookplate-corner--bl { inset-block-end: 0.6rem; inset-inline-start: 0.7rem; }
+  .bookplate-corner--br { inset-block-end: 0.6rem; inset-inline-end: 0.7rem; }
+
+  .abstract-kicker {
+    font-family: var(--font-mono, monospace);
+    font-size: 0.72rem;
+    letter-spacing: 0.14em;
+    color: var(--accent);
+    margin-block-end: 0.5rem;
+  }
+
+  .abstract-body-real {
+    font-family: var(--font-serif, Georgia, serif);
+    font-size: 0.96rem;
+    color: var(--text-primary);
+    line-height: 1.68;
+    margin: 0;
+  }
+
+  /* BibTeX Cartouche Box */
+  .preview-bibtex-box {
+    background: var(--bg-canvas);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-sm, 8px);
+    padding: 1.15rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .bibtex-label,
+  .toc-heading {
+    font-family: var(--font-mono, monospace);
+    font-size: 0.6875rem;
+    letter-spacing: 0.12em;
+    color: var(--accent);
+    margin: 0;
+  }
+
+  .bibtex-code-pre {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-sm, 6px);
+    padding: 0.875rem;
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    overflow-x: auto;
+    margin: 0;
+    line-height: 1.5;
+  }
+
+  /* Monograph Mirror Specs */
+  .dossier-hero-real {
+    display: flex;
+    gap: 1.75rem;
+    border-block-end: 1px solid var(--border-subtle);
+    padding-block-end: 1.75rem;
+  }
+
+  .dossier-cover-showcase-real {
+    inline-size: 140px;
+    block-size: 210px;
+    border-radius: 6px;
+    border: 1px solid var(--border-subtle);
+    box-shadow: 0 22px 44px -12px oklch(0% 0 0 / 0.65);
+    aspect-ratio: 2 / 3;
+    overflow: hidden;
+    position: relative;
+    flex-shrink: 0;
+  }
+
+  .real-book-cover-img {
+    inline-size: 100%;
+    block-size: 100%;
+    object-fit: cover;
+  }
+
+  .book-slot-tag {
+    position: absolute;
+    inset-inline-end: 6px;
+    bottom: 6px;
+    background: rgba(0, 0, 0, 0.78);
+    color: var(--accent);
+    font-family: var(--font-mono, monospace);
+    font-size: 0.6rem;
+    padding: 0.15rem 0.45rem;
+    border-radius: 3px;
+    letter-spacing: 0.05em;
+  }
+
+  .dossier-meta-lockup-real {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+  }
+
+  .colophon-specs-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.75rem;
+    padding: 0.875rem 1rem;
+    border-radius: 4px;
+    background: color-mix(in oklab, var(--bg-surface) 92%, #f4efe6 8%);
+    border: 1px solid var(--border-subtle);
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.04);
+    margin: 0.5rem 0 0.85rem;
+  }
+
+  .colophon-specs-grid dt {
+    font-family: var(--font-mono, monospace);
+    font-size: 0.58rem;
+    color: var(--text-muted);
+    letter-spacing: 0.08em;
+  }
+
+  .colophon-specs-grid dd {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0.2rem 0 0;
+  }
+
+  /* Table of Contents & Weekly Modules Preview */
+  .toc-preview-section,
+  .weeks-preview-section {
+    display: flex;
+    flex-direction: column;
+    gap: 0.875rem;
+    margin-top: 0.5rem;
+  }
+
+  .preview-chapters-list,
+  .preview-weeks-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  :global(.pv-chapter-item) {
+    display: flex;
+    gap: 1rem;
+    align-items: flex-start;
+    background: color-mix(in srgb, var(--bg-surface) 90%, black);
+    padding: 0.85rem 1.15rem;
+    border-radius: var(--radius-sm, 8px);
+    border: 1px solid color-mix(in srgb, var(--accent) 22%, var(--border-subtle));
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  :global(.pv-chapter-item:hover) {
+    border-color: color-mix(in srgb, var(--accent) 45%, var(--border-subtle));
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+  }
+
+  :global(.pv-ch-num) {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-mono, monospace);
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 12%, transparent);
+    border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+    border-radius: 4px;
+    padding: 0.2rem 0.55rem;
+    letter-spacing: 0.04em;
+    flex-shrink: 0;
+    margin-top: 0.1rem;
+  }
+
+  :global(.pv-ch-body) {
+    flex: 1 1 auto;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+  }
+
+  :global(.pv-ch-title) {
+    font-family: var(--font-serif, Georgia, serif);
+    font-size: 0.98rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    letter-spacing: -0.01em;
+    line-height: 1.35;
+  }
+
+  :global(.pv-ch-desc) {
+    font-family: var(--font-serif, Georgia, serif);
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    margin: 0.2rem 0 0;
+    line-height: 1.55;
+  }
+
+  :global(.pv-week-item) {
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+    background: color-mix(in srgb, var(--bg-surface) 90%, black);
+    padding: 0.85rem 1.15rem;
+    border-radius: var(--radius-sm, 8px);
+    border: 1px solid color-mix(in srgb, var(--accent) 22%, var(--border-subtle));
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  :global(.pv-week-item:hover) {
+    border-color: color-mix(in srgb, var(--accent) 45%, var(--border-subtle));
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+  }
+
+  :global(.pv-wk-head) {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+  }
+
+  :global(.pv-wk-num) {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-mono, monospace);
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 12%, transparent);
+    border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+    border-radius: 4px;
+    padding: 0.2rem 0.55rem;
+    letter-spacing: 0.04em;
+    flex-shrink: 0;
+  }
+
+  :global(.pv-wk-topic) {
+    font-family: var(--font-serif, Georgia, serif);
+    font-size: 0.98rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    letter-spacing: -0.01em;
+    line-height: 1.35;
+  }
+
+  :global(.pv-wk-readings) {
+    margin: 0;
+    padding: 0.5rem 0 0 1.25rem;
+    border-top: 1px dashed color-mix(in srgb, var(--border-subtle) 60%, transparent);
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+  }
+
+  :global(.pv-wk-readings li) {
+    font-family: var(--font-serif, Georgia, serif);
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    line-height: 1.5;
+    position: relative;
+  }
+
+  :global(.pv-wk-readings li::before) {
+    content: "✦";
+    position: absolute;
+    left: -1rem;
+    color: var(--accent);
+    font-size: 0.65rem;
+    top: 0.22rem;
+  }
+
+  :global(.pv-empty-notice) {
+    padding: 2.25rem 1.5rem;
+    text-align: center;
+    border: 1px dashed color-mix(in srgb, var(--accent) 25%, var(--border-subtle));
+    border-radius: 8px;
+    background: color-mix(in srgb, var(--bg-surface) 96%, black);
+    color: var(--text-muted);
+    font-family: var(--font-serif, Georgia, serif);
+    font-size: 0.88rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.6rem;
+  }
+
+  :global(.pv-empty-notice .pv-empty-seal) {
+    font-size: 1.35rem;
+    color: var(--accent);
+    opacity: 0.8;
+  }
+
+  /* ========================================================
+     STUDIO DOCK FOOTER
+     ======================================================== */
+  .studio-dock {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.875rem 1.75rem;
+    background: var(--bg-canvas);
+    border-block-start: 1px solid var(--border-subtle);
+    gap: 1.25rem;
+    flex-shrink: 0;
+  }
+
+  .dock-left {
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+  }
+
+  .slug-indicator {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+  }
+
+  .dock-label {
+    font-weight: 700;
+    color: var(--text-muted);
+  }
+
+  .dock-slug-val {
+    color: var(--accent);
+  }
+
+  .sync-indicator {
+    font-family: var(--font-mono, monospace);
+    font-size: 0.75rem;
+    color: #10b981;
+  }
+
+  .sync-indicator.is-dirty {
+    color: #f59e0b;
+  }
+
+  .dock-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .btn-keycap {
+    font-family: var(--font-mono, monospace);
+    font-size: 0.625rem;
+    padding: 0.1rem 0.35rem;
+    border-radius: 3px;
+    background: rgba(255, 255, 255, 0.1);
+    color: inherit;
+    margin-inline-start: 0.4rem;
+  }
+
+  /* Responsive Stacking */
+  @media (max-width: 960px) {
+    .studio-main-stage.is-split-mode {
+      grid-template-columns: 1fr;
+    }
+    .form-row-2,
+    .form-row-3 {
+      grid-template-columns: 1fr;
+    }
+    .dossier-hero-real {
+      flex-direction: column;
+    }
+    .type-pill-nav {
+      display: none;
+    }
+  }
+</style>

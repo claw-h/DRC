@@ -7,23 +7,25 @@ import { getCollection } from 'astro:content';
 const publications = (await getCollection('publications').catch(() => [])).sort((a, b) => b.data.year - a.data.year);
 const books = (await getCollection('books').catch(() => [])).sort((a, b) => b.data.year - a.data.year);
 const classes = await getCollection('classes').catch(() => []);
+
+const totalCount = publications.length + books.length + classes.length;
 ---
 
-<AdminLayout title="Content & Classes Dispatch" activeModule="content">
+<AdminLayout title="Content & Syllabi Ledger" activeModule="content">
   <div class="module-container">
+    <!-- Module Header with Telemetry Stats -->
     <div class="module-header">
       <div class="header-split">
         <div>
-          <span class="module-kicker">MODULE 01 · ACADEMIC CONTENT ENGINE</span>
-          <h2>Publications, Monographs & Curriculum Dispatch</h2>
+          <h2>Publications, Monographs &amp; Syllabi</h2>
           <p class="module-sub">
-            Ingest manuscripts via Crossref DOI / BibTeX automation, author monographs, and publish university syllabi.
+            Manage refereed journal articles, authored monographs, and university course syllabi.
           </p>
         </div>
         <div class="telemetry-stats">
           <div class="stat-box">
             <span class="stat-number">{publications.length}</span>
-            <span class="stat-label">Publications</span>
+            <span class="stat-label">Articles</span>
           </div>
           <div class="stat-box">
             <span class="stat-number">{books.length}</span>
@@ -31,740 +33,1348 @@ const classes = await getCollection('classes').catch(() => []);
           </div>
           <div class="stat-box">
             <span class="stat-number">{classes.length}</span>
-            <span class="stat-label">Seminars</span>
+            <span class="stat-label">Syllabi</span>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- Content Engine Navigation Switcher -->
-    <div class="content-tab-bar" role="tablist" aria-label="Content Dispatch Types">
-      <button type="button" class="tab-btn is-active" id="tab-btn-pubs" role="tab" aria-selected="true" aria-controls="tab-pubs">
-        <span>01 · Papers & Manuscripts</span>
-        <span class="badge-count">{publications.length}</span>
-      </button>
-      <button type="button" class="tab-btn" id="tab-btn-books" role="tab" aria-selected="false" aria-controls="tab-books">
-        <span>02 · Books & Monographs</span>
-        <span class="badge-count">{books.length}</span>
-      </button>
-      <button type="button" class="tab-btn" id="tab-btn-classes" role="tab" aria-selected="false" aria-controls="tab-classes">
-        <span>03 · Courses & Syllabi</span>
-        <span class="badge-count">{classes.length}</span>
-      </button>
-      <button type="button" class="tab-btn" id="tab-btn-ledger" role="tab" aria-selected="false" aria-controls="tab-ledger">
-        <span>04 · Master Collections Ledger</span>
-      </button>
+    <!-- Quick Action Launchpad -->
+    <div class="launchpad-bar">
+      <div class="launchpad-left">
+        <button type="button" id="btn-quick-ingest" class="study-btn study-btn--ignite btn-launch btn-accent-glow" title="Fast intake: Drop PDF or paste DOI">
+          <span class="btn-icon">⚡</span>
+          <span>Quick Intake Ingest</span>
+        </button>
+        <span class="launchpad-subtext">Unified scholarly intake studio for papers, monographs, and syllabi</span>
+      </div>
+
+      <div class="launchpad-right">
+        <span class="ledger-total-badge tabular">{totalCount} TOTAL ARCHIVED WORKS</span>
+      </div>
     </div>
 
-    <!-- TAB 1: Publications & Manuscripts -->
-    <div id="tab-pubs" class="tab-content is-active" role="tabpanel" aria-labelledby="tab-btn-pubs">
-      <div class="two-col-layout">
-        <!-- Ingestion Hub -->
-        <div class="panel-card">
-          <div class="card-head">
-            <span class="card-kicker">AUTOMATION HUB</span>
-            <h3>One-Paste DOI & BibTeX Auto-Importer</h3>
-            <p class="card-desc">Instantly populate publication metadata from Crossref REST APIs or BibTeX strings.</p>
+    <!-- ========================================================
+         FASCICLE WORKBENCH (GOLDEN SPINE RAIL + ACTIVE CATALOG SHELF)
+         ======================================================== -->
+    <div class="ledger-workbench-stage" id="ledger-workbench-stage">
+      <!-- Leftmost Fascicle Spine Rail -->
+      <aside class="fascicle-spine-rail" id="fascicle-spine-rail" aria-label="Academic Fascicles">
+        <!-- Continuous Golden Axis Trim Line (Matches Admin Sidebar) -->
+        <div class="fascicle-golden-axis" aria-hidden="true"></div>
+
+        <nav class="fascicle-nav-list" role="tablist" aria-label="Fascicle Catalog Tabs">
+          <!-- Fascicle I: Publications -->
+          <button
+            type="button"
+            class="fascicle-tab-btn is-active"
+            id="tab-fascicle-publications"
+            data-fascicle-target="publications"
+            role="tab"
+            aria-selected="true"
+            aria-controls="panel-publications"
+            title="Fascicle I: Publications (Press 1)"
+          >
+            <div class="fascicle-node-badge">
+              <span class="fascicle-numeral">I</span>
+              <span class="fascicle-glow-ring" aria-hidden="true"></span>
+            </div>
+            <div class="fascicle-meta-lockup">
+              <span class="fascicle-kicker">FASCICLE I</span>
+              <span class="fascicle-title">Publications</span>
+              <span class="fascicle-count tabular" id="rail-count-publications">{publications.length} Works</span>
+            </div>
+            <span class="fascicle-hotkey" aria-hidden="true" title="Hot-key: 1">1</span>
+          </button>
+
+          <!-- Fascicle II: Books / Monographs -->
+          <button
+            type="button"
+            class="fascicle-tab-btn"
+            id="tab-fascicle-books"
+            data-fascicle-target="books"
+            role="tab"
+            aria-selected="false"
+            aria-controls="panel-books"
+            title="Fascicle II: Monographs (Press 2)"
+          >
+            <div class="fascicle-node-badge">
+              <span class="fascicle-numeral">II</span>
+              <span class="fascicle-glow-ring" aria-hidden="true"></span>
+            </div>
+            <div class="fascicle-meta-lockup">
+              <span class="fascicle-kicker">FASCICLE II</span>
+              <span class="fascicle-title">Monographs</span>
+              <span class="fascicle-count tabular" id="rail-count-books">{books.length} Volumes</span>
+            </div>
+            <span class="fascicle-hotkey" aria-hidden="true" title="Hot-key: 2">2</span>
+          </button>
+
+          <!-- Fascicle III: Classes / Syllabi -->
+          <button
+            type="button"
+            class="fascicle-tab-btn"
+            id="tab-fascicle-classes"
+            data-fascicle-target="classes"
+            role="tab"
+            aria-selected="false"
+            aria-controls="panel-classes"
+            title="Fascicle III: Classes (Press 3)"
+          >
+            <div class="fascicle-node-badge">
+              <span class="fascicle-numeral">III</span>
+              <span class="fascicle-glow-ring" aria-hidden="true"></span>
+            </div>
+            <div class="fascicle-meta-lockup">
+              <span class="fascicle-kicker">FASCICLE III</span>
+              <span class="fascicle-title">Classes</span>
+              <span class="fascicle-count tabular" id="rail-count-classes">{classes.length} Seminars</span>
+            </div>
+            <span class="fascicle-hotkey" aria-hidden="true" title="Hot-key: 3">3</span>
+          </button>
+        </nav>
+      </aside>
+
+      <!-- Right Stage: Active Fascicle Catalog Shelf -->
+      <section class="fascicle-catalog-shelf" id="fascicle-catalog-shelf" aria-live="polite">
+        <!-- Shelf Action Header: Category Breadcrumb, Search, 2-Way View Switch, + Add Button -->
+        <header class="shelf-action-header">
+          <div class="shelf-heading-lockup">
+            <span class="shelf-fleuron" aria-hidden="true">❧</span>
+            <div class="shelf-titles">
+              <span class="shelf-kicker mono" id="shelf-kicker">FASCICLE I · ARTICLES &amp; MANUSCRIPTS</span>
+              <h3 class="shelf-main-title serif" id="shelf-main-title">Refereed Articles &amp; Critical Essays</h3>
+            </div>
+            <span class="shelf-count-pill tabular" id="shelf-count-pill">{publications.length} RECORDS</span>
           </div>
 
-          <div class="importer-stack">
-            <div class="input-action-row">
+          <div class="shelf-tools-cluster">
+            <!-- Real-time Filter Search Input -->
+            <div class="shelf-search-box">
+              <label for="ledger-search-input" class="sr-only">Search active fascicle</label>
+              <span class="search-icon" aria-hidden="true">🔍</span>
               <input
-                type="text"
-                id="doi-input"
-                placeholder="Paste DOI (e.g. 10.1086/734192 or 10.5840/ipq2022…)"
-                aria-label="DOI Input"
+                type="search"
+                id="ledger-search-input"
+                placeholder="Filter articles by title, journal, DOI, co-author, year…"
+                spellcheck="false"
+                autocomplete="off"
               />
-              <button type="button" id="doi-fetch-btn" class="btn-accent">
-                Resolve DOI
-              </button>
+              <button type="button" id="btn-search-clear" class="btn-search-clear" aria-label="Clear search" title="Clear search (Esc)" hidden>✕</button>
+              <span id="search-count-readout" class="search-readout tabular" hidden></span>
             </div>
 
-            <div class="bibtex-paste-box">
-              <label for="bibtex-quick-paste" class="mini-label">Or paste BibTeX entry snippet:</label>
-              <textarea
-                id="bibtex-quick-paste"
-                rows="3"
-                placeholder="@article{cordry2024, author = {Cordry, Duncan R.}, title = {...}, year = {2024}}"
-              ></textarea>
-              <button type="button" id="bibtex-parse-btn" class="btn-outline-sm">
-                Parse BibTeX →
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <!-- Publication Form -->
-        <div class="panel-card">
-          <div class="card-head">
-            <span class="card-kicker">MANUSCRIPT SCHEMA</span>
-            <h3>Publish Manuscript Record</h3>
-          </div>
-
-          <form id="pub-form" class="editor-form">
-            <div class="form-row-2">
-              <label>
-                <span>Article Title *</span>
-                <input type="text" name="title" id="pub-title" placeholder="e.g. Epistemic Horizons in..." required />
-              </label>
-              <label>
-                <span>Publication Year *</span>
-                <input type="number" name="year" id="pub-year" value="2026" required />
-              </label>
-            </div>
-
-            <div class="form-row-2">
-              <label>
-                <span>Journal / Venue *</span>
-                <input type="text" name="venue" id="pub-venue" placeholder="e.g. Journal of French and Francophone Philosophy" required />
-              </label>
-              <label>
-                <span>Volume & Issue</span>
-                <input type="text" name="volumeIssue" id="pub-volume" placeholder="e.g. Vol. 42, Issue 1" />
-              </label>
-            </div>
-
-            <div class="form-row-2">
-              <label>
-                <span>DOI Identifier</span>
-                <input type="text" name="doi" id="pub-doi" placeholder="e.g. 10.xxxx/yyyy" />
-              </label>
-              <label>
-                <span>Co-Authors (comma-separated)</span>
-                <input type="text" name="coAuthors" id="pub-authors" placeholder="e.g. Wynter, S., Stiegler, B." />
-              </label>
-            </div>
-
-            <label>
-              <span>PDF Asset Link / URL</span>
-              <input type="text" name="pdfUrl" id="pub-pdf" placeholder="e.g. /papers/cordry-2026.pdf" />
-            </label>
-
-            <label>
-              <span>Abstract / Executive Summary *</span>
-              <textarea name="abstract" id="pub-abstract" rows="4" placeholder="Enter abstract…" required></textarea>
-            </label>
-
-            <label>
-              <span>BibTeX Citation Code</span>
-              <textarea name="citationBibtex" id="pub-bibtex" rows="3" class="mono-code" placeholder="BibTeX citation block…"></textarea>
-            </label>
-
-            <button type="submit" id="pub-submit-btn" class="btn-primary">
-              Commit Manuscript to Content Layer
+            <!-- Single 2-Way View Switcher (Tiles ⇄ Rows) -->
+            <button
+              type="button"
+              id="btn-view-toggle-2way"
+              class="view-toggle-2way"
+              role="switch"
+              aria-checked="false"
+              aria-label="Toggle display between Tiles and Rows"
+              title="Toggle between Pictographic Tiles and Dense Rows (Hot-key: V)"
+            >
+              <span class="toggle-track">
+                <span class="toggle-indicator-thumb" id="toggle-thumb" aria-hidden="true"></span>
+                <span class="toggle-segment segment-tiles is-active" id="seg-tiles">
+                  <span class="seg-icon">⊞</span>
+                  <span class="seg-text">Tiles</span>
+                </span>
+                <span class="toggle-segment segment-rows" id="seg-rows">
+                  <span class="seg-icon">☰</span>
+                  <span class="seg-text">Rows</span>
+                </span>
+              </span>
             </button>
-          </form>
+
+            <!-- Contextual Add Action Button -->
+            <button
+              type="button"
+              id="btn-shelf-context-add"
+              class="study-btn study-btn--ignite study-btn--sm btn-shelf-add"
+              data-active-fascicle="publications"
+            >
+              <span class="btn-icon">+</span>
+              <span id="shelf-btn-add-label">New Article</span>
+            </button>
+          </div>
+        </header>
+
+        <!-- Cross-Fascicle Discovery Banner (Informs user when query matches in other fascicles) -->
+        <div class="shelf-cross-discovery-bar" id="shelf-cross-discovery-bar" hidden>
+          <div class="cross-discovery-inner" id="cross-discovery-inner"></div>
         </div>
-      </div>
+
+        <!-- Shelf Panels Container (only active panel is displayed) -->
+        <div class="shelf-panels-wrap is-gallery-view" id="shelf-panels-wrap">
+          <!-- 1. Publications Panel -->
+          <div class="fascicle-panel is-active" id="panel-publications" data-panel-type="publications" role="tabpanel">
+            <!-- Tactile Pictographic Specimen Gallery -->
+            <div class="specimen-gallery" data-gallery-section="publications">
+              {publications.map((pub) => (
+                <article
+                  class="specimen-card specimen-card--publication"
+                  data-item-card={`publications-${pub.id}`}
+                  data-search-text={`${pub.data.year} ${pub.data.title} ${pub.data.subtitle || ''} ${pub.data.venue} ${pub.data.volumeIssue || ''} ${pub.data.doi || ''} ${(pub.data.coAuthors || []).join(' ')} ${pub.data.abstract || ''}`.toLowerCase()}
+                  data-card-id={pub.id}
+                  data-card-type="publications"
+                  tabindex="0"
+                  role="button"
+                  aria-label={`Inspect manuscript: ${pub.data.title}`}
+                >
+                  <script type="application/json" class="specimen-payload" set:html={JSON.stringify({
+                    type: 'publications',
+                    id: pub.id,
+                    title: pub.data.title,
+                    subtitle: pub.data.subtitle || '',
+                    year: pub.data.year,
+                    venue: pub.data.venue,
+                    volumeIssue: pub.data.volumeIssue || '',
+                    doi: pub.data.doi || '',
+                    pdfUrl: pub.data.pdfUrl || '',
+                    coAuthors: pub.data.coAuthors || [],
+                    excerpt: pub.data.abstract || '',
+                    citation: pub.data.citationBibtex || '',
+                    publicUrl: `/publications/${pub.id}`
+                  })} />
+                  
+                  <div class="card-face">
+                    <div class="card-eyebrow-line">
+                      <span class="card-year mono">{pub.data.year}</span>
+                      <span class="card-fleuron" aria-hidden="true">❧</span>
+                      <span class="card-venue-tag">{pub.data.venue}</span>
+                    </div>
+
+                    <div class="card-body-lockup">
+                      <h4 class="card-main-title">{pub.data.title}</h4>
+                      {pub.data.subtitle && <p class="card-sub-title">{pub.data.subtitle}</p>}
+                    </div>
+
+                    <div class="card-footer-line">
+                      <div class="card-chips-cluster">
+                        {pub.data.pdfUrl && <span class="specimen-chip chip-accent">📄 PDF</span>}
+                        {pub.data.doi && <span class="specimen-chip chip-mono">⌖ DOI</span>}
+                        {pub.data.coAuthors && pub.data.coAuthors.length > 0 && (
+                          <span class="specimen-chip chip-subtle">+{pub.data.coAuthors.length} co-author</span>
+                        )}
+                      </div>
+                      <div class="card-hover-prompt">
+                        <span class="prompt-icon">👁</span>
+                        <span class="prompt-text">Inspect</span>
+                      </div>
+                    </div>
+                  </div>
+                </article>
+              ))}
+            </div>
+
+            <div class="table-wrap">
+              <table class="admin-table">
+                <thead>
+                  <tr>
+                    <th style="width: 80px;">Year</th>
+                    <th>Title &amp; Subtitle</th>
+                    <th>Venue / Journal</th>
+                    <th style="width: 140px;">DOI</th>
+                    <th class="text-right" style="width: 150px;">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {publications.map((pub) => (
+                    <tr
+                      data-item-row={`publications-${pub.id}`}
+                      data-search-text={`${pub.data.year} ${pub.data.title} ${pub.data.subtitle || ''} ${pub.data.venue} ${pub.data.volumeIssue || ''} ${pub.data.doi || ''} ${(pub.data.coAuthors || []).join(' ')} ${pub.data.abstract || ''}`.toLowerCase()}
+                    >
+                      <td class="mono">{pub.data.year}</td>
+                      <td>
+                        <strong>{pub.data.title}</strong>
+                        {pub.data.subtitle && <span class="sub-text"> — {pub.data.subtitle}</span>}
+                      </td>
+                      <td class="text-secondary">{pub.data.venue} {pub.data.volumeIssue ? `(${pub.data.volumeIssue})` : ''}</td>
+                      <td class="mono-doi">{pub.data.doi || '—'}</td>
+                      <td class="text-right">
+                        <div class="row-actions">
+                          <button
+                            type="button"
+                            class="study-btn study-btn--ledger study-btn--sm btn-table-edit"
+                            data-edit-type="publications"
+                            data-edit-id={pub.id}
+                            title="Edit Article in Atelier"
+                          >
+                            ✎ Edit
+                          </button>
+                          <a href={`/publications/${pub.id}`} target="_blank" rel="noopener noreferrer" class="study-btn study-btn--ghost study-btn--sm btn-table-view" title="View Public Page">
+                            ↗
+                          </a>
+                          <button
+                            type="button"
+                            class="study-btn study-btn--hazard study-btn--sm btn-table-delete"
+                            data-delete-type="publications"
+                            data-delete-id={pub.id}
+                            data-delete-name={pub.data.title}
+                            title="Delete Article"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Search Zero State for Publications -->
+            <div class="search-empty-state" id="empty-state-publications" hidden>
+              <span class="empty-seal" aria-hidden="true">❦</span>
+              <h4>No Manuscripts Found in Fascicle I</h4>
+              <p class="empty-msg">No publications match "<span class="empty-query-label"></span>".</p>
+              <div class="cross-fascicle-suggestions" id="cross-suggest-publications"></div>
+              <button type="button" class="study-btn study-btn--ghost study-btn--sm btn-reset-search">Clear Search Filter</button>
+            </div>
+          </div>
+
+          <!-- 2. Books Panel -->
+          <div class="fascicle-panel" id="panel-books" data-panel-type="books" role="tabpanel" hidden>
+            <!-- Tactile Pictographic Specimen Gallery for Books -->
+            <div class="specimen-gallery" data-gallery-section="books">
+              {books.map((b) => (
+                <article
+                  class="specimen-card specimen-card--monograph"
+                  data-item-card={`books-${b.id}`}
+                  data-search-text={`${b.data.year} ${b.data.title} ${b.data.subtitle || ''} ${b.data.publisher} ${b.data.isbn} ${b.data.synopsis || ''}`.toLowerCase()}
+                  data-card-id={b.id}
+                  data-card-type="books"
+                  tabindex="0"
+                  role="button"
+                  aria-label={`Inspect monograph: ${b.data.title}`}
+                >
+                  <script type="application/json" class="specimen-payload" set:html={JSON.stringify({
+                    type: 'books',
+                    id: b.id,
+                    title: b.data.title,
+                    subtitle: b.data.subtitle || '',
+                    year: b.data.year,
+                    publisher: b.data.publisher,
+                    isbn: b.data.isbn,
+                    pages: b.data.pages,
+                    coverImage: b.data.coverImage,
+                    chapterCount: (b.data.chapters || []).length,
+                    excerpt: b.data.synopsis || '',
+                    publicUrl: '/#books'
+                  })} />
+                  
+                  <div class="monograph-plate-layout">
+                    <div class="monograph-cover-slot">
+                      <img src={b.data.coverImage} alt={b.data.title} class="monograph-cover-art" loading="lazy" />
+                      <span class="monograph-year-foil mono">{b.data.year}</span>
+                      <button
+                        type="button"
+                        class="btn-cover-quick-edit"
+                        data-action="edit-book-cover"
+                        data-book-id={b.id}
+                        data-book-title={b.data.title}
+                        data-book-cover={b.data.coverImage}
+                        title={`Adjust or replace cover for "${b.data.title}"`}
+                      >
+                        ✎ Cover
+                      </button>
+                    </div>
+                    <div class="monograph-meta-slot">
+                      <div class="card-eyebrow-line">
+                        <span class="card-fleuron" aria-hidden="true">📖</span>
+                        <span class="card-venue-tag">{b.data.publisher}</span>
+                      </div>
+                      <h4 class="card-main-title">{b.data.title}</h4>
+                      {b.data.subtitle && <p class="card-sub-title">{b.data.subtitle}</p>}
+                      <div class="card-footer-line">
+                        <div class="card-chips-cluster">
+                          <span class="specimen-chip mono">{b.data.pages}pp</span>
+                          <span class="specimen-chip chip-mono">{b.data.isbn}</span>
+                        </div>
+                        <div class="card-hover-prompt">
+                          <span class="prompt-icon">👁</span>
+                          <span class="prompt-text">Inspect</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </article>
+              ))}
+            </div>
+
+            <div class="table-wrap">
+              <table class="admin-table">
+                <thead>
+                  <tr>
+                    <th style="width: 80px;">Year</th>
+                    <th style="width: 50px;">Cover</th>
+                    <th>Title &amp; Subtitle</th>
+                    <th>Publisher Imprint</th>
+                    <th style="width: 140px;">ISBN</th>
+                    <th class="text-right" style="width: 150px;">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {books.map((b) => (
+                    <tr
+                      data-item-row={`books-${b.id}`}
+                      data-search-text={`${b.data.year} ${b.data.title} ${b.data.subtitle || ''} ${b.data.publisher} ${b.data.isbn} ${b.data.synopsis || ''}`.toLowerCase()}
+                    >
+                      <td class="mono">{b.data.year}</td>
+                      <td>
+                        <button
+                          type="button"
+                          class="mini-cover-thumb mini-cover-thumb--action"
+                          data-action="edit-book-cover"
+                          data-book-id={b.id}
+                          data-book-title={b.data.title}
+                          data-book-cover={b.data.coverImage}
+                          title={`Click to adjust cover for "${b.data.title}"`}
+                        >
+                          <img src={b.data.coverImage} alt={b.data.title} class="mini-thumb-img" />
+                          <span class="mini-thumb-overlay" aria-hidden="true">✎</span>
+                        </button>
+                      </td>
+                      <td>
+                        <strong>{b.data.title}</strong>
+                        {b.data.subtitle && <span class="sub-text"> — {b.data.subtitle}</span>}
+                      </td>
+                      <td class="text-secondary">{b.data.publisher}</td>
+                      <td class="mono-doi">{b.data.isbn}</td>
+                      <td class="text-right">
+                        <div class="row-actions">
+                          <button
+                            type="button"
+                            class="study-btn study-btn--ledger study-btn--sm btn-table-edit"
+                            data-edit-type="books"
+                            data-edit-id={b.id}
+                            title="Edit Monograph in Atelier"
+                          >
+                            ✎ Edit
+                          </button>
+                          <a href="/#books" target="_blank" rel="noopener noreferrer" class="study-btn study-btn--ghost study-btn--sm btn-table-view" title="View Public Page">
+                            ↗
+                          </a>
+                          <button
+                            type="button"
+                            class="study-btn study-btn--hazard study-btn--sm btn-table-delete"
+                            data-delete-type="books"
+                            data-delete-id={b.id}
+                            data-delete-name={b.data.title}
+                            title="Delete Monograph"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Search Zero State for Books -->
+            <div class="search-empty-state" id="empty-state-books" hidden>
+              <span class="empty-seal" aria-hidden="true">❦</span>
+              <h4>No Monographs Found in Fascicle II</h4>
+              <p class="empty-msg">No monograph volumes match "<span class="empty-query-label"></span>".</p>
+              <div class="cross-fascicle-suggestions" id="cross-suggest-books"></div>
+              <button type="button" class="study-btn study-btn--ghost study-btn--sm btn-reset-search">Clear Search Filter</button>
+            </div>
+          </div>
+
+          <!-- 3. Classes Panel -->
+          <div class="fascicle-panel" id="panel-classes" data-panel-type="classes" role="tabpanel" hidden>
+            <!-- Tactile Pictographic Specimen Gallery for Classes -->
+            <div class="specimen-gallery" data-gallery-section="classes">
+              {classes.map((c) => (
+                <article
+                  class="specimen-card specimen-card--class"
+                  data-item-card={`classes-${c.id}`}
+                  data-search-text={`${c.data.courseCode} ${c.data.title} ${c.data.term} ${c.data.academicYear} ${c.data.level} ${c.data.schedule || ''} ${c.data.summary || ''}`.toLowerCase()}
+                  data-card-id={c.id}
+                  data-card-type="classes"
+                  tabindex="0"
+                  role="button"
+                  aria-label={`Inspect syllabus: ${c.data.title}`}
+                >
+                  <script type="application/json" class="specimen-payload" set:html={JSON.stringify({
+                    type: 'classes',
+                    id: c.id,
+                    courseCode: c.data.courseCode,
+                    title: c.data.title,
+                    term: c.data.term,
+                    academicYear: c.data.academicYear,
+                    level: c.data.level,
+                    schedule: c.data.schedule || '',
+                    syllabusPdf: c.data.syllabusPdf || '',
+                    weekCount: (c.data.weeks || []).length,
+                    excerpt: c.data.summary || '',
+                    publicUrl: '/#classes'
+                  })} />
+                  
+                  <div class="card-face">
+                    <div class="card-eyebrow-line">
+                      <span class="course-code-monogram mono">{c.data.courseCode}</span>
+                      <span class="card-venue-tag">{c.data.term} ({c.data.academicYear})</span>
+                      <span class="level-pill-mini">{c.data.level}</span>
+                    </div>
+
+                    <div class="card-body-lockup">
+                      <h4 class="card-main-title">{c.data.title}</h4>
+                    </div>
+
+                    <div class="card-footer-line">
+                      <div class="card-chips-cluster">
+                        <span class="specimen-chip">{(c.data.weeks || []).length} Modules</span>
+                        {c.data.syllabusPdf && <span class="specimen-chip chip-accent">📋 PDF</span>}
+                      </div>
+                      <div class="card-hover-prompt">
+                        <span class="prompt-icon">👁</span>
+                        <span class="prompt-text">Inspect</span>
+                      </div>
+                    </div>
+                  </div>
+                </article>
+              ))}
+            </div>
+
+            <div class="table-wrap">
+              <table class="admin-table">
+                <thead>
+                  <tr>
+                    <th style="width: 100px;">Code</th>
+                    <th>Course Title</th>
+                    <th>Term &amp; Year</th>
+                    <th style="width: 120px;">Level</th>
+                    <th class="text-right" style="width: 150px;">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {classes.map((c) => (
+                    <tr
+                      data-item-row={`classes-${c.id}`}
+                      data-search-text={`${c.data.courseCode} ${c.data.title} ${c.data.term} ${c.data.academicYear} ${c.data.level} ${c.data.schedule || ''} ${c.data.summary || ''}`.toLowerCase()}
+                    >
+                      <td class="mono font-bold">{c.data.courseCode}</td>
+                      <td><strong>{c.data.title}</strong></td>
+                      <td class="text-secondary">{c.data.term} ({c.data.academicYear})</td>
+                      <td><span class="level-pill">{c.data.level}</span></td>
+                      <td class="text-right">
+                        <div class="row-actions">
+                          <button
+                            type="button"
+                            class="study-btn study-btn--ledger study-btn--sm btn-table-edit"
+                            data-edit-type="classes"
+                            data-edit-id={c.id}
+                            title="Edit Syllabus in Atelier"
+                          >
+                            ✎ Edit
+                          </button>
+                          <a href="/#classes" target="_blank" rel="noopener noreferrer" class="study-btn study-btn--ghost study-btn--sm btn-table-view" title="View Public Page">
+                            ↗
+                          </a>
+                          <button
+                            type="button"
+                            class="study-btn study-btn--hazard study-btn--sm btn-table-delete"
+                            data-delete-type="classes"
+                            data-delete-id={c.id}
+                            data-delete-name={c.data.title}
+                            title="Delete Seminar"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Search Zero State for Classes -->
+            <div class="search-empty-state" id="empty-state-classes" hidden>
+              <span class="empty-seal" aria-hidden="true">❦</span>
+              <h4>No Syllabi Found in Fascicle III</h4>
+              <p class="empty-msg">No university courses match "<span class="empty-query-label"></span>".</p>
+              <div class="cross-fascicle-suggestions" id="cross-suggest-classes"></div>
+              <button type="button" class="study-btn study-btn--ghost study-btn--sm btn-reset-search">Clear Search Filter</button>
+            </div>
+          </div>
+        </div>
+      </section>
     </div>
 
-    <!-- TAB 2: Books & Monographs -->
-    <div id="tab-books" class="tab-content" role="tabpanel" aria-labelledby="tab-btn-books" hidden>
-      <div class="panel-card max-w-form">
-        <div class="card-head">
-          <span class="card-kicker">MONOGRAPH ARCHIVE</span>
-          <h3>Author Academic Monograph</h3>
-          <p class="card-desc">Generates a validated Markdown record in <code>src/data/books/</code>.</p>
+    <!-- ========================================================
+         FLOATING COLOPHON INSPECTOR (HOVERABLE LOUPE HUD)
+         ======================================================== -->
+    <aside
+      id="colophon-inspector-hud"
+      class="colophon-inspector-hud"
+      role="tooltip"
+      aria-hidden="true"
+      hidden
+    >
+      <div class="hud-inner">
+        <div class="hud-eyebrow-row">
+          <div class="hud-eyebrow-left">
+            <span class="hud-seal" aria-hidden="true">❧</span>
+            <span class="hud-kicker mono" id="hud-kicker">01 · PUBLICATION</span>
+            <span class="hud-badge tabular" id="hud-year-badge">2024</span>
+          </div>
+          <span class="hud-status-chip" id="hud-status">PEER-REVIEWED</span>
         </div>
 
-        <form id="book-form" class="editor-form">
-          <div class="form-row-2">
-            <label>
-              <span>Monograph Title *</span>
-              <input type="text" name="title" id="book-title" placeholder="e.g. Technical Objects & Spiritual Practices" required />
-            </label>
-            <label>
-              <span>Subtitle</span>
-              <input type="text" name="subtitle" id="book-subtitle" placeholder="e.g. Organology, the Organic & Inorganic" />
-            </label>
-          </div>
+        <div class="hud-title-lockup">
+          <h4 class="hud-title" id="hud-title">Title</h4>
+          <p class="hud-subtitle" id="hud-subtitle"></p>
+          <div class="hud-venue-meta" id="hud-venue-meta"></div>
+        </div>
 
-          <div class="form-row-3">
-            <label>
-              <span>Publication Year *</span>
-              <input type="number" name="year" id="book-year" value="2026" required />
-            </label>
-            <label>
-              <span>Publisher Imprint *</span>
-              <input type="text" name="publisher" id="book-publisher" value="Ashoka University · Philosophy Monograph" required />
-            </label>
-            <label>
-              <span>ISBN / Catalog ID *</span>
-              <input type="text" name="isbn" id="book-isbn" value="ASHOKA-PHIL-2026-DRC" required />
-            </label>
-          </div>
+        <!-- Abstract / Synopsis Bookplate Frame -->
+        <div class="hud-abstract-frame">
+          <div class="hud-abstract-corner tl" aria-hidden="true">❦</div>
+          <div class="hud-abstract-corner tr" aria-hidden="true">❦</div>
+          <div class="hud-abstract-corner bl" aria-hidden="true">❦</div>
+          <div class="hud-abstract-corner br" aria-hidden="true">❦</div>
+          <span class="hud-abstract-kicker">SYNOPSIS · ARCHIVAL EXTRACT</span>
+          <p class="hud-abstract-text" id="hud-abstract-text"></p>
+        </div>
 
-          <div class="form-row-2">
-            <label>
-              <span>Page Count</span>
-              <input type="number" name="pages" id="book-pages" value="220" />
-            </label>
-            <label>
-              <span>Cover Image Path</span>
-              <input type="text" name="coverImage" id="book-cover" value="/images/books/celestial-mechanics.svg" />
-            </label>
-          </div>
-
-          <label>
-            <span>Monograph Synopsis *</span>
-            <textarea name="synopsis" id="book-synopsis" rows="4" placeholder="Overview of the core thesis, philosophical lineages, and arguments…" required></textarea>
-          </label>
-
-          <!-- Chapters Builder -->
-          <div class="repeater-section">
-            <div class="repeater-head">
-              <span class="mini-label">Monograph Chapters</span>
-              <button type="button" id="add-chapter-btn" class="btn-outline-sm">+ Add Chapter</button>
-            </div>
-            <div id="chapters-container" class="repeater-list">
-              <div class="repeater-item chapter-row">
-                <input type="text" class="ch-num" placeholder="01" value="01" />
-                <input type="text" class="ch-title" placeholder="Chapter Title" value="Between the Organic and the Inorganic" />
-                <input type="text" class="ch-summary" placeholder="Summary statement" value="Investigates ontological continuity..." />
-                <button type="button" class="btn-remove-row" title="Remove chapter">✕</button>
-              </div>
-            </div>
-          </div>
-
-          <button type="submit" id="book-submit-btn" class="btn-primary">
-            Publish Monograph to Book Shelf
+        <!-- Direct Actions Dock -->
+        <div class="hud-actions-dock">
+          <button type="button" class="study-btn study-btn--ignite study-btn--sm" id="hud-btn-edit">
+            <span>✎ Edit in Atelier</span>
+            <span class="btn-keycap">⌘E</span>
           </button>
-        </form>
-      </div>
-    </div>
-
-    <!-- TAB 3: Courses & Seminars -->
-    <div id="tab-classes" class="tab-content" role="tabpanel" aria-labelledby="tab-btn-classes" hidden>
-      <div class="panel-card max-w-form">
-        <div class="card-head">
-          <span class="card-kicker">CURRICULUM SUITE</span>
-          <h3>Dispatch University Seminar Syllabus</h3>
-          <p class="card-desc">Generates course schedules and weekly reading lists in <code>src/data/classes/</code>.</p>
-        </div>
-
-        <form id="class-form" class="editor-form">
-          <div class="form-row-3">
-            <label>
-              <span>Course Code *</span>
-              <input type="text" name="code" id="class-code" placeholder="e.g. PHIL 3070" required />
-            </label>
-            <label>
-              <span>Academic Term *</span>
-              <input type="text" name="term" id="class-term" value="Monsoon 2026" required />
-            </label>
-            <label>
-              <span>Academic Year *</span>
-              <input type="text" name="academicYear" id="class-year" value="2025–2026" required />
-            </label>
-          </div>
-
-          <div class="form-row-2">
-            <label>
-              <span>Seminar Title *</span>
-              <input type="text" name="title" id="class-title" placeholder="e.g. Continental Philosophy of Technology" required />
-            </label>
-            <label>
-              <span>Level *</span>
-              <select name="level" id="class-level" class="admin-select">
-                <option value="Graduate">Graduate</option>
-                <option value="Undergraduate">Undergraduate</option>
-                <option value="Seminar" selected>Seminar</option>
-              </select>
-            </label>
-          </div>
-
-          <div class="form-row-2">
-            <label>
-              <span>Meeting Schedule / Room Location *</span>
-              <input type="text" name="location" id="class-location" value="Ashoka University · Department of Philosophy" required />
-            </label>
-            <label>
-              <span>Syllabus PDF Route</span>
-              <input type="text" name="syllabusPdf" id="class-pdf" value="/cv" />
-            </label>
-          </div>
-
-          <label>
-            <span>Course Summary & Objectives *</span>
-            <textarea name="description" id="class-desc" rows="4" placeholder="Course syllabus overview…" required></textarea>
-          </label>
-
-          <!-- Weekly Modules Builder -->
-          <div class="repeater-section">
-            <div class="repeater-head">
-              <span class="mini-label">Syllabus Weekly Schedule</span>
-              <button type="button" id="add-week-btn" class="btn-outline-sm">+ Add Week</button>
-            </div>
-            <div id="weeks-container" class="repeater-list">
-              <div class="repeater-item week-row">
-                <input type="text" class="wk-num" placeholder="WK 01" value="WK 01" />
-                <input type="text" class="wk-topic" placeholder="Weekly Topic" value="Foundational Norms & Technics" />
-                <textarea class="wk-readings" rows="2" placeholder="Readings (one per line)">Georges Canguilhem (1952), Machine and Organism&#10;André Leroi-Gourhan (1964), Gesture and Speech</textarea>
-                <button type="button" class="btn-remove-row" title="Remove week">✕</button>
-              </div>
-            </div>
-          </div>
-
-          <button type="submit" id="class-submit-btn" class="btn-primary">
-            Publish Seminar Syllabus
+          <a href="#" target="_blank" rel="noopener noreferrer" class="study-btn study-btn--ghost study-btn--sm" id="hud-link-view">
+            <span>↗ Public View</span>
+          </a>
+          <button type="button" class="study-btn study-btn--hazard study-btn--sm" id="hud-btn-delete">
+            <span>✕ Delete</span>
           </button>
-        </form>
-      </div>
-    </div>
-
-    <!-- TAB 4: Master Collections Ledger -->
-    <div id="tab-ledger" class="tab-content" role="tabpanel" aria-labelledby="tab-btn-ledger" hidden>
-      <div class="ledger-stack">
-        <!-- Publications Ledger Table -->
-        <div class="ledger-box">
-          <div class="box-head">
-            <span class="card-kicker">COLLECTION: PUBLICATIONS ({publications.length})</span>
-            <h3>Manuscripts & Refereed Articles</h3>
-          </div>
-          <div class="table-wrap">
-            <table class="admin-table">
-              <thead>
-                <tr>
-                  <th>Year</th>
-                  <th>Title</th>
-                  <th>Venue</th>
-                  <th>DOI</th>
-                  <th class="text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {publications.map((pub) => (
-                  <tr data-item-row={`publications-${pub.id}`}>
-                    <td class="mono">{pub.data.year}</td>
-                    <td>
-                      <strong>{pub.data.title}</strong>
-                      {pub.data.subtitle && <span class="sub-text"> — {pub.data.subtitle}</span>}
-                    </td>
-                    <td class="text-secondary">{pub.data.venue}</td>
-                    <td class="mono-doi">{pub.data.doi || '—'}</td>
-                    <td class="text-right">
-                      <div class="row-actions">
-                        <a href={`/publications/${pub.id}`} target="_blank" rel="noopener noreferrer" class="btn-table-view">
-                          View ↗
-                        </a>
-                        <button
-                          type="button"
-                          class="btn-table-delete"
-                          data-delete-type="publications"
-                          data-delete-id={pub.id}
-                          data-delete-name={pub.data.title}
-                        >
-                          ✕
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        <!-- Books Ledger Table -->
-        <div class="ledger-box">
-          <div class="box-head">
-            <span class="card-kicker">COLLECTION: BOOKS ({books.length})</span>
-            <h3>Authored Monographs</h3>
-          </div>
-          <div class="table-wrap">
-            <table class="admin-table">
-              <thead>
-                <tr>
-                  <th>Year</th>
-                  <th>Title</th>
-                  <th>Publisher</th>
-                  <th>ISBN</th>
-                  <th class="text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {books.map((b) => (
-                  <tr data-item-row={`books-${b.id}`}>
-                    <td class="mono">{b.data.year}</td>
-                    <td>
-                      <strong>{b.data.title}</strong>
-                      {b.data.subtitle && <span class="sub-text"> — {b.data.subtitle}</span>}
-                    </td>
-                    <td class="text-secondary">{b.data.publisher}</td>
-                    <td class="mono-doi">{b.data.isbn}</td>
-                    <td class="text-right">
-                      <div class="row-actions">
-                        <a href="/#books" target="_blank" rel="noopener noreferrer" class="btn-table-view">
-                          View ↗
-                        </a>
-                        <button
-                          type="button"
-                          class="btn-table-delete"
-                          data-delete-type="books"
-                          data-delete-id={b.id}
-                          data-delete-name={b.data.title}
-                        >
-                          ✕
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        <!-- Classes Ledger Table -->
-        <div class="ledger-box">
-          <div class="box-head">
-            <span class="card-kicker">COLLECTION: CLASSES ({classes.length})</span>
-            <h3>University Courses & Seminars</h3>
-          </div>
-          <div class="table-wrap">
-            <table class="admin-table">
-              <thead>
-                <tr>
-                  <th>Code</th>
-                  <th>Title</th>
-                  <th>Term</th>
-                  <th>Level</th>
-                  <th class="text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {classes.map((c) => (
-                  <tr data-item-row={`classes-${c.id}`}>
-                    <td class="mono font-bold">{c.data.courseCode}</td>
-                    <td><strong>{c.data.title}</strong></td>
-                    <td class="text-secondary">{c.data.term} ({c.data.academicYear})</td>
-                    <td><span class="level-pill">{c.data.level}</span></td>
-                    <td class="text-right">
-                      <div class="row-actions">
-                        <a href="/#classes" target="_blank" rel="noopener noreferrer" class="btn-table-view">
-                          View ↗
-                        </a>
-                        <button
-                          type="button"
-                          class="btn-table-delete"
-                          data-delete-type="classes"
-                          data-delete-id={c.id}
-                          data-delete-name={c.data.title}
-                        >
-                          ✕
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
         </div>
       </div>
-    </div>
+    </aside>
   </div>
 
   <script>
     declare const notify: (message: string, status?: string) => void;
     declare const postAdmin: (url: string, payload: Record<string, any>) => Promise<any>;
+    declare const confirmAction: (options: {
+      title?: string;
+      message?: string;
+      itemName?: string;
+      itemId?: string;
+      itemType?: string;
+      confirmLabel?: string;
+      onConfirm: () => Promise<void> | void;
+    }) => void;
+    declare const openContentEditor: (options?: {
+      type?: 'publications' | 'books' | 'classes';
+      mode?: 'create' | 'edit';
+      id?: string;
+      focusIngest?: boolean;
+      onSaved?: (item: any) => void;
+    }) => void;
 
-    // 1. Content Tab Bar Navigation
-    const tabBtns = document.querySelectorAll<HTMLButtonElement>('.content-tab-bar .tab-btn');
-    const tabContents = document.querySelectorAll<HTMLElement>('.tab-content');
+    // 1. Quick Ingest Launcher
+    document.getElementById('btn-quick-ingest')?.addEventListener('click', () => {
+      (window as any).openContentEditor?.({
+        type: currentFascicle || 'publications',
+        mode: 'create',
+        focusIngest: true,
+      });
+    });
 
-    tabBtns.forEach((btn) => {
-      btn.addEventListener('click', () => {
-        const targetId = btn.getAttribute('aria-controls');
-        if (!targetId) return;
+    // 2. Single 2-Way View Switcher (Tiles ⇄ Rows)
+    const shelfPanelsWrap = document.getElementById('shelf-panels-wrap');
+    const btnViewToggle2Way = document.getElementById('btn-view-toggle-2way');
+    const segTiles = document.getElementById('seg-tiles');
+    const segRows = document.getElementById('seg-rows');
 
-        tabBtns.forEach((b) => {
-          b.classList.remove('is-active');
-          b.setAttribute('aria-selected', 'false');
-        });
-        tabContents.forEach((c) => {
-          c.classList.remove('is-active');
-          c.hidden = true;
-        });
+    let currentLayoutMode: 'gallery' | 'table' = 'gallery';
 
-        btn.classList.add('is-active');
-        btn.setAttribute('aria-selected', 'true');
-        const targetEl = document.getElementById(targetId);
-        if (targetEl) {
-          targetEl.classList.add('is-active');
-          targetEl.hidden = false;
+    function setLayoutMode(mode: 'gallery' | 'table') {
+      currentLayoutMode = mode;
+      if (shelfPanelsWrap) {
+        shelfPanelsWrap.classList.toggle('is-gallery-view', mode === 'gallery');
+        shelfPanelsWrap.classList.toggle('is-table-view', mode === 'table');
+      }
+
+      if (btnViewToggle2Way) {
+        btnViewToggle2Way.setAttribute('aria-checked', mode === 'table' ? 'true' : 'false');
+      }
+      segTiles?.classList.toggle('is-active', mode === 'gallery');
+      segRows?.classList.toggle('is-active', mode === 'table');
+
+      try {
+        localStorage.setItem('drc_admin_ledger_view', mode);
+      } catch {}
+    }
+
+    const savedLayoutMode = (localStorage.getItem('drc_admin_ledger_view') as any) || 'gallery';
+    setLayoutMode(savedLayoutMode === 'table' ? 'table' : 'gallery');
+
+    btnViewToggle2Way?.addEventListener('click', () => {
+      setLayoutMode(currentLayoutMode === 'gallery' ? 'table' : 'gallery');
+    });
+
+    // 3. Fascicle Spine Navigation & Smart Lineage Arrow
+    const fascicleTabs = document.querySelectorAll<HTMLButtonElement>('.fascicle-tab-btn');
+    const fasciclePanels = document.querySelectorAll<HTMLElement>('.fascicle-panel');
+    const smartLineageArrow = document.getElementById('smart-lineage-arrow');
+    const fascicleSpineRail = document.getElementById('fascicle-spine-rail');
+    const shelfKicker = document.getElementById('shelf-kicker');
+    const shelfMainTitle = document.getElementById('shelf-main-title');
+    const shelfCountPill = document.getElementById('shelf-count-pill');
+    const shelfBtnAddLabel = document.getElementById('shelf-btn-add-label');
+    const btnShelfContextAdd = document.getElementById('btn-shelf-context-add') as HTMLButtonElement | null;
+
+    const fascicleMeta: Record<string, { kicker: string; title: string; addLabel: string }> = {
+      publications: {
+        kicker: 'FASCICLE I · ARTICLES & MANUSCRIPTS',
+        title: 'Refereed Articles & Critical Essays',
+        addLabel: 'New Article',
+      },
+      books: {
+        kicker: 'FASCICLE II · AUTHORED MONOGRAPHS',
+        title: 'Authored Academic Monographs',
+        addLabel: 'New Monograph',
+      },
+      classes: {
+        kicker: 'FASCICLE III · SEMINARS & SYLLABI',
+        title: 'Pedagogical Syllabi & Curricula',
+        addLabel: 'New Syllabus',
+      },
+    };
+
+    let currentFascicle: 'publications' | 'books' | 'classes' = 'publications';
+
+    function setFascicle(target: 'publications' | 'books' | 'classes') {
+      currentFascicle = target;
+
+      fascicleTabs.forEach((tab) => {
+        const isTarget = tab.dataset.fascicleTarget === target;
+        tab.classList.toggle('is-active', isTarget);
+        tab.setAttribute('aria-selected', isTarget ? 'true' : 'false');
+      });
+
+      fasciclePanels.forEach((panel) => {
+        const isTarget = panel.dataset.panelType === target;
+        panel.classList.toggle('is-active', isTarget);
+        panel.hidden = !isTarget;
+      });
+
+      const meta = fascicleMeta[target];
+      if (meta) {
+        if (shelfKicker) shelfKicker.textContent = meta.kicker;
+        if (shelfMainTitle) shelfMainTitle.textContent = meta.title;
+        if (shelfBtnAddLabel) shelfBtnAddLabel.textContent = meta.addLabel;
+        if (btnShelfContextAdd) btnShelfContextAdd.dataset.activeFascicle = target;
+      }
+
+      // Update count pill for active panel
+      const activePanel = document.getElementById(`panel-${target}`);
+      const itemCount = activePanel?.querySelectorAll('.specimen-card').length || 0;
+      if (shelfCountPill) {
+        shelfCountPill.textContent = `${itemCount} RECORDS`;
+      }
+
+      const searchInput = document.getElementById('ledger-search-input') as HTMLInputElement | null;
+      if (searchInput) {
+        if (target === 'publications') {
+          searchInput.placeholder = 'Filter publications by title, venue, DOI, co-author, abstract, year…';
+        } else if (target === 'books') {
+          searchInput.placeholder = 'Filter monographs by title, publisher, ISBN, synopsis, year…';
+        } else {
+          searchInput.placeholder = 'Filter syllabi by course code, title, term, level, summary…';
         }
+      }
+
+      try {
+        localStorage.setItem('drc_admin_active_fascicle', target);
+      } catch {}
+
+      // Re-filter search if search input has active value
+      executeContextAwareSearch();
+    }
+
+    fascicleTabs.forEach((tab) => {
+      tab.addEventListener('click', () => {
+        const target = tab.dataset.fascicleTarget as any;
+        if (target) setFascicle(target);
       });
     });
 
-    // 2. DOI Auto-Populate Resolver
-    const doiBtn = document.getElementById('doi-fetch-btn') as HTMLButtonElement | null;
-    doiBtn?.addEventListener('click', async () => {
-      const doiInput = document.getElementById('doi-input') as HTMLInputElement | null;
-      const doi = doiInput?.value.trim() || '';
-      if (!doi) {
-        notify('Please enter a valid DOI.', 'warn');
-        doiInput?.focus();
-        return;
-      }
+    btnShelfContextAdd?.addEventListener('click', () => {
+      (window as any).openContentEditor?.({ type: currentFascicle, mode: 'create' });
+    });
 
-      if (doiBtn) {
-        doiBtn.disabled = true;
-        doiBtn.textContent = 'Resolving…';
-      }
+    const savedFascicle = (localStorage.getItem('drc_admin_active_fascicle') as any) || 'publications';
+    setFascicle(['publications', 'books', 'classes'].includes(savedFascicle) ? savedFascicle : 'publications');
 
-      notify('Querying Crossref metadata index…', 'info');
-      const data = await postAdmin('/api/admin/content', {
-        action: 'import-doi',
-        doi,
+    // 4. Shared Delete Logic
+    function confirmDeleteItem(type: string, id: string, name: string) {
+      (window as any).confirmAction?.({
+        title: `Permanently Delete ${type === 'publications' ? 'Manuscript' : type === 'books' ? 'Monograph' : 'Seminar'}?`,
+        message: `You are about to irreversibly purge "${name}" from ${type}. This action cannot be undone.`,
+        itemName: name,
+        itemId: id,
+        itemType: type,
+        confirmLabel: 'Confirm Permanent Delete',
+        onConfirm: async () => {
+          (window as any).notify?.(`Purging ${id} from ${type}…`, 'info');
+          const res = await (window as any).postAdmin?.('/api/admin/content', {
+            action: 'delete-content',
+            type,
+            id,
+          });
+
+          if (res?.ok) {
+            (window as any).notify?.(res.message || `Deleted ${id}.`, 'success');
+            const row = document.querySelector(`[data-item-row="${type}-${id}"]`);
+            const card = document.querySelector(`[data-item-card="${type}-${id}"]`);
+            if (row) {
+              row.classList.add('row-deleted');
+              setTimeout(() => row.remove(), 350);
+            }
+            if (card) {
+              card.classList.add('card-deleted');
+              setTimeout(() => {
+                card.remove();
+                // Update live count readout on spine rail and shelf header
+                const activePanel = document.getElementById(`panel-${type}`);
+                const remaining = activePanel?.querySelectorAll('.specimen-card').length || 0;
+                const railCount = document.getElementById(`rail-count-${type}`);
+                if (railCount) {
+                  railCount.textContent = `${remaining} ${type === 'publications' ? 'Works' : type === 'books' ? 'Volumes' : 'Seminars'}`;
+                }
+                if (shelfCountPill && currentFascicle === type) {
+                  shelfCountPill.textContent = `${remaining} RECORDS`;
+                }
+              }, 350);
+            }
+          } else {
+            (window as any).notify?.(res?.error || 'Failed to delete record.', 'error');
+          }
+        },
       });
+    }
 
-      if (doiBtn) {
-        doiBtn.disabled = false;
-        doiBtn.textContent = 'Resolve DOI';
-      }
-
-      if (data.ok && data.metadata) {
-        const m = data.metadata;
-        (document.getElementById('pub-title') as HTMLInputElement).value = m.title || '';
-        (document.getElementById('pub-year') as HTMLInputElement).value = String(m.year || 2026);
-        (document.getElementById('pub-venue') as HTMLInputElement).value = m.venue || '';
-        (document.getElementById('pub-doi') as HTMLInputElement).value = m.doi || '';
-        (document.getElementById('pub-volume') as HTMLInputElement).value = m.volumeIssue || '';
-        (document.getElementById('pub-authors') as HTMLInputElement).value = (m.coAuthors || []).join(', ');
-        (document.getElementById('pub-abstract') as HTMLTextAreaElement).value = m.abstract || '';
-        (document.getElementById('pub-bibtex') as HTMLTextAreaElement).value = m.citationBibtex || '';
-        notify(`Resolved metadata: "${m.title}"`, 'success');
-      } else {
-        notify(data.error || 'Failed to resolve DOI.', 'error');
-      }
-    });
-
-    // 3. BibTeX Parser Quick Import
-    document.getElementById('bibtex-parse-btn')?.addEventListener('click', async () => {
-      const textarea = document.getElementById('bibtex-quick-paste') as HTMLTextAreaElement | null;
-      const rawBib = textarea?.value.trim() || '';
-      if (!rawBib) {
-        notify('Please paste BibTeX code first.', 'warn');
-        textarea?.focus();
-        return;
-      }
-
-      notify('Parsing BibTeX snippet…', 'info');
-      const data = await postAdmin('/api/admin/content', {
-        action: 'parse-bibtex',
-        bibtex: rawBib,
-      });
-
-      if (data.ok && data.metadata) {
-        const m = data.metadata;
-        (document.getElementById('pub-title') as HTMLInputElement).value = m.title || '';
-        (document.getElementById('pub-year') as HTMLInputElement).value = String(m.year || 2026);
-        (document.getElementById('pub-venue') as HTMLInputElement).value = m.venue || '';
-        (document.getElementById('pub-doi') as HTMLInputElement).value = m.doi || '';
-        (document.getElementById('pub-volume') as HTMLInputElement).value = m.volumeIssue || '';
-        (document.getElementById('pub-authors') as HTMLInputElement).value = (m.coAuthors || []).join(', ');
-        (document.getElementById('pub-abstract') as HTMLTextAreaElement).value = m.abstract || '';
-        (document.getElementById('pub-bibtex') as HTMLTextAreaElement).value = m.citationBibtex || rawBib;
-        notify('Parsed BibTeX fields into form.', 'success');
-      } else {
-        notify(data.error || 'Unable to parse BibTeX.', 'error');
-      }
-    });
-
-    // 4. Submit Publication
-    document.getElementById('pub-form')?.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const form = e.currentTarget as HTMLFormElement;
-      const submitBtn = document.getElementById('pub-submit-btn') as HTMLButtonElement | null;
-      if (submitBtn) submitBtn.disabled = true;
-
-      const fd = new FormData(form);
-      notify('Writing manuscript markdown to src/data/publications/…', 'info');
-
-      const data = await postAdmin('/api/admin/content', {
-        action: 'create-publication',
-        title: fd.get('title'),
-        year: fd.get('year'),
-        venue: fd.get('venue'),
-        volumeIssue: fd.get('volumeIssue'),
-        doi: fd.get('doi'),
-        coAuthors: fd.get('coAuthors'),
-        pdfUrl: fd.get('pdfUrl'),
-        abstract: fd.get('abstract'),
-        citationBibtex: fd.get('citationBibtex'),
-      });
-
-      if (submitBtn) submitBtn.disabled = false;
-      if (data.ok) {
-        notify(data.message || 'Committed publication successfully.', 'success');
-        form.reset();
-        setTimeout(() => window.location.reload(), 1200);
-      } else {
-        notify(data.error || 'Failed to save publication.', 'error');
-      }
-    });
-
-    // 5. Dynamic Chapter Repeater
-    document.getElementById('add-chapter-btn')?.addEventListener('click', () => {
-      const container = document.getElementById('chapters-container');
-      if (!container) return;
-      const count = container.querySelectorAll('.chapter-row').length + 1;
-      const numStr = String(count).padStart(2, '0');
-
-      const row = document.createElement('div');
-      row.className = 'repeater-item chapter-row';
-      row.innerHTML = `
-        <input type="text" class="ch-num" placeholder="${numStr}" value="${numStr}" />
-        <input type="text" class="ch-title" placeholder="Chapter Title" />
-        <input type="text" class="ch-summary" placeholder="Summary statement" />
-        <button type="button" class="btn-remove-row" title="Remove chapter">✕</button>
-      `;
-      container.appendChild(row);
-      (row.querySelector('.ch-title') as HTMLInputElement)?.focus();
-    });
-
-    // 6. Submit Book
-    document.getElementById('book-form')?.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const form = e.currentTarget as HTMLFormElement;
-      const submitBtn = document.getElementById('book-submit-btn') as HTMLButtonElement | null;
-      if (submitBtn) submitBtn.disabled = true;
-
-      const fd = new FormData(form);
-      const chapterRows = document.querySelectorAll<HTMLElement>('.chapter-row');
-      const chapters: Array<{ number: string; title: string; summary: string }> = [];
-
-      chapterRows.forEach((row) => {
-        const num = (row.querySelector('.ch-num') as HTMLInputElement)?.value || '';
-        const title = (row.querySelector('.ch-title') as HTMLInputElement)?.value || '';
-        const summary = (row.querySelector('.ch-summary') as HTMLInputElement)?.value || '';
-        if (title.trim()) chapters.push({ number: num, title, summary });
-      });
-
-      notify('Writing monograph to src/data/books/…', 'info');
-      const data = await postAdmin('/api/admin/content', {
-        action: 'create-book',
-        title: fd.get('title'),
-        subtitle: fd.get('subtitle'),
-        year: fd.get('year'),
-        publisher: fd.get('publisher'),
-        isbn: fd.get('isbn'),
-        pages: fd.get('pages'),
-        coverImage: fd.get('coverImage'),
-        synopsis: fd.get('synopsis'),
-        chapters,
-      });
-
-      if (submitBtn) submitBtn.disabled = false;
-      if (data.ok) {
-        notify(data.message || 'Published monograph successfully.', 'success');
-        form.reset();
-        setTimeout(() => window.location.reload(), 1200);
-      } else {
-        notify(data.error || 'Failed to save monograph.', 'error');
-      }
-    });
-
-    // 7. Dynamic Week Repeater
-    document.getElementById('add-week-btn')?.addEventListener('click', () => {
-      const container = document.getElementById('weeks-container');
-      if (!container) return;
-      const count = container.querySelectorAll('.week-row').length + 1;
-      const numStr = `WK ${String(count).padStart(2, '0')}`;
-
-      const row = document.createElement('div');
-      row.className = 'repeater-item week-row';
-      row.innerHTML = `
-        <input type="text" class="wk-num" placeholder="${numStr}" value="${numStr}" />
-        <input type="text" class="wk-topic" placeholder="Weekly Topic" />
-        <textarea class="wk-readings" rows="2" placeholder="Readings (one per line)"></textarea>
-        <button type="button" class="btn-remove-row" title="Remove week">✕</button>
-      `;
-      container.appendChild(row);
-      (row.querySelector('.wk-topic') as HTMLInputElement)?.focus();
-    });
-
-    // Generic row deletion in repeaters
+    // 5. Edit Actions (Cards & Table Rows)
     document.addEventListener('click', (e) => {
-      const btn = (e.target as HTMLElement).closest('.btn-remove-row');
-      if (btn) btn.closest('.repeater-item')?.remove();
-    });
-
-    // 8. Submit Class
-    document.getElementById('class-form')?.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const form = e.currentTarget as HTMLFormElement;
-      const submitBtn = document.getElementById('class-submit-btn') as HTMLButtonElement | null;
-      if (submitBtn) submitBtn.disabled = true;
-
-      const fd = new FormData(form);
-      const weekRows = document.querySelectorAll<HTMLElement>('.week-row');
-      const weeks: Array<{ weekNumber: string; topic: string; readings: string[] }> = [];
-
-      weekRows.forEach((row) => {
-        const wkNum = (row.querySelector('.wk-num') as HTMLInputElement)?.value || '';
-        const topic = (row.querySelector('.wk-topic') as HTMLInputElement)?.value || '';
-        const readingsRaw = (row.querySelector('.wk-readings') as HTMLTextAreaElement)?.value || '';
-        const readings = readingsRaw.split('\n').map((r) => r.trim()).filter(Boolean);
-        if (topic.trim()) weeks.push({ weekNumber: wkNum, topic, readings });
-      });
-
-      notify('Writing seminar syllabus to src/data/classes/…', 'info');
-      const data = await postAdmin('/api/admin/content', {
-        action: 'create-class',
-        code: fd.get('code'),
-        term: fd.get('term'),
-        academicYear: fd.get('academicYear'),
-        title: fd.get('title'),
-        level: fd.get('level'),
-        location: fd.get('location'),
-        syllabusPdf: fd.get('syllabusPdf'),
-        description: fd.get('description'),
-        weeks,
-      });
-
-      if (submitBtn) submitBtn.disabled = false;
-      if (data.ok) {
-        notify(data.message || 'Published course syllabus successfully.', 'success');
-        form.reset();
-        setTimeout(() => window.location.reload(), 1200);
-      } else {
-        notify(data.error || 'Failed to save course.', 'error');
-      }
-    });
-
-    // 9. Prune & Delete Content Rows
-    document.querySelectorAll<HTMLButtonElement>('[data-delete-type]').forEach((btn) => {
-      btn.addEventListener('click', async () => {
-        const type = btn.dataset.deleteType;
-        const id = btn.dataset.deleteId;
-        const name = btn.dataset.deleteName || id;
-        if (!type || !id) return;
-
-        if (!confirm(`Are you sure you want to permanently delete "${name}" from ${type}?`)) {
-          return;
-        }
-
-        btn.disabled = true;
-        btn.textContent = '…';
-        notify(`Deleting ${id} from ${type}…`, 'info');
-
-        const data = await postAdmin('/api/admin/content', {
-          action: 'delete-content',
+      const btn = (e.target as HTMLElement).closest('.btn-table-edit, .btn-card-edit') as HTMLButtonElement | null;
+      if (!btn) return;
+      const type = btn.dataset.editType as any;
+      const id = btn.dataset.editId;
+      if (type && id) {
+        (window as any).openContentEditor?.({
           type,
           id,
+          mode: 'edit',
+          onSaved: () => {
+            setTimeout(() => window.location.reload(), 1000);
+          },
         });
+      }
+    });
 
-        if (data.ok) {
-          notify(data.message || `Deleted ${id}.`, 'success');
-          document.querySelector(`[data-item-row="${type}-${id}"]`)?.remove();
+    // 5. Delete Actions from Table Rows
+    document.addEventListener('click', (e) => {
+      const btn = (e.target as HTMLElement).closest('.btn-table-delete') as HTMLButtonElement | null;
+      if (!btn) return;
+      const type = btn.dataset.deleteType;
+      const id = btn.dataset.deleteId;
+      const name = btn.dataset.deleteName || id;
+      if (type && id) {
+        confirmDeleteItem(type, id, name);
+      }
+    });
+
+    // 5b. Direct In-Situ Book Cover Adjustment
+    document.addEventListener('click', (e) => {
+      const btn = (e.target as HTMLElement).closest('[data-action="edit-book-cover"]') as HTMLElement | null;
+      if (!btn) return;
+      e.stopPropagation();
+      e.preventDefault();
+
+      const bookId = btn.dataset.bookId || '';
+      const bookTitle = btn.dataset.bookTitle || 'Monograph';
+      const currentCover = btn.dataset.bookCover || '';
+
+      (window as any).openMediaCropper?.({
+        aspect: 'book-cover',
+        targetEntity: { type: 'book', id: bookId, title: bookTitle },
+        title: `Adjust Cover: ${bookTitle}`,
+        kicker: '02 · MONOGRAPH COVER ATELIER',
+        initialImageUrl: currentCover,
+        fileNameSlug: bookId,
+        applyLabel: 'Save & Update Monograph Cover ✓',
+        onApply: (res: any) => {
+          if (res?.imageUrl) {
+            const newSrc = `${res.imageUrl}?t=${Date.now()}`;
+            document.querySelectorAll(`[data-item-card="books-${bookId}"] .monograph-cover-art, [data-item-row="books-${bookId}"] .mini-thumb-img`).forEach((img) => {
+              (img as HTMLImageElement).src = newSrc;
+            });
+            document.querySelectorAll(`[data-book-id="${bookId}"]`).forEach((el) => {
+              (el as HTMLElement).dataset.bookCover = res.imageUrl;
+            });
+          }
+        },
+      });
+    });
+
+    // 6. Floating Colophon Inspector HUD Controller
+    const hud = document.getElementById('colophon-inspector-hud');
+    const hudKicker = document.getElementById('hud-kicker');
+    const hudYear = document.getElementById('hud-year-badge');
+    const hudStatus = document.getElementById('hud-status');
+    const hudTitle = document.getElementById('hud-title');
+    const hudSubtitle = document.getElementById('hud-subtitle');
+    const hudVenueMeta = document.getElementById('hud-venue-meta');
+    const hudAbstractText = document.getElementById('hud-abstract-text');
+    const hudBtnEdit = document.getElementById('hud-btn-edit');
+    const hudLinkView = document.getElementById('hud-link-view') as HTMLAnchorElement | null;
+    const hudBtnDelete = document.getElementById('hud-btn-delete');
+
+    let hudOpenTimer: any = null;
+    let hudCloseTimer: any = null;
+    let currentPayload: any = null;
+
+    function populateHud(data: any) {
+      if (!hud) return;
+      currentPayload = data;
+
+      if (hudKicker) {
+        if (data.type === 'publications') hudKicker.textContent = '01 · PUBLICATION';
+        else if (data.type === 'books') hudKicker.textContent = '02 · MONOGRAPH';
+        else hudKicker.textContent = '03 · CURRICULUM';
+      }
+
+      if (hudYear) {
+        hudYear.textContent = String(data.year || data.academicYear || '2025');
+      }
+
+      if (hudStatus) {
+        if (data.type === 'publications') hudStatus.textContent = 'PEER-REVIEWED';
+        else if (data.type === 'books') hudStatus.textContent = `${data.chapterCount || 0} CHAPTERS`;
+        else hudStatus.textContent = `${data.level || 'SEMINAR'} (${data.weekCount || 0} WKS)`;
+      }
+
+      if (hudTitle) hudTitle.textContent = data.title;
+      if (hudSubtitle) {
+        hudSubtitle.textContent = data.subtitle || '';
+        hudSubtitle.hidden = !data.subtitle;
+      }
+
+      if (hudVenueMeta) {
+        if (data.type === 'publications') {
+          hudVenueMeta.textContent = `${data.venue} ${data.volumeIssue ? `· ${data.volumeIssue}` : ''}`;
+        } else if (data.type === 'books') {
+          hudVenueMeta.textContent = `${data.publisher} · ISBN: ${data.isbn} · ${data.pages} Pages`;
         } else {
-          btn.disabled = false;
-          btn.textContent = '✕';
-          notify(data.error || 'Failed to delete record.', 'error');
+          hudVenueMeta.textContent = `${data.courseCode} · ${data.term} (${data.academicYear}) · ${data.schedule || 'Ashoka University'}`;
+        }
+      }
+
+      if (hudAbstractText) {
+        hudAbstractText.textContent = data.excerpt || 'Archival synopsis recorded in sovereign faculty repository.';
+      }
+
+      if (hudLinkView) {
+        hudLinkView.href = data.publicUrl || '/';
+      }
+    }
+
+    function positionHud(card: HTMLElement) {
+      if (!hud) return;
+      const rect = card.getBoundingClientRect();
+      const hudWidth = Math.min(460, window.innerWidth - 32);
+      const hudHeight = 340;
+
+      // Horizontal: prefer right of card, fallback to left
+      let left = rect.right + 14;
+      if (left + hudWidth > window.innerWidth - 16) {
+        left = rect.left - hudWidth - 14;
+      }
+      if (left < 16) {
+        left = Math.max(16, (window.innerWidth - hudWidth) / 2);
+      }
+
+      // Vertical: align with card top, clamp to viewport
+      let top = rect.top;
+      if (top + hudHeight > window.innerHeight - 16) {
+        top = Math.max(16, window.innerHeight - hudHeight - 16);
+      }
+      if (top < 16) top = 16;
+
+      hud.style.left = `${Math.round(left)}px`;
+      hud.style.top = `${Math.round(top)}px`;
+    }
+
+    function showHud(card: HTMLElement) {
+      const payloadEl = card.querySelector('.specimen-payload');
+      if (!payloadEl) return;
+
+      try {
+        const data = JSON.parse(payloadEl.textContent || '{}');
+        populateHud(data);
+        positionHud(card);
+
+        if (hud) {
+          hud.hidden = false;
+          hud.setAttribute('aria-hidden', 'false');
+          requestAnimationFrame(() => {
+            hud.classList.add('is-visible');
+          });
+        }
+      } catch (err) {
+        console.error('Failed to parse specimen payload', err);
+      }
+    }
+
+    function hideHud() {
+      if (!hud) return;
+      hud.classList.remove('is-visible');
+      setTimeout(() => {
+        if (!hud.classList.contains('is-visible')) {
+          hud.hidden = true;
+          hud.setAttribute('aria-hidden', 'true');
+        }
+      }, 260);
+    }
+
+    // Attach hover listeners to all specimen cards
+    document.querySelectorAll<HTMLElement>('.specimen-card').forEach((card) => {
+      card.addEventListener('mouseenter', () => {
+        clearTimeout(hudCloseTimer);
+        clearTimeout(hudOpenTimer);
+        hudOpenTimer = setTimeout(() => showHud(card), 140);
+      });
+
+      card.addEventListener('mouseleave', () => {
+        clearTimeout(hudOpenTimer);
+        hudCloseTimer = setTimeout(() => hideHud(), 180);
+      });
+
+      card.addEventListener('focus', () => {
+        clearTimeout(hudCloseTimer);
+        clearTimeout(hudOpenTimer);
+        showHud(card);
+      });
+
+      card.addEventListener('blur', () => {
+        clearTimeout(hudOpenTimer);
+        hudCloseTimer = setTimeout(() => hideHud(), 180);
+      });
+
+      // Clicking card directly launches atelier edit
+      card.addEventListener('click', (e) => {
+        const target = e.target as HTMLElement;
+        if (target.closest('button, a')) return;
+        const type = card.dataset.cardType as any;
+        const id = card.dataset.cardId;
+        if (type && id) {
+          hideHud();
+          (window as any).openContentEditor?.({
+            type,
+            id,
+            mode: 'edit',
+            onSaved: () => setTimeout(() => window.location.reload(), 1000),
+          });
         }
       });
+    });
+
+    // Keep HUD open when hovering directly inside it
+    hud?.addEventListener('mouseenter', () => {
+      clearTimeout(hudCloseTimer);
+    });
+
+    hud?.addEventListener('mouseleave', () => {
+      hudCloseTimer = setTimeout(() => hideHud(), 180);
+    });
+
+    // Close HUD on scroll or escape
+    window.addEventListener('scroll', () => hideHud(), { passive: true });
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') hideHud();
+    });
+
+    // HUD Actions
+    hudBtnEdit?.addEventListener('click', () => {
+      if (currentPayload) {
+        hideHud();
+        (window as any).openContentEditor?.({
+          type: currentPayload.type,
+          id: currentPayload.id,
+          mode: 'edit',
+          onSaved: () => setTimeout(() => window.location.reload(), 1000),
+        });
+      }
+    });
+
+    hudBtnDelete?.addEventListener('click', () => {
+      if (currentPayload) {
+        const { type, id, title } = currentPayload;
+        hideHud();
+        confirmDeleteItem(type, id, title);
+      }
+    });
+
+    // 7. Smart Context-Aware Archival Search Engine (2-Pass Intelligence)
+    function executeContextAwareSearch() {
+      const searchInput = document.getElementById('ledger-search-input') as HTMLInputElement | null;
+      const searchClearBtn = document.getElementById('btn-search-clear') as HTMLButtonElement | null;
+      const searchReadout = document.getElementById('search-count-readout');
+      const rawQ = (searchInput?.value || '').trim();
+      const q = rawQ.toLowerCase();
+      const tokens = q.split(/\s+/).filter(Boolean);
+
+      if (searchClearBtn) {
+        searchClearBtn.hidden = !rawQ;
+      }
+
+      const fascicleCounts: Record<string, { total: number; visible: number }> = {
+        publications: { total: 0, visible: 0 },
+        books: { total: 0, visible: 0 },
+        classes: { total: 0, visible: 0 },
+      };
+
+      const fascicleTypes: Array<'publications' | 'books' | 'classes'> = ['publications', 'books', 'classes'];
+
+      // --- PASS 1: Calculate matches & toggle visibility for all fascicles ---
+      fascicleTypes.forEach((fType) => {
+        const panel = document.getElementById(`panel-${fType}`);
+        if (!panel) return;
+
+        const cards = panel.querySelectorAll<HTMLElement>('.specimen-card');
+        const rows = panel.querySelectorAll<HTMLElement>('[data-item-row]');
+
+        fascicleCounts[fType].total = cards.length;
+        let visibleInFascicle = 0;
+
+        cards.forEach((card) => {
+          const text = (card.dataset.searchText || '').toLowerCase();
+          const match = tokens.length === 0 || tokens.every((tok) => text.includes(tok));
+
+          card.classList.toggle('is-search-hidden', !match);
+          card.hidden = !match;
+
+          if (match) visibleInFascicle++;
+        });
+
+        rows.forEach((row) => {
+          const text = (row.dataset.searchText || '').toLowerCase();
+          const match = tokens.length === 0 || tokens.every((tok) => text.includes(tok));
+
+          row.classList.toggle('is-search-hidden', !match);
+          row.hidden = !match;
+        });
+
+        fascicleCounts[fType].visible = visibleInFascicle;
+      });
+
+      // --- PASS 2: Update UI, Rail Badges, Empty States, and Cross-Fascicle Banners ---
+      fascicleTypes.forEach((fType) => {
+        const visibleInFascicle = fascicleCounts[fType].visible;
+        const totalInFascicle = fascicleCounts[fType].total;
+
+        // Update rail count badge
+        const railCount = document.getElementById(`rail-count-${fType}`);
+        if (railCount) {
+          if (tokens.length === 0) {
+            const noun = fType === 'publications' ? 'Works' : fType === 'books' ? 'Volumes' : 'Seminars';
+            railCount.textContent = `${totalInFascicle} ${noun}`;
+            railCount.classList.remove('is-filtering');
+          } else {
+            railCount.textContent = `${visibleInFascicle} match${visibleInFascicle === 1 ? '' : 'es'}`;
+            railCount.classList.add('is-filtering');
+          }
+        }
+
+        // Handle Panel Empty State
+        const emptyState = document.getElementById(`empty-state-${fType}`);
+        const emptyQueryLabel = emptyState?.querySelector('.empty-query-label');
+        const crossSuggest = document.getElementById(`cross-suggest-${fType}`);
+
+        if (emptyState) {
+          const showEmpty = tokens.length > 0 && visibleInFascicle === 0;
+          emptyState.hidden = !showEmpty;
+          emptyState.classList.toggle('is-hidden', !showEmpty);
+
+          if (showEmpty) {
+            if (emptyQueryLabel) emptyQueryLabel.textContent = rawQ;
+
+            // Accurate cross-fascicle suggestions because Pass 1 has finished!
+            if (crossSuggest) {
+              const otherMatches = fascicleTypes
+                .filter((other) => other !== fType && fascicleCounts[other].visible > 0)
+                .map((other) => ({
+                  type: other,
+                  name: other === 'publications' ? 'Fascicle I: Publications' : other === 'books' ? 'Fascicle II: Monographs' : 'Fascicle III: Classes',
+                  count: fascicleCounts[other].visible,
+                }));
+
+              if (otherMatches.length > 0) {
+                crossSuggest.innerHTML = `
+                  <div class="cross-match-banner">
+                    <span class="cross-sparkle">✦</span>
+                    <span>Found matching records in other fascicles:</span>
+                    <div class="cross-pills">
+                      ${otherMatches.map((m) => `
+                        <button type="button" class="cross-jump-btn" data-jump-to="${m.type}">
+                          <span>${m.name}</span>
+                          <span class="jump-pill-count">${m.count}</span>
+                          <span class="pill-arrow" aria-hidden="true">→</span>
+                        </button>
+                      `).join('')}
+                    </div>
+                  </div>
+                `;
+                crossSuggest.querySelectorAll<HTMLButtonElement>('.cross-jump-btn').forEach((btn) => {
+                  btn.addEventListener('click', () => {
+                    const jumpTarget = btn.dataset.jumpTo as any;
+                    if (jumpTarget) setFascicle(jumpTarget);
+                  });
+                });
+              } else {
+                crossSuggest.innerHTML = '';
+              }
+            }
+          }
+        }
+      });
+
+      // --- PASS 3: Top Cross-Fascicle Discovery Strip for Active View ---
+      const crossDiscoveryBar = document.getElementById('shelf-cross-discovery-bar');
+      const crossDiscoveryInner = document.getElementById('cross-discovery-inner');
+
+      if (crossDiscoveryBar && crossDiscoveryInner) {
+        const otherMatchesForActive = fascicleTypes
+          .filter((other) => other !== currentFascicle && fascicleCounts[other].visible > 0)
+          .map((other) => ({
+            type: other,
+            name: other === 'publications' ? 'Fascicle I: Publications' : other === 'books' ? 'Fascicle II: Monographs' : 'Fascicle III: Classes',
+            count: fascicleCounts[other].visible,
+          }));
+
+        if (tokens.length > 0 && otherMatchesForActive.length > 0) {
+          crossDiscoveryBar.hidden = false;
+          crossDiscoveryBar.classList.remove('is-hidden');
+          crossDiscoveryInner.innerHTML = `
+            <div class="cross-discovery-left">
+              <span class="cross-seal">✦</span>
+              <span>Search query "${rawQ}" also matches in other fascicles:</span>
+            </div>
+            <div class="cross-discovery-pills">
+              ${otherMatchesForActive.map((m) => `
+                <button type="button" class="cross-jump-pill" data-jump-to="${m.type}">
+                  <span>${m.name}</span>
+                  <span class="pill-num">${m.count}</span>
+                  <span class="pill-arrow" aria-hidden="true">→</span>
+                </button>
+              `).join('')}
+            </div>
+          `;
+
+          crossDiscoveryInner.querySelectorAll<HTMLButtonElement>('.cross-jump-pill').forEach((btn) => {
+            btn.addEventListener('click', () => {
+              const jumpTarget = btn.dataset.jumpTo as any;
+              if (jumpTarget) setFascicle(jumpTarget);
+            });
+          });
+        } else {
+          crossDiscoveryBar.hidden = true;
+          crossDiscoveryBar.classList.add('is-hidden');
+          crossDiscoveryInner.innerHTML = '';
+        }
+      }
+
+      // Shelf header pill & live count readout
+      const activeStats = fascicleCounts[currentFascicle];
+      if (shelfCountPill && activeStats) {
+        if (tokens.length === 0) {
+          shelfCountPill.textContent = `${activeStats.total} RECORDS`;
+          shelfCountPill.classList.remove('pill-filtering');
+        } else {
+          shelfCountPill.textContent = `${activeStats.visible} of ${activeStats.total} MATCHES`;
+          shelfCountPill.classList.add('pill-filtering');
+        }
+      }
+
+      if (searchReadout && activeStats) {
+        if (tokens.length === 0) {
+          searchReadout.hidden = true;
+        } else {
+          searchReadout.textContent = `${activeStats.visible} match${activeStats.visible === 1 ? '' : 'es'}`;
+          searchReadout.hidden = false;
+        }
+      }
+    }
+
+    const searchInputEl = document.getElementById('ledger-search-input') as HTMLInputElement | null;
+    const searchClearBtnEl = document.getElementById('btn-search-clear');
+
+    searchInputEl?.addEventListener('input', executeContextAwareSearch);
+
+    function clearSearch() {
+      if (searchInputEl) {
+        searchInputEl.value = '';
+        executeContextAwareSearch();
+        searchInputEl.focus();
+      }
+    }
+
+    searchClearBtnEl?.addEventListener('click', clearSearch);
+
+    document.querySelectorAll('.btn-reset-search').forEach((btn) => {
+      btn.addEventListener('click', clearSearch);
+    });
+
+    // 8. Sovereign Hotkeys (1: Publications, 2: Books, 3: Classes, V: Toggle View, / or ⌘K: Search)
+    window.addEventListener('keydown', (e) => {
+      const activeEl = document.activeElement;
+      const tagName = (activeEl?.tagName || '').toLowerCase();
+      const isInput = ['input', 'textarea', 'select'].includes(tagName) || (activeEl as HTMLElement)?.isContentEditable;
+
+      // Escape while searching clears query
+      if (e.key === 'Escape' && activeEl === searchInputEl) {
+        clearSearch();
+        searchInputEl?.blur();
+        return;
+      }
+
+      // Quick focus search hotkey (/ or ⌘K)
+      if ((e.key === '/' || (e.key === 'k' && (e.metaKey || e.ctrlKey))) && !isInput) {
+        e.preventDefault();
+        searchInputEl?.focus();
+        searchInputEl?.select();
+        return;
+      }
+
+      if (isInput) return;
+
+      if (e.key === '1') {
+        e.preventDefault();
+        setFascicle('publications');
+      } else if (e.key === '2') {
+        e.preventDefault();
+        setFascicle('books');
+      } else if (e.key === '3') {
+        e.preventDefault();
+        setFascicle('classes');
+      } else if (e.key === 'v' || e.key === 'V') {
+        e.preventDefault();
+        setLayoutMode(currentLayoutMode === 'gallery' ? 'table' : 'gallery');
+      }
+    });
+
+    // 9. Listen for Content Update Events
+    window.addEventListener('drc:content-updated', () => {
+      setTimeout(() => window.location.reload(), 1200);
     });
   </script>
 </AdminLayout>
@@ -790,22 +1400,27 @@ const classes = await getCollection('classes').catch(() => []);
   }
 
   .module-kicker {
-    font-family: var(--font-mono);
-    font-size: 0.75rem;
-    letter-spacing: 0.12em;
+    font-family: var(--font-serif);
+    font-size: 0.76rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
     color: var(--accent);
+    font-weight: 500;
   }
 
   .header-split h2 {
     margin: 0.25rem 0 0.25rem;
     font-size: var(--step-1);
+    font-family: var(--font-display);
     font-weight: 500;
+    letter-spacing: -0.01em;
   }
 
   .module-sub {
     margin: 0;
-    font-size: 0.88rem;
+    font-size: 0.9rem;
     color: var(--text-secondary);
+    font-family: var(--font-serif);
   }
 
   .telemetry-stats {
@@ -816,419 +1431,1221 @@ const classes = await getCollection('classes').catch(() => []);
   .stat-box {
     display: flex;
     flex-direction: column;
-    padding: 0.5rem 0.85rem;
+    padding: 0.45rem 0.85rem;
     background: var(--bg-surface);
     border: 1px solid var(--border-hairline);
-    border-radius: 0.375rem;
-    min-width: 90px;
+    border-radius: 0.25rem;
+    min-width: 85px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
   }
 
   .stat-number {
-    font-family: var(--font-mono);
-    font-size: 1.15rem;
-    font-weight: 600;
+    font-family: var(--font-display);
+    font-size: 1.35rem;
+    font-weight: 500;
+    line-height: 1.1;
     color: var(--accent);
   }
 
   .stat-label {
-    font-family: var(--font-mono);
-    font-size: 0.68rem;
-    color: var(--text-tertiary);
-    letter-spacing: 0.05em;
-  }
-
-  /* Content Tab Bar */
-  .content-tab-bar {
-    display: flex;
-    gap: 0.5rem;
-    flex-wrap: wrap;
-    border-bottom: 1px solid var(--border-hairline);
-    padding-bottom: 0.5rem;
-  }
-
-  .tab-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.55rem 0.95rem;
-    border-radius: 0.375rem;
-    border: 1px solid var(--border-hairline);
-    background: var(--bg-surface);
-    color: var(--text-secondary);
-    font-family: var(--font-mono);
-    font-size: 0.8rem;
-    letter-spacing: 0.04em;
-    cursor: pointer;
-    transition: all 0.15s ease;
-  }
-
-  .tab-btn:hover {
-    color: var(--text-primary);
-    border-color: var(--accent);
-  }
-
-  .tab-btn.is-active {
-    background: var(--bg-elevated);
-    color: var(--accent);
-    border-color: var(--accent);
-    box-shadow: 0 0 0 1px var(--accent);
-  }
-
-  .badge-count {
-    padding: 0.1rem 0.4rem;
-    border-radius: 9999px;
-    background: var(--bg-canvas);
+    font-family: var(--font-serif);
     font-size: 0.7rem;
-    color: var(--text-tertiary);
+    color: var(--text-muted);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
   }
 
-  .tab-btn.is-active .badge-count {
-    background: color-mix(in oklch, var(--accent) 20%, transparent);
-    color: var(--accent);
-  }
-
-  /* Layout grids */
-  .two-col-layout {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(min(100%, 500px), 1fr));
-    gap: 1.5rem;
-  }
-
-  .max-w-form {
-    max-width: 880px;
-  }
-
-  .panel-card {
-    padding: 1.5rem;
-    border-radius: 0.75rem;
-    border: 1px solid var(--border-hairline);
-    background: var(--bg-elevated);
-    display: flex;
-    flex-direction: column;
-    gap: 1.25rem;
-  }
-
-  .card-kicker {
-    font-family: var(--font-mono);
-    font-size: 0.72rem;
-    letter-spacing: 0.1em;
-    color: var(--accent);
-  }
-
-  .card-head h3 {
-    margin: 0.2rem 0 0.25rem;
-    font-size: 1.05rem;
-    font-weight: 500;
-  }
-
-  .card-desc {
-    margin: 0;
-    font-size: 0.82rem;
-    color: var(--text-secondary);
-  }
-
-  /* Form controls */
-  .editor-form {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-  }
-
-  .form-row-2 {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-    gap: 0.85rem;
-  }
-
-  .form-row-3 {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-    gap: 0.85rem;
-  }
-
-  .editor-form label {
-    display: flex;
-    flex-direction: column;
-    gap: 0.35rem;
-    font-family: var(--font-mono);
-    font-size: 0.75rem;
-    color: var(--text-secondary);
-  }
-
-  .editor-form input,
-  .editor-form textarea,
-  .admin-select {
-    padding: 0.6rem 0.8rem;
-    border-radius: 0.375rem;
-    border: 1px solid var(--border-hairline);
-    background: var(--bg-canvas);
-    color: var(--text-primary);
-    font-family: inherit;
-    font-size: 0.88rem;
-  }
-
-  .editor-form input:focus,
-  .editor-form textarea:focus,
-  .admin-select:focus {
-    outline: none;
-    border-color: var(--accent);
-    box-shadow: 0 0 0 1px var(--accent);
-  }
-
-  .mono-code {
-    font-family: var(--font-mono);
-    font-size: 0.78rem;
-  }
-
-  /* Importer stack */
-  .importer-stack {
-    display: flex;
-    flex-direction: column;
-    gap: 1.25rem;
-  }
-
-  .input-action-row {
-    display: flex;
-    gap: 0.5rem;
-    flex-wrap: wrap;
-  }
-
-  .input-action-row input {
-    flex: 1;
-    min-width: 220px;
-    padding: 0.6rem 0.8rem;
-    border-radius: 0.375rem;
-    border: 1px solid var(--border-hairline);
-    background: var(--bg-canvas);
-    color: var(--text-primary);
-  }
-
-  .btn-accent {
-    padding: 0.6rem 1rem;
-    border-radius: 0.375rem;
-    background: color-mix(in oklch, var(--accent) 18%, var(--bg-surface));
-    border: 1px solid var(--accent);
-    color: var(--text-primary);
-    font-family: var(--font-mono);
-    font-size: 0.78rem;
-    cursor: pointer;
-  }
-
-  .btn-accent:hover {
-    background: var(--accent);
-    color: var(--bg-canvas);
-  }
-
-  .bibtex-paste-box {
-    display: flex;
-    flex-direction: column;
-    gap: 0.4rem;
-  }
-
-  .mini-label {
-    font-family: var(--font-mono);
-    font-size: 0.72rem;
-    color: var(--text-tertiary);
-    letter-spacing: 0.05em;
-  }
-
-  .bibtex-paste-box textarea {
-    padding: 0.6rem 0.8rem;
-    border-radius: 0.375rem;
-    border: 1px solid var(--border-hairline);
-    background: var(--bg-canvas);
-    color: var(--text-primary);
-    font-family: var(--font-mono);
-    font-size: 0.76rem;
-  }
-
-  .btn-outline-sm {
-    align-self: flex-start;
-    padding: 0.35rem 0.65rem;
-    border-radius: 0.25rem;
-    border: 1px solid var(--border-hairline);
-    background: var(--bg-surface);
-    color: var(--text-primary);
-    font-family: var(--font-mono);
-    font-size: 0.72rem;
-    cursor: pointer;
-  }
-
-  .btn-outline-sm:hover {
-    border-color: var(--accent);
-    color: var(--accent);
-  }
-
-  /* Repeaters (Chapters & Weeks) */
-  .repeater-section {
-    display: flex;
-    flex-direction: column;
-    gap: 0.85rem;
-    padding: 1.25rem;
-    background: var(--bg-surface);
-    border: 1px solid var(--border-hairline);
-    border-radius: 0.5rem;
-  }
-
-  .repeater-head {
+  /* Launchpad Bar */
+  .launchpad-bar {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    border-bottom: 1px solid color-mix(in oklch, var(--border-hairline) 60%, transparent);
-    padding-bottom: 0.5rem;
+    flex-wrap: wrap;
+    gap: 0.85rem;
+    padding: 0.75rem 1rem;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-hairline);
+    border-radius: 0.375rem;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.18);
   }
 
-  .repeater-list {
-    display: flex;
-    flex-direction: column;
-    gap: 0.65rem;
-  }
-
-  .repeater-section :global(.repeater-item) {
+  .launchpad-left {
     display: flex;
     align-items: center;
-    gap: 0.65rem;
-    padding: 0.65rem 0.85rem;
-    background: var(--bg-canvas);
-    border: 1px solid var(--border-hairline);
-    border-radius: 0.45rem;
-    transition: all 0.15s ease;
+    gap: 0.55rem;
+    flex-wrap: wrap;
   }
 
-  .repeater-section :global(.repeater-item:hover) {
-    border-color: color-mix(in oklch, var(--accent) 45%, var(--border-hairline));
+  .btn-launch {
+    min-block-size: 34px;
   }
 
-  .repeater-section :global(.ch-num),
-  .repeater-section :global(.wk-num) {
-    width: 65px;
-    flex-shrink: 0;
-    padding: 0.6rem 0.4rem;
-    border-radius: 0.35rem;
+  .btn-icon {
+    font-size: 0.85rem;
+  }
+
+  .ledger-total-badge {
+    font-family: var(--font-serif);
+    font-size: 0.74rem;
+    color: var(--text-muted);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  /* Streamlined Launchpad Subtext */
+  .launchpad-subtext {
+    font-family: var(--font-serif);
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    font-style: italic;
+    margin-left: 0.35rem;
+  }
+
+  /* ========================================================
+     FASCICLE WORKBENCH STAGE (SPLIT RAIL + CATALOG SHELF)
+     ======================================================== */
+  .ledger-workbench-stage {
+    display: grid;
+    grid-template-columns: 240px 1fr;
+    gap: 1.5rem;
+    align-items: start;
+    position: relative;
+  }
+
+  @media (max-width: 900px) {
+    .ledger-workbench-stage {
+      grid-template-columns: 1fr;
+      gap: 1rem;
+    }
+  }
+
+  /* Left Fascicle Spine Rail */
+  .fascicle-spine-rail {
+    position: sticky;
+    top: 1rem;
+    display: flex;
+    flex-direction: column;
+    padding: 1rem 0.75rem;
+    background: var(--bg-surface);
     border: 1px solid var(--border-hairline);
-    background: var(--bg-elevated);
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.25);
+    position: relative;
+    user-select: none;
+  }
+
+  /* Continuous Golden Axis Trim Line (Matches Left Admin Sidebar) */
+  .fascicle-golden-axis {
+    position: absolute;
+    top: 1.5rem;
+    bottom: 1.5rem;
+    left: 36px;
+    width: 2px;
+    transform: translateX(-50%);
+    background: linear-gradient(
+      180deg,
+      transparent 0%,
+      var(--accent) 15%,
+      var(--accent) 85%,
+      transparent 100%
+    );
+    box-shadow: 0 0 8px color-mix(in srgb, var(--accent) 45%, transparent);
+    pointer-events: none;
+    z-index: 1;
+    animation: golden-pulse 4s ease-in-out infinite;
+  }
+
+  .fascicle-nav-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+    position: relative;
+    z-index: 2;
+  }
+
+  .fascicle-tab-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.7rem 0.65rem 0.7rem 0.5rem;
+    border-radius: 6px;
+    border: 1px solid transparent;
+    background: transparent;
+    cursor: pointer;
+    text-align: left;
+    transition: all 0.24s cubic-bezier(0.16, 1, 0.3, 1);
+    position: relative;
+    width: 100%;
+  }
+
+  .fascicle-tab-btn:hover {
+    background: rgba(255, 255, 255, 0.04);
+  }
+
+  .fascicle-tab-btn.is-active {
+    background: color-mix(in srgb, var(--accent) 12%, var(--bg-surface));
+    border-color: color-mix(in srgb, var(--accent) 35%, transparent);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+  }
+
+  .fascicle-tab-btn.is-active::after {
+    content: '';
+    position: absolute;
+    right: -1px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 3px;
+    height: 50%;
+    border-radius: 2px 0 0 2px;
+    background: var(--accent);
+    box-shadow: 0 0 8px color-mix(in srgb, var(--accent) 80%, transparent);
+  }
+
+  .fascicle-node-badge {
+    width: 32px;
+    height: 32px;
+    min-width: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg-surface);
+    border: 1.5px solid var(--border-hairline);
+    position: relative;
+    z-index: 2;
+    transition: all 0.24s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .fascicle-numeral {
+    font-family: var(--font-display, Georgia, serif);
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    line-height: 1;
+    transition: color 0.2s ease;
+  }
+
+  .fascicle-tab-btn:hover .fascicle-numeral,
+  .fascicle-tab-btn.is-active .fascicle-numeral {
     color: var(--accent);
-    font-family: var(--font-mono);
-    font-weight: 600;
-    font-size: 0.82rem;
-    text-align: center;
   }
 
-  .repeater-section :global(.ch-title),
-  .repeater-section :global(.wk-topic) {
-    flex: 1;
-    min-width: 160px;
-    padding: 0.6rem 0.8rem;
-    border-radius: 0.35rem;
-    border: 1px solid var(--border-hairline);
-    background: var(--bg-surface);
-    color: var(--text-primary);
-    font-family: inherit;
-    font-size: 0.85rem;
-  }
-
-  .repeater-section :global(.ch-summary) {
-    flex: 2;
-    min-width: 220px;
-    padding: 0.6rem 0.8rem;
-    border-radius: 0.35rem;
-    border: 1px solid var(--border-hairline);
-    background: var(--bg-surface);
-    color: var(--text-primary);
-    font-family: inherit;
-    font-size: 0.85rem;
-  }
-
-  .repeater-section :global(.wk-readings) {
-    flex: 2;
-    min-width: 220px;
-    padding: 0.6rem 0.8rem;
-    border-radius: 0.35rem;
-    border: 1px solid var(--border-hairline);
-    background: var(--bg-surface);
-    color: var(--text-primary);
-    font-family: inherit;
-    font-size: 0.82rem;
-    line-height: 1.4;
-    resize: vertical;
-  }
-
-  .repeater-section :global(.ch-num:focus),
-  .repeater-section :global(.wk-num:focus),
-  .repeater-section :global(.ch-title:focus),
-  .repeater-section :global(.wk-topic:focus),
-  .repeater-section :global(.ch-summary:focus),
-  .repeater-section :global(.wk-readings:focus) {
-    outline: none;
+  .fascicle-tab-btn.is-active .fascicle-node-badge {
     border-color: var(--accent);
-    box-shadow: 0 0 0 1px var(--accent);
+    box-shadow: 0 0 10px color-mix(in srgb, var(--accent) 50%, transparent);
+    background: color-mix(in srgb, var(--accent) 16%, var(--bg-surface));
   }
 
-  .repeater-section :global(.btn-remove-row) {
+  .fascicle-glow-ring {
+    position: absolute;
+    inset: -3px;
+    border-radius: 50%;
+    border: 1px solid var(--accent);
+    opacity: 0;
+    transform: scale(0.8);
+    transition: all 0.24s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .fascicle-tab-btn.is-active .fascicle-glow-ring {
+    opacity: 0.65;
+    transform: scale(1);
+  }
+
+  .fascicle-meta-lockup {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    flex: 1;
+    min-width: 0;
+  }
+
+  .fascicle-kicker {
+    font-family: var(--font-mono, monospace);
+    font-size: 0.625rem;
+    letter-spacing: 0.1em;
+    color: var(--text-muted);
+    text-transform: uppercase;
+  }
+
+  .fascicle-tab-btn.is-active .fascicle-kicker {
+    color: var(--accent);
+    font-weight: 600;
+  }
+
+  .fascicle-title {
+    font-family: var(--font-serif, Georgia, serif);
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    line-height: 1.2;
+  }
+
+  .fascicle-count {
+    font-family: var(--font-serif);
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .fascicle-hotkey {
+    font-family: var(--font-mono);
+    font-size: 0.58rem;
+    padding: 0.1rem 0.35rem;
+    border-radius: 3px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--border-hairline);
+    color: var(--text-muted);
+    opacity: 0.6;
+    transition: all 0.2s ease;
+  }
+
+  .fascicle-tab-btn:hover .fascicle-hotkey,
+  .fascicle-tab-btn.is-active .fascicle-hotkey {
+    opacity: 1;
+    color: var(--accent);
+    border-color: color-mix(in srgb, var(--accent) 40%, transparent);
+  }
+
+  /* Right Stage: Active Fascicle Catalog Shelf */
+  .fascicle-catalog-shelf {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-hairline);
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.25);
+    display: flex;
+    flex-direction: column;
+  }
+
+  .shelf-action-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+    padding: 0.95rem 1.25rem;
+    border-bottom: 1px solid var(--border-hairline);
+    background: color-mix(in srgb, var(--bg-surface) 93%, white);
+  }
+
+  .shelf-heading-lockup {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .shelf-fleuron {
+    font-size: 1.15rem;
+    color: var(--accent);
+    line-height: 1;
+  }
+
+  .shelf-titles {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+  }
+
+  .shelf-kicker {
+    font-family: var(--font-mono, monospace);
+    font-size: 0.65rem;
+    letter-spacing: 0.12em;
+    color: var(--accent);
+    font-weight: 600;
+    text-transform: uppercase;
+  }
+
+  .shelf-main-title {
+    margin: 0;
+    font-family: var(--font-display, Georgia, serif);
+    font-size: 1.15rem;
+    font-weight: 500;
+    color: var(--text-primary);
+    line-height: 1.2;
+  }
+
+  .shelf-count-pill {
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    padding: 0.15rem 0.5rem;
+    border-radius: 9999px;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid var(--border-hairline);
+    color: var(--text-secondary);
+  }
+
+  .shelf-tools-cluster {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+  }
+
+  .shelf-search-box {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    position: relative;
+    min-width: 250px;
+  }
+
+  .shelf-search-box .search-icon {
+    position: absolute;
+    left: 0.65rem;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    pointer-events: none;
+  }
+
+  .shelf-search-box input {
+    width: 100%;
+    padding: 0.42rem 2rem 0.42rem 1.85rem;
+    border-radius: 6px;
+    border: 1px solid var(--border-hairline);
+    background: color-mix(in srgb, var(--bg-surface) 88%, black);
+    color: var(--text-primary);
+    font-family: var(--font-serif);
+    font-size: 0.82rem;
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.2);
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  .shelf-search-box input:focus {
+    outline: none;
+    border-color: color-mix(in srgb, var(--accent) 55%, transparent);
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 55%, transparent);
+  }
+
+  .btn-search-clear {
+    position: absolute;
+    right: 0.5rem;
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    cursor: pointer;
+    padding: 0.2rem 0.35rem;
+    border-radius: 50%;
+    line-height: 1;
+    transition: color 0.15s ease, background-color 0.15s ease;
+  }
+
+  .btn-search-clear:hover {
+    color: var(--accent);
+    background: rgba(255, 255, 255, 0.08);
+  }
+
+  .search-readout {
+    font-family: var(--font-serif);
+    font-size: 0.72rem;
+    color: var(--accent);
+    white-space: nowrap;
+  }
+
+  /* Single 2-Way View Switcher (Tiles ⇄ Rows) */
+  .view-toggle-2way {
+    border: none;
+    background: none;
+    padding: 0;
+    cursor: pointer;
+    display: inline-flex;
+  }
+
+  .view-toggle-2way:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+    border-radius: 9999px;
+  }
+
+  .view-toggle-2way .toggle-track {
+    display: inline-flex;
+    align-items: center;
+    position: relative;
+    padding: 2px;
+    border-radius: 9999px;
+    background: color-mix(in srgb, var(--bg-surface) 88%, black);
+    border: 1px solid var(--border-hairline);
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.3);
+    user-select: none;
+  }
+
+  .toggle-indicator-thumb {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: calc(50% - 2px);
+    height: calc(100% - 4px);
+    border-radius: 9999px;
+    background: color-mix(in srgb, var(--accent) 18%, var(--bg-surface));
+    border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+    transition: transform 0.26s cubic-bezier(0.16, 1, 0.3, 1);
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  .view-toggle-2way[aria-checked="true"] .toggle-indicator-thumb {
+    transform: translateX(100%);
+  }
+
+  .toggle-segment {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.35rem 0.65rem;
+    font-family: var(--font-serif, Georgia, serif);
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    position: relative;
+    z-index: 2;
+    transition: color 0.2s ease;
+    white-space: nowrap;
+  }
+
+  .toggle-segment.is-active {
+    color: var(--accent);
+    font-weight: 600;
+  }
+
+  .seg-icon {
+    font-size: 0.85rem;
+    line-height: 1;
+  }
+
+  /* Shelf Panels Container */
+  .shelf-panels-wrap {
+    position: relative;
+    min-height: 380px;
+  }
+
+  .fascicle-panel {
+    display: none;
+    opacity: 0;
+    transition: opacity 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .fascicle-panel.is-active {
+    display: block;
+    opacity: 1;
+  }
+
+  .shelf-panels-wrap.is-gallery-view .table-wrap {
+    display: none !important;
+  }
+
+  .shelf-panels-wrap.is-gallery-view .specimen-gallery {
+    display: grid !important;
+  }
+
+  .shelf-panels-wrap.is-table-view .specimen-gallery {
+    display: none !important;
+  }
+
+  .shelf-panels-wrap.is-table-view .table-wrap {
+    display: block !important;
+  }
+
+  /* Reliable Hiding for Search Filtering */
+  [hidden],
+  .search-empty-state[hidden],
+  .search-empty-state.is-hidden,
+  .shelf-cross-discovery-bar[hidden],
+  .shelf-cross-discovery-bar.is-hidden,
+  .specimen-card.is-search-hidden,
+  .admin-table tr.is-search-hidden,
+  [data-item-card].is-search-hidden,
+  [data-item-row].is-search-hidden {
+    display: none !important;
+  }
+
+  /* Top Cross-Fascicle Discovery Strip */
+  .shelf-cross-discovery-bar {
+    background: color-mix(in srgb, var(--accent) 10%, var(--bg-surface));
+    border-bottom: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+    padding: 0.65rem 1.25rem;
+    transition: all 0.24s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  :global(.cross-discovery-inner) {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    font-family: var(--font-serif);
+    font-size: 0.84rem;
+    color: var(--text-primary);
+  }
+
+  :global(.cross-discovery-left) {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+  }
+
+  :global(.cross-discovery-left .cross-seal) {
+    color: var(--accent);
+    font-size: 0.95rem;
+  }
+
+  :global(.cross-discovery-pills) {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.55rem;
+    flex-wrap: wrap;
+  }
+
+  :global(.cross-jump-pill),
+  :global(.cross-jump-btn) {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.32rem 0.8rem;
+    border-radius: 9999px;
+    background: color-mix(in srgb, var(--accent) 10%, var(--bg-surface, #121214));
+    border: 1px solid color-mix(in srgb, var(--accent) 48%, transparent);
+    color: var(--accent);
+    font-family: var(--font-mono, monospace);
+    font-size: 0.74rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    cursor: pointer;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  :global(.cross-jump-pill:hover),
+  :global(.cross-jump-btn:hover) {
+    background: var(--accent);
+    color: #0b0c10;
+    border-color: var(--accent);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 14px color-mix(in srgb, var(--accent) 40%, transparent);
+  }
+
+  :global(.cross-jump-pill .pill-num),
+  :global(.jump-pill-count) {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 34px;
-    height: 34px;
-    flex-shrink: 0;
-    border-radius: 0.35rem;
-    border: 1px solid color-mix(in oklch, oklch(65% 0.2 25) 35%, transparent);
-    background: color-mix(in oklch, oklch(65% 0.2 25) 10%, transparent);
-    color: oklch(78% 0.16 25);
-    cursor: pointer;
-    font-size: 0.85rem;
-    transition: all 0.15s ease;
+    padding: 0.1rem 0.45rem;
+    border-radius: 9999px;
+    background: rgba(0, 0, 0, 0.45);
+    border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+    color: var(--accent);
+    font-weight: 700;
+    font-size: 0.68rem;
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+    transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
   }
 
-  .repeater-section :global(.btn-remove-row:hover) {
-    background: oklch(65% 0.2 25);
-    color: #fff;
-    border-color: oklch(65% 0.2 25);
-    transform: scale(1.05);
+  :global(.cross-jump-pill:hover .pill-num),
+  :global(.cross-jump-btn:hover .jump-pill-count) {
+    background: rgba(0, 0, 0, 0.22);
+    border-color: rgba(0, 0, 0, 0.25);
+    color: #0b0c10;
   }
 
-  .btn-primary {
-    padding: 0.75rem 1.25rem;
-    border-radius: 0.375rem;
-    border: 1px solid var(--accent);
-    background: color-mix(in oklch, var(--accent) 18%, var(--bg-surface));
-    color: var(--text-primary);
-    font-family: var(--font-mono);
-    font-size: 0.82rem;
-    letter-spacing: 0.05em;
-    cursor: pointer;
-    transition: all 0.18s ease;
-    margin-top: 0.5rem;
+  :global(.cross-jump-pill .pill-arrow),
+  :global(.cross-jump-btn .pill-arrow) {
+    font-size: 0.8rem;
+    line-height: 1;
+    transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   }
 
-  .btn-primary:hover {
-    background: var(--accent);
-    color: var(--bg-canvas);
+  :global(.cross-jump-pill:hover .pill-arrow),
+  :global(.cross-jump-btn:hover .pill-arrow) {
+    transform: translateX(2px);
   }
 
-  /* Master Ledger Section */
-  .ledger-stack {
+  /* Dynamic Rail & Header Filtering Indicators */
+  .fascicle-count.is-filtering {
+    color: var(--accent) !important;
+    font-weight: 600;
+  }
+
+  .shelf-count-pill.pill-filtering {
+    background: color-mix(in srgb, var(--accent) 18%, transparent) !important;
+    color: var(--accent) !important;
+    border-color: color-mix(in srgb, var(--accent) 45%, transparent) !important;
+    font-weight: 600;
+  }
+
+  /* Search Zero State Notice */
+  .search-empty-state {
+    padding: 3rem 1.5rem;
+    text-align: center;
     display: flex;
     flex-direction: column;
-    gap: 2rem;
+    align-items: center;
+    gap: 0.85rem;
+    background: color-mix(in srgb, var(--bg-surface) 96%, black);
+    border-radius: 8px;
+    margin: 1.5rem 1.25rem;
+    border: 1px dashed color-mix(in srgb, var(--accent) 30%, var(--border-hairline));
   }
 
-  .ledger-box {
-    border-radius: 0.75rem;
+  .empty-seal {
+    font-size: 1.5rem;
+    color: var(--accent);
+    opacity: 0.8;
+  }
+
+  .search-empty-state h4 {
+    margin: 0;
+    font-family: var(--font-display, Georgia, serif);
+    font-size: 1.2rem;
+    font-weight: 500;
+    color: var(--text-primary);
+  }
+
+  .empty-msg {
+    margin: 0;
+    font-family: var(--font-serif);
+    font-size: 0.88rem;
+    color: var(--text-secondary);
+  }
+
+  .empty-msg .empty-query-label {
+    color: var(--accent);
+    font-weight: 600;
+  }
+
+  :global(.cross-match-banner) {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.85rem;
+    padding: 0.85rem 1.35rem;
+    border-radius: 8px;
+    background: color-mix(in srgb, var(--accent) 12%, var(--bg-surface));
+    border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+    font-family: var(--font-serif);
+    font-size: 0.86rem;
+    color: var(--text-primary);
+    margin-top: 0.5rem;
+    max-width: 620px;
+  }
+
+  :global(.cross-sparkle) {
+    color: var(--accent);
+    font-size: 0.95rem;
+  }
+
+  :global(.cross-pills) {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.55rem;
+    flex-wrap: wrap;
+  }
+
+  /* ========================================================
+     PICTOGRAPHIC SPECIMEN GALLERY & CARDS
+     ======================================================== */
+  .specimen-gallery {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(310px, 1fr));
+    gap: 1.15rem;
+    padding: 1.25rem;
+    background: color-mix(in srgb, var(--bg-surface) 95%, black);
+  }
+
+  .specimen-card {
+    position: relative;
+    background: color-mix(in srgb, var(--bg-surface) 90%, black);
     border: 1px solid var(--border-hairline);
-    background: var(--bg-elevated);
+    border-radius: 8px;
+    padding: 1.15rem 1.25rem;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    min-height: 185px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+    transition:
+      border-color 0.28s cubic-bezier(0.16, 1, 0.3, 1),
+      transform 0.28s cubic-bezier(0.16, 1, 0.3, 1),
+      box-shadow 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .specimen-card:hover,
+  .specimen-card:focus-visible {
+    border-color: color-mix(in srgb, var(--accent) 55%, transparent);
+    transform: translateY(-3px);
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.38), 0 0 0 1px color-mix(in srgb, var(--accent) 30%, transparent);
+    outline: none;
+  }
+
+  .specimen-card.card-deleted {
+    opacity: 0;
+    transform: scale(0.92);
+    transition: all 0.32s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .card-face {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    justify-content: space-between;
+    gap: 0.85rem;
+  }
+
+  .card-eyebrow-line {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.72rem;
+  }
+
+  .card-year {
+    font-family: var(--font-serif);
+    font-variant-numeric: tabular-nums;
+    font-weight: 700;
+    color: var(--accent);
+  }
+
+  .card-fleuron {
+    color: var(--accent);
+    opacity: 0.65;
+    font-size: 0.85rem;
+    line-height: 1;
+  }
+
+  .card-venue-tag {
+    font-family: var(--font-serif);
+    color: var(--text-muted);
+    font-size: 0.72rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 190px;
+  }
+
+  .card-body-lockup {
+    flex: 1;
+  }
+
+  .card-main-title {
+    margin: 0;
+    font-family: var(--font-serif, Georgia, serif);
+    font-size: 0.98rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    line-height: 1.4;
+    letter-spacing: -0.01em;
+  }
+
+  .card-sub-title {
+    margin: 0.35rem 0 0;
+    font-family: var(--font-serif);
+    font-size: 0.82rem;
+    color: var(--text-secondary);
+    line-height: 1.45;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
     overflow: hidden;
   }
 
-  .box-head {
-    padding: 1.25rem 1.5rem;
-    border-bottom: 1px solid var(--border-hairline);
+  .card-footer-line {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.04);
+    padding-top: 0.65rem;
+    margin-top: 0.25rem;
+  }
+
+  .card-chips-cluster {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    flex-wrap: wrap;
+  }
+
+  .specimen-chip {
+    font-family: var(--font-mono, monospace);
+    font-size: 0.65rem;
+    padding: 0.12rem 0.45rem;
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text-secondary);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .specimen-chip.chip-accent {
+    background: color-mix(in srgb, var(--accent) 12%, transparent);
+    color: var(--accent);
+    border-color: color-mix(in srgb, var(--accent) 30%, transparent);
+  }
+
+  .specimen-chip.chip-mono {
+    font-size: 0.62rem;
+    color: var(--text-muted);
+  }
+
+  .specimen-chip.chip-subtle {
+    font-size: 0.65rem;
+    color: var(--text-muted);
+  }
+
+  .card-hover-prompt {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    opacity: 0.6;
+    transition: all 0.2s ease;
+  }
+
+  .specimen-card:hover .card-hover-prompt {
+    opacity: 1;
+    color: var(--accent);
+  }
+
+  /* Monograph Book Plate Layout */
+  .monograph-plate-layout {
+    display: grid;
+    grid-template-columns: 72px 1fr;
+    gap: 1.1rem;
+    height: 100%;
+    align-items: stretch;
+  }
+
+  .monograph-cover-slot {
+    position: relative;
+    aspect-ratio: 2 / 3;
+    width: 100%;
+    border-radius: 4px;
+    overflow: hidden;
+    background: #000;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+    border: 1px solid var(--border-hairline);
+  }
+
+  .monograph-cover-art {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+
+  .monograph-year-foil {
+    position: absolute;
+    bottom: 3px;
+    left: 3px;
+    font-size: 0.58rem;
+    padding: 0.08rem 0.3rem;
+    background: rgba(0, 0, 0, 0.85);
+    border-radius: 2px;
+    color: var(--accent);
+    font-weight: 600;
+  }
+
+  .btn-cover-quick-edit {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    font-family: var(--font-mono, monospace);
+    font-size: 0.62rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    padding: 0.2rem 0.45rem;
+    border-radius: 4px;
+    background: color-mix(in oklab, var(--bg-surface) 90%, var(--accent) 10%);
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    cursor: pointer;
+    opacity: 0;
+    transform: translateY(-4px);
+    transition: opacity 0.16s ease, transform 0.16s ease, background 0.16s ease;
+    z-index: 5;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.6);
+  }
+
+  .specimen-card--monograph:hover .btn-cover-quick-edit,
+  .specimen-card--monograph:focus-within .btn-cover-quick-edit {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  .btn-cover-quick-edit:hover {
+    background: var(--accent);
+    color: var(--bg-canvas, #070a16);
+  }
+
+  .mini-cover-thumb--action {
+    background: transparent;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    position: relative;
+    display: inline-block;
+    outline: none;
+  }
+
+  .mini-thumb-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.7);
+    color: var(--accent);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    opacity: 0;
+    border-radius: 3px;
+    transition: opacity 0.15s ease;
+  }
+
+  .mini-cover-thumb--action:hover .mini-thumb-overlay,
+  .mini-cover-thumb--action:focus-visible .mini-thumb-overlay {
+    opacity: 1;
+  }
+
+  .monograph-meta-slot {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 0.65rem;
+  }
+
+  /* Curriculum Code Monogram */
+  .course-code-monogram {
+    font-family: var(--font-mono, monospace);
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 12%, transparent);
+    border: 1px solid color-mix(in srgb, var(--accent) 25%, transparent);
+    padding: 0.12rem 0.45rem;
+    border-radius: 4px;
+  }
+
+  .course-term-tag {
+    font-family: var(--font-serif);
+    font-size: 0.72rem;
+    color: var(--text-secondary);
+  }
+
+  .level-pill-mini {
+    font-family: var(--font-serif);
+    font-size: 0.65rem;
+    padding: 0.08rem 0.35rem;
+    border-radius: 3px;
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text-muted);
+    border: 1px solid var(--border-hairline);
+  }
+
+  /* ========================================================
+     FLOATING COLOPHON INSPECTOR HUD (LOUPE POPOVER)
+     ======================================================== */
+  .colophon-inspector-hud {
+    position: fixed;
+    z-index: 999;
+    width: min(440px, calc(100vw - 32px));
+    pointer-events: auto;
+    opacity: 0;
+    transform: translateY(8px) scale(0.97);
+    filter: blur(4px);
+    transition:
+      opacity 0.26s cubic-bezier(0.16, 1, 0.3, 1),
+      transform 0.26s cubic-bezier(0.16, 1, 0.3, 1),
+      filter 0.26s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .colophon-inspector-hud.is-visible {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0);
+  }
+
+  .hud-inner {
     background: var(--bg-surface);
+    border: 1px solid color-mix(in srgb, var(--accent) 35%, var(--border-hairline));
+    border-radius: 12px;
+    padding: 1.35rem 1.5rem;
+    box-shadow:
+      0 20px 60px rgba(0, 0, 0, 0.65),
+      0 0 0 1px rgba(255, 255, 255, 0.06),
+      inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+  }
+
+  .hud-eyebrow-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .hud-eyebrow-left {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .hud-seal {
+    font-size: 1.15rem;
+    color: var(--accent);
+    line-height: 1;
+  }
+
+  .hud-kicker {
+    font-size: 0.6875rem;
+    color: var(--accent);
+    letter-spacing: 0.1em;
+    font-weight: 700;
+  }
+
+  .hud-badge {
+    font-size: 0.6875rem;
+    padding: 0.1rem 0.4rem;
+    background: rgba(255, 255, 255, 0.06);
+    border-radius: 3px;
+    color: var(--text-secondary);
+  }
+
+  .hud-status-chip {
+    font-family: var(--font-mono, monospace);
+    font-size: 0.625rem;
+    padding: 0.1rem 0.45rem;
+    border-radius: 9999px;
+    background: color-mix(in srgb, var(--accent) 14%, transparent);
+    color: var(--accent);
+    border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+    letter-spacing: 0.06em;
+  }
+
+  .hud-title-lockup {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .hud-title {
+    margin: 0;
+    font-family: var(--font-serif, Georgia, serif);
+    font-size: 1.15rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    line-height: 1.35;
+    letter-spacing: -0.01em;
+  }
+
+  .hud-subtitle {
+    margin: 0;
+    font-family: var(--font-serif);
+    font-size: 0.86rem;
+    color: var(--text-secondary);
+    line-height: 1.45;
+  }
+
+  .hud-venue-meta {
+    font-family: var(--font-serif);
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    font-style: italic;
+    margin-top: 0.15rem;
+  }
+
+  /* Abstract Vellum Frame */
+  .hud-abstract-frame {
+    position: relative;
+    padding: 0.85rem 1.1rem;
+    border-radius: 6px;
+    background: radial-gradient(
+      320px circle at 85% 15%,
+      color-mix(in oklab, var(--bg-surface) 86%, #f4efe6 14%),
+      var(--bg-surface) 75%
+    );
+    border: 1px solid color-mix(in oklab, var(--accent) 30%, var(--border-subtle));
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.15);
+  }
+
+  .hud-abstract-corner {
+    position: absolute;
+    font-family: var(--font-serif, serif);
+    font-size: 0.8rem;
+    color: color-mix(in oklab, var(--accent) 55%, transparent);
+    user-select: none;
+    line-height: 1;
+    pointer-events: none;
+  }
+
+  .hud-abstract-corner.tl { top: 0.35rem; left: 0.45rem; }
+  .hud-abstract-corner.tr { top: 0.35rem; right: 0.45rem; }
+  .hud-abstract-corner.bl { bottom: 0.35rem; left: 0.45rem; }
+  .hud-abstract-corner.br { bottom: 0.35rem; right: 0.45rem; }
+
+  .hud-abstract-kicker {
+    display: block;
+    font-family: var(--font-mono, monospace);
+    font-size: 0.625rem;
+    letter-spacing: 0.12em;
+    color: var(--accent);
+    margin-bottom: 0.35rem;
+  }
+
+  .hud-abstract-text {
+    margin: 0;
+    font-family: var(--font-serif, Georgia, serif);
+    font-size: 0.84rem;
+    color: var(--text-primary);
+    line-height: 1.55;
+    display: -webkit-box;
+    -webkit-line-clamp: 4;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .hud-actions-dock {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    margin-top: 0.35rem;
+    padding-top: 0.65rem;
+    border-top: 1px solid var(--border-hairline);
+  }
+
+  .ledger-box {
+    border-radius: 0.375rem;
+    border: 1px solid var(--border-hairline);
+    background: var(--bg-surface);
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  }
+
+  .box-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.85rem 1.25rem;
+    border-bottom: 1px solid var(--border-hairline);
+    background: color-mix(in srgb, var(--bg-surface) 92%, white);
+  }
+
+  .card-kicker {
+    font-family: var(--font-serif);
+    font-size: 0.72rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--accent);
   }
 
   .box-head h3 {
     margin: 0.2rem 0 0;
-    font-size: 1.05rem;
+    font-family: var(--font-display);
+    font-size: 1.15rem;
     font-weight: 500;
   }
 
@@ -1239,38 +2656,58 @@ const classes = await getCollection('classes').catch(() => []);
   .admin-table {
     width: 100%;
     border-collapse: collapse;
-    font-size: 0.84rem;
+    font-size: 0.86rem;
     text-align: left;
   }
 
   .admin-table th {
     padding: 0.65rem 1.25rem;
-    font-family: var(--font-mono);
+    font-family: var(--font-serif);
     font-size: 0.72rem;
-    color: var(--text-secondary);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    font-weight: 500;
+    color: var(--text-muted);
     border-bottom: 1px solid var(--border-hairline);
     background: var(--bg-surface);
   }
 
   .admin-table td {
     padding: 0.75rem 1.25rem;
-    border-bottom: 1px solid color-mix(in oklch, var(--border-hairline) 40%, transparent);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.035);
+    vertical-align: middle;
+    font-family: var(--font-serif);
+    color: var(--text-primary);
+  }
+
+  .admin-table strong {
+    font-weight: 500;
+    color: var(--text-primary);
+    letter-spacing: -0.005em;
   }
 
   .admin-table tr:hover td {
-    background: color-mix(in oklch, var(--accent) 4%, transparent);
+    background: rgba(255, 255, 255, 0.02);
+  }
+
+  .admin-table tr.row-deleted {
+    opacity: 0;
+    transform: translateX(-12px);
+    transition: all 0.3s ease;
   }
 
   .mono {
-    font-family: var(--font-mono);
+    font-family: var(--font-serif);
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
     color: var(--accent);
     white-space: nowrap;
   }
 
   .mono-doi {
     font-family: var(--font-mono);
-    font-size: 0.75rem;
-    color: var(--text-tertiary);
+    font-size: 0.72rem;
+    color: var(--text-muted);
   }
 
   .sub-text {
@@ -1278,12 +2715,27 @@ const classes = await getCollection('classes').catch(() => []);
     color: var(--text-secondary);
   }
 
+  .mini-cover-thumb {
+    width: 28px;
+    height: 42px; /* 2:3 */
+    border-radius: 0.2rem;
+    overflow: hidden;
+    background: #000;
+    border: 1px solid var(--border-hairline);
+  }
+
+  .mini-thumb-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
   .level-pill {
     padding: 0.15rem 0.45rem;
     border-radius: 0.25rem;
     background: var(--bg-surface);
     border: 1px solid var(--border-hairline);
-    font-family: var(--font-mono);
+    font-family: var(--font-serif);
     font-size: 0.72rem;
     color: var(--text-secondary);
   }
@@ -1294,37 +2746,13 @@ const classes = await getCollection('classes').catch(() => []);
 
   .row-actions {
     display: inline-flex;
-    gap: 0.4rem;
+    gap: 0.35rem;
+    align-items: center;
+    opacity: 0.75;
+    transition: opacity 0.15s ease;
   }
 
-  .btn-table-view {
-    padding: 0.25rem 0.55rem;
-    border-radius: 0.25rem;
-    border: 1px solid var(--border-hairline);
-    background: var(--bg-surface);
-    color: var(--text-primary);
-    text-decoration: none;
-    font-family: var(--font-mono);
-    font-size: 0.75rem;
-  }
-
-  .btn-table-view:hover {
-    border-color: var(--accent);
-    color: var(--accent);
-  }
-
-  .btn-table-delete {
-    padding: 0.25rem 0.55rem;
-    border-radius: 0.25rem;
-    border: 1px solid color-mix(in oklch, oklch(65% 0.2 25) 30%, transparent);
-    background: transparent;
-    color: oklch(75% 0.16 25);
-    cursor: pointer;
-    font-size: 0.75rem;
-  }
-
-  .btn-table-delete:hover {
-    background: color-mix(in oklch, oklch(65% 0.2 25) 20%, transparent);
-    border-color: oklch(75% 0.16 25);
+  .admin-table tr:hover .row-actions {
+    opacity: 1;
   }
 </style>

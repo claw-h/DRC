@@ -1,0 +1,213 @@
+---
+import type { FacultyProfile } from '../../lib/system-state';
+
+interface Props {
+  profile: FacultyProfile;
+  isDialog?: boolean;
+  editablePortrait?: boolean;
+}
+
+const { profile, isDialog = false, editablePortrait = false } = Astro.props;
+---
+
+<div
+  class:list={['id-card-surface', { 'id-card-surface--standalone': !isDialog }]}
+  id={!isDialog ? 'admin-id-card-surface' : undefined}
+>
+  <div class="bookplate-corner bookplate-corner--tl" aria-hidden="true">❦</div>
+  <div class="bookplate-corner bookplate-corner--tr" aria-hidden="true">❦</div>
+  <div class="bookplate-corner bookplate-corner--bl" aria-hidden="true">❦</div>
+  <div class="bookplate-corner bookplate-corner--br" aria-hidden="true">❦</div>
+
+  <header class="id-card-strip">
+    <span style="display: inline-flex; align-items: center; gap: 0.45rem;">
+      <span class="seal-mark" aria-hidden="true">❧</span>
+      <span class="scholarly-caps" data-id-field="institution">{profile.institution}</span>
+    </span>
+    <div style="display: inline-flex; align-items: center; gap: 0.65rem;">
+      <span class="scholarly-caps">FOLIO · <span data-id-field="credentialId">{profile.credentialId}</span></span>
+      {isDialog && (
+        <button type="button" id="id-card-close-btn" class="id-card-close-btn" aria-label="Close visiting card">✕</button>
+      )}
+    </div>
+  </header>
+
+  <div class="id-card-body">
+    <div
+      class:list={['id-card-photo-frame', { 'id-card-photo-frame--editable': editablePortrait }]}
+      id={editablePortrait ? 'card-photo-trigger-zone' : undefined}
+      title={editablePortrait ? 'Click or drop image to edit portrait' : undefined}
+      tabindex={editablePortrait ? '0' : undefined}
+      role={editablePortrait ? 'button' : undefined}
+      aria-label={editablePortrait ? 'Edit portrait photo' : undefined}
+    >
+      <img
+        src={profile.portraitUrl}
+        alt={`Portrait of ${profile.name}`}
+        width="96"
+        height="120"
+        class="id-card-photo"
+        data-id-field="portrait"
+        onerror="this.onerror=null;this.src='/images/duncan-cordry-portrait.svg';"
+      />
+      {editablePortrait && (
+        <div class="photo-edit-overlay" aria-hidden="true">
+          <span class="photo-edit-badge">✎ Edit Photo</span>
+        </div>
+      )}
+    </div>
+    <div class="id-card-identity">
+      <span class="id-card-clearance scholarly-caps">FACULTY CARTE DE VISITE</span>
+      <h2 id="id-card-name" class="id-card-name" style="font-family: var(--font-serif);" data-id-field="name">{profile.name}</h2>
+      <p class="id-card-title" data-id-field="title">{profile.title}</p>
+      <p class="id-card-dept">
+        <span data-id-field="dept">{profile.department}</span> · <span data-id-field="education">{profile.education || 'Ph.D., Purdue University'}</span>
+      </p>
+    </div>
+  </div>
+
+  <dl class="id-card-telemetry id-card-credentials">
+    <div>
+      <dt class="scholarly-caps">SCHOLARLY INQUIRY</dt>
+      <dd><a href={`mailto:${profile.email}`} style="color: inherit;" data-id-field="email">{profile.email}</a></dd>
+    </div>
+    <div>
+      <dt class="scholarly-caps">OFFICE &amp; CONSULTATION</dt>
+      <dd data-id-field="officeHours">{profile.officeHours}</dd>
+    </div>
+  </dl>
+
+  <footer class="id-card-actions">
+    <a
+      href={`mailto:${profile.email}?subject=Academic%20Inquiry%20for%20Prof.%20Duncan%20Cordry`}
+      class="id-card-email-btn"
+      data-id-field="emailBtn"
+    >
+      ✉ Email <span data-id-field="firstName">{profile.name.split(' ')[0] || profile.name}</span> ↗
+    </a>
+    <div class="id-card-secondary-row">
+      <button type="button" class="id-card-sub-btn" id="btn-copy-faculty-email" data-email={profile.email}>
+        ⎘ Copy Email
+      </button>
+      {profile.philPeopleUrl && (
+        <a href={profile.philPeopleUrl} target="_blank" rel="noopener noreferrer" class="id-card-sub-btn" data-id-field="philPeopleUrl">
+          PhilPeople ↗
+        </a>
+      )}
+      {profile.ashokaProfileUrl && (
+        <a href={profile.ashokaProfileUrl} target="_blank" rel="noopener noreferrer" class="id-card-sub-btn" data-id-field="ashokaProfileUrl">
+          Ashoka ↗
+        </a>
+      )}
+      <a href="/cv" class="id-card-sub-btn">
+        ↓ CV
+      </a>
+    </div>
+  </footer>
+</div>
+
+<style>
+  .id-card-photo-frame {
+    position: relative;
+    display: inline-block;
+    border-radius: 6px;
+    overflow: hidden;
+  }
+
+  .id-card-photo {
+    object-fit: cover;
+    object-position: center top;
+  }
+
+  .id-card-clearance {
+    font-family: var(--font-mono);
+    font-size: 0.58rem;
+    letter-spacing: 0.16em;
+    color: var(--accent);
+    margin-block-end: 0.15rem;
+    display: block;
+  }
+
+  .seal-mark {
+    font-family: var(--font-serif);
+    font-size: 0.85rem;
+    color: var(--accent);
+    line-height: 1;
+    user-select: none;
+  }
+
+  .id-card-close-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    font-size: 0.82rem;
+    cursor: pointer;
+    line-height: 1;
+    padding: 0.2rem 0.35rem;
+    border-radius: 4px;
+    transition: color 0.15s, background 0.15s;
+  }
+
+  .id-card-close-btn:hover {
+    color: var(--accent);
+    background: var(--bg-elevated);
+  }
+
+  /* Standalone Embedded Mode (Used in Admin Identity Studio) */
+  .id-card-surface--standalone {
+    border: 1px solid color-mix(in oklab, var(--accent) 65%, transparent);
+    box-shadow: 
+      0 0 0 1px oklch(76% 0.08 85 / 0.35),
+      var(--shadow-modal-3d);
+    max-inline-size: 380px;
+    inline-size: 100%;
+    margin: 0 auto;
+    background: var(--bg-surface);
+  }
+
+  /* Editable Cameo Overlay in Admin Identity Studio */
+  .id-card-photo-frame--editable {
+    cursor: pointer;
+    outline: none;
+    transition: transform 0.18s ease, box-shadow 0.18s ease;
+  }
+
+  .id-card-photo-frame--editable:hover,
+  .id-card-photo-frame--editable:focus-visible {
+    transform: scale(1.02);
+    box-shadow: 0 0 0 2px var(--accent);
+  }
+
+  .photo-edit-overlay {
+    position: absolute;
+    inset: 0;
+    background: color-mix(in oklab, black 65%, transparent);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.18s ease;
+    border-radius: 4px;
+    padding: 4px;
+    text-align: center;
+  }
+
+  .id-card-photo-frame--editable:hover .photo-edit-overlay,
+  .id-card-photo-frame--editable:focus-visible .photo-edit-overlay {
+    opacity: 1;
+  }
+
+  .photo-edit-badge {
+    font-family: var(--font-mono);
+    font-size: 0.62rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--bg-canvas, #070a16);
+    background: var(--accent, #c9a84e);
+    padding: 0.25rem 0.45rem;
+    border-radius: 3px;
+    font-weight: 700;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+    white-space: nowrap;
+  }
+</style>

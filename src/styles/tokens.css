@@ -36,19 +36,21 @@
     --border-subtle-light: oklch(86% 0.02 85);      /* Pale vellum border */
     --ink-wet-light: oklch(42% 0.05 250);           /* Wet fresh iron-gall (slate blue-grey) */
 
-    /* Dark Mode: Bone-white gouache & shell gold on indigo-black dyed paper */
-    --bg-canvas-dark: oklch(17% 0.02 262);          /* Deep indigo-black rag paper (never pure 0% black) */
-    --bg-surface-dark: oklch(19.5% 0.022 262);      /* Indigo wash paper surface */
-    --bg-elevated-dark: oklch(23.5% 0.025 262);     /* Elevated folio deckle */
+    /* Dark Mode: Calming velvety midnight indigo & soft antique gold */
+    --bg-canvas-dark: #070a16;                      /* Deep, restful velvety midnight indigo */
+    --bg-surface-dark: #0b0f20;                     /* Soft velvety surface */
+    --bg-elevated-dark: #10152a;                    /* Soft velvety deckle (gentle 1.5% elevation, no stark slabs) */
 
-    --text-primary-dark: oklch(91% 0.02 85);        /* Aged bone-white gouache (never pure 100% white) */
-    --text-secondary-dark: oklch(75% 0.02 85);      /* Silverpoint / pale chalk */
-    --text-muted-dark: oklch(58% 0.02 262);         /* Indigo-grey wash */
+    --text-primary-dark: #cbd5e1;                   /* Soothing moonlight slate (eliminates eye glare & fatigue) */
+    --text-secondary-dark: #8da0be;                 /* Gentle silver-slate */
+    --text-muted-dark: #5c6d88;                     /* Soft graphite slate */
 
-    --accent-dark: oklch(70% 0.13 38);              /* Warm illuminated vermilion */
-    --accent-gold: oklch(80% 0.09 85);              /* Shell gold pigment for DRC monogram */
-    --border-subtle-dark: oklch(28% 0.022 262);     /* Burnished dark border */
+    --accent-dark: #c9a84e;                         /* Calming burnished antique gold (not blinding) */
+    --accent-gold: #c9a84e;                         /* Shell gold pigment */
+    --border-subtle-dark: rgba(255, 255, 255, 0.085); /* Soft whisper-thin border */
+    --border-hairline-dark: rgba(255, 255, 255, 0.055); /* Gentle translucent hairline */
     --ink-wet-dark: oklch(85% 0.08 85);             /* Wet metallic gold sheen */
+    --border-hairline-light: #ddd6c7;               /* Pale vellum hairline */
 
     /* Default fallback + @media (prefers-color-scheme: dark) */
     --bg-canvas: var(--bg-canvas-light);
@@ -57,8 +59,10 @@
     --text-primary: var(--text-primary-light);
     --text-secondary: var(--text-secondary-light);
     --text-muted: var(--text-muted-light);
+    --text-tertiary: var(--text-muted-light);
     --accent: var(--accent-light);
     --border-subtle: var(--border-subtle-light);
+    --border-hairline: var(--border-hairline-light);
     --ink-brand: var(--text-primary-light);
     --ribbon-silk: oklch(48% 0.17 28);
     --paper-vellum: oklch(93% 0.025 85);
@@ -70,8 +74,10 @@
       --text-primary: var(--text-primary-dark);
       --text-secondary: var(--text-secondary-dark);
       --text-muted: var(--text-muted-dark);
-      --accent: var(--accent-dark);
+      --text-tertiary: var(--text-muted-dark);
+      --accent: var(--accent-gold);
       --border-subtle: var(--border-subtle-dark);
+      --border-hairline: var(--border-hairline-dark);
       --ink-brand: var(--text-primary-dark);
     }
 
@@ -82,7 +88,7 @@
       --text-primary: light-dark(var(--text-primary-light), var(--text-primary-dark));
       --text-secondary: light-dark(var(--text-secondary-light), var(--text-secondary-dark));
       --text-muted: light-dark(var(--text-muted-light), var(--text-muted-dark));
-      --accent: light-dark(var(--accent-light), var(--accent-dark));
+      --accent: light-dark(var(--accent-light), var(--accent-gold));
       --border-subtle: light-dark(var(--border-subtle-light), var(--border-subtle-dark));
       --ink-brand: light-dark(var(--text-primary-light), var(--text-primary-dark));
     }
@@ -97,8 +103,10 @@
       --text-primary: var(--text-primary-dark);
       --text-secondary: var(--text-secondary-dark);
       --text-muted: var(--text-muted-dark);
-      --accent: var(--accent-dark);
+      --text-tertiary: var(--text-muted-dark);
+      --accent: var(--accent-gold);
       --border-subtle: var(--border-subtle-dark);
+      --border-hairline: var(--border-hairline-dark);
       --ink-brand: var(--text-primary-dark);
     }
 
@@ -111,16 +119,18 @@
       --text-primary: var(--text-primary-light);
       --text-secondary: var(--text-secondary-light);
       --text-muted: var(--text-muted-light);
+      --text-tertiary: var(--text-muted-light);
       --accent: var(--accent-light);
       --border-subtle: var(--border-subtle-light);
+      --border-hairline: var(--border-hairline-light);
       --ink-brand: var(--text-primary-light);
       --ink-dissolve-brightness: 0.94;
     }
 
-    /* Accessibility High-Contrast Monochrome Mode Token Overrides */
+    /* Accessibility High-Contrast Monochrome Mode Token Overrides (Public Folio Only) */
     /* Dark Mode: Pure Black and White */
-    &[data-a11y-mode="true"][data-theme="dark"],
-    &:has(> head > meta[name="color-scheme"][content="dark"])[data-a11y-mode="true"] {
+    &[data-a11y-mode="true"]:not([data-admin-page])[data-theme="dark"],
+    &:has(> head > meta[name="color-scheme"][content="dark"])[data-a11y-mode="true"]:not([data-admin-page]) {
       --bg-canvas: #000000;
       --bg-surface: #080808;
       --bg-elevated: #141414;
@@ -139,8 +149,8 @@
     }
 
     /* Light Mode: Pure White and Black */
-    &[data-a11y-mode="true"][data-theme="light"],
-    &:has(> head > meta[name="color-scheme"][content="light"])[data-a11y-mode="true"] {
+    &[data-a11y-mode="true"]:not([data-admin-page])[data-theme="light"],
+    &:has(> head > meta[name="color-scheme"][content="light"])[data-a11y-mode="true"]:not([data-admin-page]) {
       --bg-canvas: #ffffff;
       --bg-surface: #fafafa;
       --bg-elevated: #f0f0f0;
@@ -160,7 +170,7 @@
 
     /* System Media Queries when no manual data-theme override is pinned */
     @media (prefers-color-scheme: dark) {
-      &[data-a11y-mode="true"]:not([data-theme="light"]) {
+      &[data-a11y-mode="true"]:not([data-admin-page]):not([data-theme="light"]) {
         --bg-canvas: #000000;
         --bg-surface: #080808;
         --bg-elevated: #141414;
@@ -180,7 +190,7 @@
     }
 
     @media (prefers-color-scheme: light) {
-      &[data-a11y-mode="true"]:not([data-theme="dark"]) {
+      &[data-a11y-mode="true"]:not([data-admin-page]):not([data-theme="dark"]) {
         --bg-canvas: #ffffff;
         --bg-surface: #fafafa;
         --bg-elevated: #f0f0f0;
@@ -328,41 +338,135 @@
     user-select: none;
   }
 
-  /* Accessibility Mode: Global Typography Scaling & Boldness */
-  html[data-a11y-mode="true"] {
+  /* Accessibility Mode: Global Typography Scaling & Boldness (Public Folio Only) */
+  html:not([data-admin-page])[data-a11y-mode="true"] {
     font-size: 120%;
     font-synthesis: weight;
   }
 
-  html[data-a11y-mode="true"] body,
-  html[data-a11y-mode="true"] body * {
+  html:not([data-admin-page])[data-a11y-mode="true"] body,
+  html:not([data-admin-page])[data-a11y-mode="true"] body * {
     font-weight: 600 !important;
   }
 
-  html[data-a11y-mode="true"] h1,
-  html[data-a11y-mode="true"] h2,
-  html[data-a11y-mode="true"] h3,
-  html[data-a11y-mode="true"] h4,
-  html[data-a11y-mode="true"] strong,
-  html[data-a11y-mode="true"] b,
-  html[data-a11y-mode="true"] th,
-  html[data-a11y-mode="true"] .scholarly-caps {
+  html:not([data-admin-page])[data-a11y-mode="true"] h1,
+  html:not([data-admin-page])[data-a11y-mode="true"] h2,
+  html:not([data-admin-page])[data-a11y-mode="true"] h3,
+  html:not([data-admin-page])[data-a11y-mode="true"] h4,
+  html:not([data-admin-page])[data-a11y-mode="true"] strong,
+  html:not([data-admin-page])[data-a11y-mode="true"] b,
+  html:not([data-admin-page])[data-a11y-mode="true"] th,
+  html:not([data-admin-page])[data-a11y-mode="true"] .scholarly-caps {
     font-weight: 700 !important;
   }
 
-  /* Accessibility Mode: Complete Desaturation & High-Contrast Visual Elements */
-  html[data-a11y-mode="true"] canvas,
-  html[data-a11y-mode="true"] img,
-  html[data-a11y-mode="true"] .header-folio-seal,
-  html[data-a11y-mode="true"] .bookplate-corner,
-  html[data-a11y-mode="true"] .brand-lockup,
-  html[data-a11y-mode="true"] svg:not(.icon-sun):not(.icon-a11y) {
+  /* Accessibility Mode: Complete Desaturation & High-Contrast Visual Elements (Public Folio Only) */
+  html:not([data-admin-page])[data-a11y-mode="true"] canvas,
+  html:not([data-admin-page])[data-a11y-mode="true"] img,
+  html:not([data-admin-page])[data-a11y-mode="true"] .header-folio-seal,
+  html:not([data-admin-page])[data-a11y-mode="true"] .bookplate-corner,
+  html:not([data-admin-page])[data-a11y-mode="true"] .brand-lockup,
+  html:not([data-admin-page])[data-a11y-mode="true"] svg:not(.icon-sun):not(.icon-a11y) {
     filter: grayscale(100%) contrast(1.15);
   }
 
-  html[data-a11y-mode="true"] ::selection {
+  html:not([data-admin-page])[data-a11y-mode="true"] ::selection {
     background: var(--text-primary);
     color: var(--bg-canvas);
+  }
+
+  /* =========================================================================
+     Admin Observatory Dedicated Theming & Accessibility System
+     Middle Ages Calligraphic Standard: Lapis Indigos & Tasteful Whites
+     ========================================================================= */
+
+  /* Base Admin Fallbacks & Hairline Definition */
+  html[data-admin-page] {
+    --border-hairline: rgba(255, 255, 255, 0.065);
+    --border-subtle: rgba(255, 255, 255, 0.1);
+    --text-tertiary: var(--text-muted);
+    --accent-gold: #c9a84e;
+  }
+
+  /* Admin Dark Mode (Velvety Midnight Indigo & Soft Burnished Gold Scriptorium) */
+  html[data-admin-page][data-theme="dark"],
+  html[data-admin-page]:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg-canvas: #070a16;         /* Deep velvety midnight indigo (restful & immersive) */
+    --bg-surface: #0b0f20;        /* Soft velvety midnight surface */
+    --bg-elevated: #10152a;       /* Gentle deckle elevation (zero jarring slabs) */
+    --text-primary: #cbd5e1;      /* Calming moonlight slate (eliminates eye glare & fatigue) */
+    --text-secondary: #8da0be;    /* Gentle velvet slate */
+    --text-muted: #5c6d88;        /* Soft dusk graphite */
+    --text-tertiary: #5c6d88;
+    --accent: #c9a84e;            /* Soft burnished antique gold (not blinding) */
+    --accent-gold: #c9a84e;
+    --accent-amber: #d4973b;
+    --accent-cinnabar: #b84b39;
+    --border-hairline: rgba(255, 255, 255, 0.055); /* Whisper-thin soft translucent hairline */
+    --border-subtle: rgba(255, 255, 255, 0.085);   /* Soft subtle border */
+  }
+
+  /* Admin Light Mode (Vellum Leaf & Iron-Gall Study) */
+  html[data-admin-page][data-theme="light"] {
+    color-scheme: light;
+    --bg-canvas: #fbf8f1;
+    --bg-surface: #ffffff;
+    --bg-elevated: #f2ece0;
+    --text-primary: #221a14;
+    --text-secondary: #54473b;
+    --text-muted: #7a6d5f;
+    --text-tertiary: #7a6d5f;
+    --accent: #8b3a1a;            /* Warm terracotta / iron-gall rust (replaces cold navy) */
+    --accent-amber: #b2781b;
+    --accent-cinnabar: #a6341f;
+    --border-hairline: #ddd6c7;
+    --border-subtle: #cfc6b4;
+  }
+
+  /* Admin Accessibility Mode (Enhanced Legibility & Solid Contrast) */
+  html[data-admin-page][data-admin-a11y-mode="true"] {
+    font-size: 104%;
+  }
+
+  html[data-admin-page][data-admin-a11y-mode="true"][data-theme="dark"],
+  html[data-admin-page][data-admin-a11y-mode="true"]:not([data-theme="light"]) {
+    --bg-canvas: #050711;
+    --bg-surface: #0a0e1c;
+    --bg-elevated: #0f1528;
+    --text-primary: #e2e8f0;
+    --text-secondary: #cbd5e1;
+    --text-muted: #94a3b8;
+    --text-tertiary: #94a3b8;
+    --accent: #d4b256;
+    --border-hairline: rgba(255, 255, 255, 0.12);
+    --border-subtle: rgba(255, 255, 255, 0.18);
+  }
+
+  html[data-admin-page][data-admin-a11y-mode="true"][data-theme="light"] {
+    --bg-canvas: #ffffff;
+    --bg-surface: #fbf9f4;
+    --bg-elevated: #eae4d5;
+    --text-primary: #000000;
+    --text-secondary: #1a140f;
+    --text-muted: #3a3127;
+    --text-tertiary: #3a3127;
+    --accent: #6b260e;
+    --border-hairline: #1a140f;
+    --border-subtle: #1a140f;
+  }
+
+  html[data-admin-page][data-admin-a11y-mode="true"] .admin-table th,
+  html[data-admin-page][data-admin-a11y-mode="true"] .admin-table td {
+    border-bottom-width: 1.5px;
+    border-bottom-color: var(--border-hairline);
+  }
+
+  html[data-admin-page][data-admin-a11y-mode="true"] input,
+  html[data-admin-page][data-admin-a11y-mode="true"] textarea,
+  html[data-admin-page][data-admin-a11y-mode="true"] select {
+    border-width: 1.5px;
+    border-color: var(--border-hairline);
   }
 }
 

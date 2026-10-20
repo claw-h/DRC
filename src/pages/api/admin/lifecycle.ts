@@ -121,9 +121,9 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     const phrase = String(body.confirmationPhrase || '');
     const password = String(body.password || '');
 
-    if (phrase !== 'DESTROY-DRC-OBSERVATORY') {
+    if (phrase !== 'DESTROY-DRC-OBSERVATORY' && phrase !== 'CONFIRM-PERMANENT-RESET') {
       return new Response(
-        JSON.stringify({ error: 'Confirmation phrase must match DESTROY-DRC-OBSERVATORY' }),
+        JSON.stringify({ error: 'Confirmation phrase must match CONFIRM-PERMANENT-RESET' }),
         { status: 400, headers: { 'Content-Type': 'application/json' } }
       );
     }

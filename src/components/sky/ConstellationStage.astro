@@ -122,6 +122,15 @@ const { featuredConstellationId = null } = Astro.props;
       <button
         type="button"
         class="sky-hud-btn scholarly-caps"
+        id="btn-toggle-loupe"
+        title="Toggle Astronomical Inspection Loupe (L)"
+        aria-pressed="false"
+      >
+        ⌕ Loupe 3.6×
+      </button>
+      <button
+        type="button"
+        class="sky-hud-btn scholarly-caps"
         id="btn-new-constellation"
         title="Turn to another engraved plate from the 88 IAU constellations"
       >
@@ -154,6 +163,10 @@ const { featuredConstellationId = null } = Astro.props;
   .sky-interactive-canvas {
     cursor: default;
     background: transparent;
+  }
+
+  .sky-interactive-canvas.loupe-engaged {
+    cursor: none !important;
   }
 
   .stage-sky-hud {
@@ -383,6 +396,13 @@ const { featuredConstellationId = null } = Astro.props;
     border-color: var(--accent);
     color: var(--accent);
     transform: translateY(-1px);
+  }
+
+  .sky-hud-btn.is-active {
+    background: color-mix(in oklch, var(--accent) 22%, var(--bg-surface));
+    border-color: var(--accent);
+    color: var(--accent);
+    box-shadow: 0 0 12px color-mix(in oklch, var(--accent) 30%, transparent);
   }
 
   .sky-scroll-cue {
@@ -619,6 +639,7 @@ const { featuredConstellationId = null } = Astro.props;
     private isInteracting: boolean = false;
     private mousePos = { x: -1000, y: -1000 };
     private parallax = { x: 0, y: 0, targetX: 0, targetY: 0 };
+    private canvasRect: DOMRect | null = null;
 
     // Dense Diamond Dust Background Stars
     private denseFieldStars: any[] = [];
@@ -631,8 +652,9 @@ const { featuredConstellationId = null } = Astro.props;
     private reducedMotion: boolean = false;     // prefers-reduced-motion: freeze twinkle
     private staticScintillation: boolean = false; // export: render at mean brightness
 
-    // Deep-Sky Galaxy Morphology Cache (deterministic per celestial object)
+    // Deep-Sky Galaxy & Nebula Morphology Caches (deterministic per celestial object)
     private galaxyGenomes: Map<string, GalaxyMorphology> = new Map();
+    private nebulaGenomes: Map<string, NebulaMorphology> = new Map();
 
     // Universal Cosmological Background Deep Field Galaxies (20–45 distant micro-galaxies)
     private universalFieldGalaxies: any[] = [];
@@ -650,10 +672,40 @@ const { featuredConstellationId = null } = Astro.props;
       trail: [] as Array<{ x: number, y: number, time: number }>
     };
 
+    // Astronomical Inspection Loupe (2.5x Magnifier, vintage fisheye optics & materialization engine)
+    private loupeAnim = {
+      active: false,
+      progress: 0,
+      scale: 0,
+      opacity: 0,
+      spinAngle: 0,
+      startTime: 0,
+      duration: 520,       // ms for blossoming expansion
+      closeDuration: 320   // ms for closing collapse
+    };
+
+    get loupeActive(): boolean {
+      return this.loupeAnim.active;
+    }
+    set loupeActive(val: boolean) {
+      if (this.loupeAnim.active !== val) {
+        this.loupeAnim.active = val;
+        this.loupeAnim.startTime = performance.now();
+        if (this.canvas) {
+          this.canvas.classList.toggle('loupe-engaged', val);
+          this.canvas.style.cursor = val ? 'none' : 'default';
+        }
+      }
+    }
+
+    // User activity tracking for 30-second idle fade
+    private lastUserActivityTime: number = performance.now();
+
     async connectedCallback() {
       this.canvas = this.querySelector('#sky-artefact-layer') as HTMLCanvasElement;
       this.ctx = this.canvas.getContext('2d', { alpha: true })!;
       this.meteorState.nextTrigger = performance.now() + 7000;
+      this.lastUserActivityTime = performance.now();
 
       // Accessibility: freeze stellar twinkle for users who prefer reduced motion
       const motionQuery = window.matchMedia?.('(prefers-reduced-motion: reduce)');
@@ -820,6 +872,7 @@ const { featuredConstellationId = null } = Astro.props;
       this.canvas.width = Math.floor(w * dpr);
       this.canvas.height = Math.floor(h * dpr);
       this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      this.canvasRect = this.canvas.getBoundingClientRect();
 
       this.renderSingleFrame(performance.now());
     }
@@ -888,6 +941,7 @@ const { featuredConstellationId = null } = Astro.props;
       this.currentConstellation = chosen;
       this.plateSessionCounter = 0;
       this.galaxyGenomes.clear();
+      this.nebulaGenomes.clear();
       this.generateDenseFieldStars(chosen);
       this.generateUniversalFieldGalaxies(chosen);
       this.camera.ra = chosen.barycenterRaDeg ?? 83.8;
@@ -910,6 +964,7 @@ const { featuredConstellationId = null } = Astro.props;
       this.currentConstellation = target;
       this.plateSessionCounter++;
       this.galaxyGenomes.clear();
+      this.nebulaGenomes.clear();
       this.generateDenseFieldStars(target);
       this.generateUniversalFieldGalaxies(target);
       this.updateCartouche(target);
@@ -1075,6 +1130,9 @@ const { featuredConstellationId = null } = Astro.props;
       // Sky-wide atmospheric seeing for this frame (shared by every star layer)
       this.updateSeeing(now);
 
+      // 0. Natural Mesospheric Airglow & Horizon Luminance Floor
+      this.drawAirglowFloor(w, h, isDark);
+
       // 1. Refractor Lens Dome Vignette on outer margin
       this.drawDomeVignette(w, h, isDark);
 
@@ -1085,7 +1143,10 @@ const { featuredConstellationId = null } = Astro.props;
       this.drawNebularVeils(w, h, isDark, now, newConstellationAlpha, this.currentConstellation, this.plateSessionCounter);
 
       // 3. Archival Graticule Frame & Vernier Ruler (z = 0, sits fixed on the paper aperture)
-      this.drawGraticule(w, h, inkSubtle);
+      this.drawGraticule(w, h, inkSubtle, now);
+
+      // 3b. Official IAU Constellation Boundaries (Delporte 1930)
+      this.drawConstellationBoundaries(w, h, isDark, newConstellationAlpha);
 
       // 4. Golden Ecliptic (Via Solis) & Galactic Equator (Via Lactea) Arcs
       this.drawCelestialArcs(w, h, isDark, now, newConstellationAlpha);
@@ -1124,6 +1185,26 @@ const { featuredConstellationId = null } = Astro.props;
       this.drawCosmicTransients(w, h, isDark, now);
 
       this.ctx.restore();
+
+      // 12. Antique Brass Inspection Loupe (2.5x Magnifier, Vintage Fisheye & Materialization Engine)
+      this.updateLoupeAnim(now);
+      if (this.loupeAnim.scale > 0.001) {
+        this.drawLoupe(w, h, isDark, now);
+      }
+    }
+
+    private drawAirglowFloor(w: number, h: number, isDark: boolean) {
+      if (!isDark) return;
+      const grad = this.ctx.createLinearGradient(0, 0, 0, h);
+      // Zenith (y=0): deep cosmic black-slate void
+      grad.addColorStop(0, 'rgba(6, 8, 14, 0)');
+      // Mid-sky (y=0.6h): twilight/atmosphere transition threshold
+      grad.addColorStop(0.6, 'rgba(8, 14, 20, 0.025)');
+      // Horizon floor (y=h): authentic mesospheric oxygen airglow (faint slate-olive / cyan-tinted glow)
+      grad.addColorStop(1, 'rgba(14, 24, 28, 0.075)');
+
+      this.ctx.fillStyle = grad;
+      this.ctx.fillRect(0, 0, w, h);
     }
 
     private drawDomeVignette(w: number, h: number, isDark: boolean) {
@@ -1158,6 +1239,42 @@ const { featuredConstellationId = null } = Astro.props;
       return genome;
     }
 
+    /**
+     * Projects any Equatorial (RA, Dec in degrees) coordinate into canvas screen space (px)
+     * using the celestial camera's tangent gnomonic projection.
+     */
+    private projectRaDec(raDeg: number, decDeg: number, w: number, h: number, z: number = 0.25): { x: number; y: number; visible: boolean } {
+      const cx = w * 0.5;
+      const cy = h * 0.5;
+      const deg2rad = Math.PI / 180;
+      const chartScale = this.currentConstellation?.chartScale || 7500;
+      const isDesktop = w >= 1024;
+      const fovMultiplier = isDesktop ? 1.45 : 1.05;
+      const fovScale = (chartScale / 5000) * (Math.min(w, h) * 0.5) * fovMultiplier;
+
+      const camRaRad = this.camera.ra * deg2rad;
+      const camDecRad = this.camera.dec * deg2rad;
+      const sinCamDec = Math.sin(camDecRad);
+      const cosCamDec = Math.cos(camDecRad);
+
+      const dra = (raDeg * deg2rad) - camRaRad;
+      const dRad = decDeg * deg2rad;
+      const sinDec = Math.sin(dRad);
+      const cosDec = Math.cos(dRad);
+
+      const cosC = sinCamDec * sinDec + cosCamDec * cosDec * Math.cos(dra);
+      if (cosC <= 0.05) return { x: -1000, y: -1000, visible: false };
+
+      const xi = -(cosDec * Math.sin(dra)) / cosC;
+      const eta = (cosCamDec * sinDec - sinCamDec * cosDec * Math.cos(dra)) / cosC;
+
+      const x = cx + xi * fovScale + this.parallax.x * z;
+      const y = cy - eta * fovScale + this.parallax.y * z;
+
+      const visible = x >= -120 && x <= w + 120 && y >= -120 && y <= h + 120;
+      return { x, y, visible };
+    }
+
     private drawNebularVeils(
       w: number,
       h: number,
@@ -1169,36 +1286,73 @@ const { featuredConstellationId = null } = Astro.props;
     ) {
       if (!con || alphaMultiplier <= 0.01) return;
 
-      const genome = this.getPlateNebulaGenome(con, salt);
-      const cx = w * 0.5;
-      const cy = h * 0.5;
       const minDim = Math.min(w, h);
-      const isMilkyWay = con?.inMilkyWay;
-      const intensity = (isMilkyWay ? 1.35 : 1.0) * alphaMultiplier;
+      const bDeg = Math.abs(con.galacticLatDeg ?? 40);
+      const isMilkyWay = con.inMilkyWay || bDeg < 34;
 
-      // Current dynamic hue rotation: base plate offset + continuous time progression
-      const currentHueShift = (genome.plateBaseHueOffset + now * genome.hueShiftSpeed) % 360;
+      // 1. Procedural Milky Way Galactic Disc (Luminous Stellar Backbone)
+      if (isMilkyWay) {
+        this.ctx.save();
+        const centerGal = eq2gal(this.camera.ra, this.camera.dec);
+        const z = 0.12;
 
-      for (const cl of genome.clouds) {
-        const driftX = Math.sin(now * cl.freqX + cl.phase) * (minDim * 0.06);
-        const driftY = Math.cos(now * cl.freqY + cl.phase) * (minDim * 0.05);
-        const px = cx + cl.relX * minDim + driftX + this.parallax.x * 0.10;
-        const py = cy + cl.relY * minDim + driftY + this.parallax.y * 0.10;
-        const rad = minDim * cl.radRatio;
+        // Sample along Galactic Equator across visible hemisphere
+        for (let dL = -54; dL <= 54; dL += 3) {
+          const l = (centerGal.l + dL + 360) % 360;
+          const eq = gal2eq(l, 0);
+          const pt = this.projectRaDec(eq.ra, eq.dec, w, h, z);
+          if (!pt.visible) continue;
 
-        const baseRgb = isDark ? cl.baseHueDark : cl.baseHueLight;
-        const [r, g, b] = rotateRgbHue(baseRgb, currentHueShift);
-        const a = (isDark ? cl.baseDarkAlpha : cl.baseLightAlpha) * intensity;
+          // Intensity peaks at Galactic Center (l = 0/360 in Sagittarius), softens towards Anticenter
+          const centerDist = Math.min(Math.abs(l), Math.abs(360 - l));
+          const lFactor = 0.65 + 0.85 * Math.exp(-centerDist / 45.0);
+          const rad = minDim * (0.32 + 0.12 * Math.exp(-centerDist / 60.0));
 
-        const grad = this.ctx.createRadialGradient(px, py, rad * 0.08, px, py, rad);
-        grad.addColorStop(0, `rgba(${r}, ${g}, ${b}, ${a})`);
-        grad.addColorStop(0.45, `rgba(${r}, ${g}, ${b}, ${a * 0.45})`);
-        grad.addColorStop(1, `rgba(${r}, ${g}, ${b}, 0)`);
+          const grad = this.ctx.createRadialGradient(pt.x, pt.y, rad * 0.05, pt.x, pt.y, rad);
+          if (isDark) {
+            const aCore = 0.048 * lFactor * alphaMultiplier;
+            const aMid = 0.024 * lFactor * alphaMultiplier;
+            grad.addColorStop(0, `rgba(230, 234, 245, ${aCore})`);
+            grad.addColorStop(0.45, `rgba(240, 225, 205, ${aMid})`);
+            grad.addColorStop(1, 'rgba(230, 234, 245, 0)');
+          } else {
+            const aCore = 0.035 * lFactor * alphaMultiplier;
+            grad.addColorStop(0, `rgba(45, 40, 36, ${aCore})`);
+            grad.addColorStop(0.5, `rgba(60, 52, 44, ${aCore * 0.4})`);
+            grad.addColorStop(1, 'rgba(45, 40, 36, 0)');
+          }
 
-        this.ctx.fillStyle = grad;
-        this.ctx.beginPath();
-        this.ctx.arc(px, py, rad, 0, Math.PI * 2);
-        this.ctx.fill();
+          this.ctx.fillStyle = grad;
+          this.ctx.beginPath();
+          this.ctx.arc(pt.x, pt.y, rad, 0, Math.PI * 2);
+          this.ctx.fill();
+        }
+
+        // 2. Interstellar Dust Extinction Lanes (Dark Nebulae / The Great Rift)
+        // High extinction occurs near the central galactic stream (|b| < 18°)
+        if (bDeg < 18 && isDark) {
+          for (let dL = -48; dL <= 48; dL += 5) {
+            const l = (centerGal.l + dL + 360) % 360;
+            // Dust rifts sit slightly offset from the galactic spine
+            const bOffset = (Math.sin(l * 0.12) * 1.6) - 0.4;
+            const eqDust = gal2eq(l, bOffset);
+            const ptDust = this.projectRaDec(eqDust.ra, eqDust.dec, w, h, z);
+            if (!ptDust.visible) continue;
+
+            const dustRad = minDim * (0.16 + 0.06 * Math.sin(l * 0.31));
+            const dustGrad = this.ctx.createRadialGradient(ptDust.x, ptDust.y, dustRad * 0.05, ptDust.x, ptDust.y, dustRad);
+            const dustA = 0.18 * alphaMultiplier;
+            dustGrad.addColorStop(0, `rgba(4, 6, 10, ${dustA})`);
+            dustGrad.addColorStop(0.6, `rgba(6, 8, 14, ${dustA * 0.4})`);
+            dustGrad.addColorStop(1, 'rgba(6, 8, 14, 0)');
+
+            this.ctx.fillStyle = dustGrad;
+            this.ctx.beginPath();
+            this.ctx.arc(ptDust.x, ptDust.y, dustRad, 0, Math.PI * 2);
+            this.ctx.fill();
+          }
+        }
+        this.ctx.restore();
       }
     }
 
@@ -1211,68 +1365,178 @@ const { featuredConstellationId = null } = Astro.props;
     ) {
       if (!this.currentConstellation || alphaMultiplier <= 0.01) return;
 
-      const cy = h * 0.5;
+      const margin = clamp(24, w * 0.025, 48);
       const z = 0.25;
 
-      // Golden Zodiacal Ecliptic Arc (Via Solis)
+      this.ctx.save();
+      // Clean aperture clip prevents ragged edges
+      this.ctx.beginPath();
+      this.ctx.rect(margin, margin, w - margin * 2, h - margin * 2);
+      this.ctx.clip();
+
+      // 1. Golden Zodiacal Ecliptic Arc (Via Solis) - Smooth, continuous across viewport
       if (this.currentConstellation.isZodiac) {
         this.ctx.save();
         this.ctx.strokeStyle = isDark
-          ? `rgba(235, 195, 95, ${0.14 * alphaMultiplier})`
-          : `rgba(165, 115, 30, ${0.16 * alphaMultiplier})`;
-        this.ctx.lineWidth = 0.75;
-        this.ctx.setLineDash([4, 6]);
+          ? `rgba(225, 185, 95, ${0.11 * alphaMultiplier})`
+          : `rgba(165, 115, 30, ${0.13 * alphaMultiplier})`;
+        this.ctx.lineWidth = 0.45;
+        this.ctx.setLineDash([1.5, 3.5]);
 
-        // Ecliptic chord across chart
-        const yEcl = cy + this.parallax.y * z;
+        let started = false;
         this.ctx.beginPath();
-        this.ctx.moveTo(30, yEcl - 40);
-        this.ctx.bezierCurveTo(w * 0.33, yEcl - 10, w * 0.66, yEcl + 20, w - 30, yEcl + 50);
+        for (let l = 0; l <= 360; l += 0.25) {
+          const eq = ecl2eq(l);
+          const pt = this.projectRaDec(eq.ra, eq.dec, w, h, z);
+          if (pt.visible) {
+            if (!started) {
+              this.ctx.moveTo(pt.x, pt.y);
+              started = true;
+            } else {
+              this.ctx.lineTo(pt.x, pt.y);
+            }
+          } else {
+            started = false;
+          }
+        }
         this.ctx.stroke();
-
-        this.ctx.fillStyle = isDark
-          ? `rgba(235, 195, 95, ${0.28 * alphaMultiplier})`
-          : `rgba(165, 115, 30, ${0.32 * alphaMultiplier})`;
-        this.ctx.font = 'italic 10px Newsreader, serif';
-        this.ctx.fillText('VIA SOLIS · ECLIPTICA', w - 165, yEcl + 42);
         this.ctx.setLineDash([]);
         this.ctx.restore();
       }
 
-      // Galactic Equator Arc (Via Lactea)
-      if (this.currentConstellation.inMilkyWay) {
+      // 2. Galactic Equator Arc (Via Lactea) - Smooth, continuous across viewport
+      const bDeg = Math.abs(this.currentConstellation.galacticLatDeg ?? 40);
+      if (this.currentConstellation.inMilkyWay || bDeg < 35) {
         this.ctx.save();
         this.ctx.strokeStyle = isDark
-          ? `rgba(190, 215, 255, ${0.12 * alphaMultiplier})`
-          : `rgba(50, 75, 120, ${0.14 * alphaMultiplier})`;
-        this.ctx.lineWidth = 0.75;
-        this.ctx.setLineDash([2, 5]);
+          ? `rgba(185, 215, 250, ${0.10 * alphaMultiplier})`
+          : `rgba(50, 75, 120, ${0.12 * alphaMultiplier})`;
+        this.ctx.lineWidth = 0.45;
+        this.ctx.setLineDash([1.5, 3.5]);
 
-        const galY = cy + this.parallax.y * z;
+        let started = false;
         this.ctx.beginPath();
-        this.ctx.moveTo(30, galY + 60);
-        this.ctx.bezierCurveTo(w * 0.35, galY + 25, w * 0.65, galY - 25, w - 30, galY - 60);
+        for (let l = 0; l <= 360; l += 0.25) {
+          const eq = gal2eq(l, 0);
+          const pt = this.projectRaDec(eq.ra, eq.dec, w, h, z);
+          if (pt.visible) {
+            if (!started) {
+              this.ctx.moveTo(pt.x, pt.y);
+              started = true;
+            } else {
+              this.ctx.lineTo(pt.x, pt.y);
+            }
+          } else {
+            started = false;
+          }
+        }
         this.ctx.stroke();
-
-        this.ctx.fillStyle = isDark
-          ? `rgba(190, 215, 255, ${0.24 * alphaMultiplier})`
-          : `rgba(50, 75, 120, ${0.28 * alphaMultiplier})`;
-        this.ctx.font = 'italic 10px Newsreader, serif';
-        this.ctx.fillText('VIA LACTEA · AEQUATOR GALACTICOS', 35, galY + 52);
         this.ctx.setLineDash([]);
         this.ctx.restore();
       }
+
+      this.ctx.restore();
     }
 
-    private drawGraticule(w: number, h: number, tickColor: string) {
+    private drawGraticule(w: number, h: number, tickColor: string, now: number) {
       const margin = clamp(24, w * 0.025, 48);
-      this.ctx.strokeStyle = tickColor;
-      this.ctx.lineWidth = 0.75;
+      const isDark = this.isDarkTheme();
 
-      // Outer border frame (fixed aperture on the page, unshifted by parallax)
+      // 1. Projected Celestial Graticule (Declination Parallels & RA Hour Circles)
+      this.ctx.save();
+      // Clip to inner page aperture so lines end cleanly at the neatline frame
+      this.ctx.beginPath();
+      this.ctx.rect(margin, margin, w - margin * 2, h - margin * 2);
+      this.ctx.clip();
+
+      // Soft watermarked celestial grid stroke (ethereal, never visually slices through galaxies or stars)
+      const gridColor = isDark ? 'rgba(180, 175, 165, 0.06)' : 'rgba(120, 114, 108, 0.08)';
+      this.ctx.strokeStyle = gridColor;
+      this.ctx.lineWidth = 0.35;
+      this.ctx.setLineDash([1.5, 3.5]);
+      this.ctx.font = 'italic 7.5px Newsreader, serif';
+      this.ctx.fillStyle = gridColor;
+
+      const camDec = this.camera.dec;
+      const camRa = this.camera.ra;
+
+      // (a) Declination Parallels (every 20° for clean, elegant, non-cluttering sky)
+      const startDec = Math.max(-80, Math.floor((camDec - 40) / 20) * 20);
+      const endDec = Math.min(80, Math.ceil((camDec + 40) / 20) * 20);
+
+      for (let d = startDec; d <= endDec; d += 20) {
+        let started = false;
+        let labelPt: { x: number; y: number } | null = null;
+        this.ctx.beginPath();
+        // Sweep wide hemisphere in fine sub-pixel steps so the parallel reaches edge-to-edge
+        for (let dra = -110; dra <= 110; dra += 0.25) {
+          const a = (camRa + dra + 360) % 360;
+          const pt = this.projectRaDec(a, d, w, h, 0);
+          if (pt.visible) {
+            if (!started) {
+              this.ctx.moveTo(pt.x, pt.y);
+              started = true;
+            } else {
+              this.ctx.lineTo(pt.x, pt.y);
+            }
+            if (!labelPt && pt.x > margin + 6 && pt.x < margin + 40) {
+              labelPt = pt;
+            }
+          } else {
+            started = false;
+          }
+        }
+        this.ctx.stroke();
+
+        if (labelPt) {
+          const decLabel = d > 0 ? `+${d}°` : d < 0 ? `${d}°` : '0°';
+          this.ctx.fillText(decLabel, labelPt.x + 3, labelPt.y - 2);
+        }
+      }
+
+      // (b) Right Ascension Meridians (every 30° = 2 hours)
+      const startRaH = Math.floor((camRa - 45) / 30) * 2;
+      const endRaH = Math.ceil((camRa + 45) / 30) * 2;
+
+      for (let hIdx = startRaH; hIdx <= endRaH; hIdx += 2) {
+        const a = (((hIdx * 15) % 360) + 360) % 360;
+        let started = false;
+        let labelPt: { x: number; y: number } | null = null;
+        this.ctx.beginPath();
+        // Sweep wide declination range so meridians cross from top margin to bottom margin
+        for (let d = -84; d <= 84; d += 0.25) {
+          const pt = this.projectRaDec(a, d, w, h, 0);
+          if (pt.visible) {
+            if (!started) {
+              this.ctx.moveTo(pt.x, pt.y);
+              started = true;
+            } else {
+              this.ctx.lineTo(pt.x, pt.y);
+            }
+            if (!labelPt && pt.y > margin + 6 && pt.y < margin + 35) {
+              labelPt = pt;
+            }
+          } else {
+            started = false;
+          }
+        }
+        this.ctx.stroke();
+
+        if (labelPt) {
+          const hourNum = ((hIdx % 24) + 24) % 24;
+          this.ctx.fillText(`${String(hourNum).padStart(2, '0')}h`, labelPt.x - 8, labelPt.y + 9);
+        }
+      }
+
+      this.ctx.restore();
+
+      // 2. Outer Neatline Aperture Frame (fixed on the paper page)
+      this.ctx.save();
+      this.ctx.strokeStyle = tickColor;
+      this.ctx.lineWidth = 0.80;
       this.ctx.strokeRect(margin, margin, w - margin * 2, h - margin * 2);
 
-      // Vernier ticks along top and bottom edges
+      // Vernier ticks along margin edges
       const step = 40;
       this.ctx.beginPath();
       for (let x = margin + step; x < w - margin; x += step) {
@@ -1288,6 +1552,190 @@ const { featuredConstellationId = null } = Astro.props;
         this.ctx.lineTo(w - margin - 4, y);
       }
       this.ctx.stroke();
+
+      // 3. Engraved Magnitude Scale Key (Magnitudo Stellarum)
+      this.drawMagnitudeScale(w, h, margin, tickColor, now);
+      this.ctx.restore();
+    }
+
+    private drawMagnitudeScale(w: number, h: number, margin: number, tickColor: string, now: number) {
+      if (w < 768) return;
+
+      const idleMs = now - this.lastUserActivityTime;
+      if (idleMs >= 31500) {
+        // Disappear completely after 30s idle (+ 1.5s linear fade)
+        return;
+      }
+      let idleAlpha = 1.0;
+      if (idleMs > 30000) {
+        idleAlpha = Math.max(0, 1.0 - (idleMs - 30000) / 1500);
+      }
+
+      const isDark = this.isDarkTheme();
+      const scaleW = 195;
+      const scaleH = 32;
+      // Positioned at top-right inside outer plate margin
+      const x0 = w - margin - scaleW - 14;
+      const y0 = margin + 14;
+
+      this.ctx.save();
+      this.ctx.globalAlpha *= idleAlpha;
+      this.ctx.fillStyle = isDark ? 'rgba(7, 9, 14, 0.65)' : 'rgba(245, 242, 235, 0.72)';
+      this.ctx.fillRect(x0, y0, scaleW, scaleH);
+      this.ctx.strokeStyle = tickColor;
+      this.ctx.lineWidth = 0.55;
+      this.ctx.strokeRect(x0, y0, scaleW, scaleH);
+
+      this.ctx.fillStyle = isDark ? 'rgba(215, 205, 190, 0.75)' : 'rgba(55, 48, 42, 0.85)';
+      this.ctx.font = '600 7.5px Newsreader, serif';
+      this.ctx.fillText('MAGNITUDO STELLARUM', x0 + 8, y0 + 10);
+
+      const mags = [
+        { label: '1ᵐ', r: 3.5, spike: true },
+        { label: '2ᵐ', r: 2.7, spike: false },
+        { label: '3ᵐ', r: 2.0, spike: false },
+        { label: '4ᵐ', r: 1.5, spike: false },
+        { label: '5ᵐ', r: 1.0, spike: false },
+        { label: '6ᵐ', r: 0.65, spike: false }
+      ];
+
+      const startDotX = x0 + 14;
+      const dotStep = 30;
+      const dotY = y0 + 21;
+
+      for (let i = 0; i < mags.length; i++) {
+        const item = mags[i];
+        const dx = startDotX + i * dotStep;
+
+        this.ctx.fillStyle = isDark ? '#ffffff' : '#221e1a';
+        this.ctx.beginPath();
+        this.ctx.arc(dx, dotY, item.r, 0, Math.PI * 2);
+        this.ctx.fill();
+
+        if (item.spike) {
+          this.ctx.strokeStyle = this.ctx.fillStyle;
+          this.ctx.lineWidth = 0.45;
+          this.ctx.beginPath();
+          this.ctx.moveTo(dx - 5, dotY);
+          this.ctx.lineTo(dx + 5, dotY);
+          this.ctx.moveTo(dx, dotY - 5);
+          this.ctx.lineTo(dx, dotY + 5);
+          this.ctx.stroke();
+        }
+
+        this.ctx.fillStyle = isDark ? 'rgba(195, 185, 170, 0.65)' : 'rgba(75, 68, 60, 0.75)';
+        this.ctx.font = '8px Newsreader, serif';
+        this.ctx.fillText(item.label, dx + 6, dotY + 3);
+      }
+
+      this.ctx.restore();
+    }
+
+    private drawConstellationBoundaries(
+      w: number,
+      h: number,
+      isDark: boolean,
+      alphaMultiplier: number
+    ) {
+      if (!this.currentConstellation || !this.currentConstellation.stars || alphaMultiplier <= 0.01) return;
+
+      const margin = clamp(24, w * 0.025, 48);
+
+      let minRa = 999, maxRa = -999, minDec = 999, maxDec = -999;
+      for (const star of this.currentConstellation.stars) {
+        const hip = star[4];
+        const catalogStar = this.starsMap.get(hip);
+        if (catalogStar) {
+          const [, ra, dec] = catalogStar;
+          if (ra < minRa) minRa = ra;
+          if (ra > maxRa) maxRa = ra;
+          if (dec < minDec) minDec = dec;
+          if (dec > maxDec) maxDec = dec;
+        }
+      }
+
+      if (minRa === 999) return;
+
+      if (maxRa - minRa > 180) {
+        minRa = (this.currentConstellation.barycenterRaDeg - 25 + 360) % 360;
+        maxRa = (this.currentConstellation.barycenterRaDeg + 25) % 360;
+      }
+
+      const padDec = Math.max(3.5, (maxDec - minDec) * 0.18);
+      const padRa = Math.max(4.5, (maxRa - minRa) * 0.18);
+
+      const bTop = Math.min(88, maxDec + padDec);
+      const bBottom = Math.max(-88, minDec - padDec);
+      const bLeft = (minRa - padRa + 360) % 360;
+      const bRight = (maxRa + padRa) % 360;
+
+      const z = 0.22;
+      this.ctx.save();
+      // Clip to inner neatline aperture so boundaries never spill outside the plate frame
+      this.ctx.beginPath();
+      this.ctx.rect(margin, margin, w - margin * 2, h - margin * 2);
+      this.ctx.clip();
+
+      this.ctx.strokeStyle = isDark
+        ? `rgba(215, 205, 190, ${0.08 * alphaMultiplier})`
+        : `rgba(60, 52, 44, ${0.10 * alphaMultiplier})`;
+      this.ctx.lineWidth = 0.40;
+      this.ctx.setLineDash([1.5, 3]);
+
+      // Construct continuous perimeter path clipped to page aperture
+      this.ctx.beginPath();
+      let started = false;
+      const raSpan = ((bRight - bLeft + 360) % 360);
+
+      // 1. Top edge: Left -> Right along bTop
+      for (let s = 0; s <= raSpan; s += 0.25) {
+        const a = (bLeft + s) % 360;
+        const pt = this.projectRaDec(a, bTop, w, h, z);
+        if (pt.visible) {
+          if (!started) { this.ctx.moveTo(pt.x, pt.y); started = true; }
+          else { this.ctx.lineTo(pt.x, pt.y); }
+        } else {
+          started = false;
+        }
+      }
+
+      // 2. Right edge: bTop -> bBottom along bRight
+      for (let d = bTop; d >= bBottom; d -= 0.25) {
+        const pt = this.projectRaDec(bRight, d, w, h, z);
+        if (pt.visible) {
+          if (!started) { this.ctx.moveTo(pt.x, pt.y); started = true; }
+          else { this.ctx.lineTo(pt.x, pt.y); }
+        } else {
+          started = false;
+        }
+      }
+
+      // 3. Bottom edge: Right -> Left along bBottom
+      for (let s = raSpan; s >= 0; s -= 0.25) {
+        const a = (bLeft + s) % 360;
+        const pt = this.projectRaDec(a, bBottom, w, h, z);
+        if (pt.visible) {
+          if (!started) { this.ctx.moveTo(pt.x, pt.y); started = true; }
+          else { this.ctx.lineTo(pt.x, pt.y); }
+        } else {
+          started = false;
+        }
+      }
+
+      // 4. Left edge: bBottom -> bTop along bLeft
+      for (let d = bBottom; d <= bTop; d += 0.25) {
+        const pt = this.projectRaDec(bLeft, d, w, h, z);
+        if (pt.visible) {
+          if (!started) { this.ctx.moveTo(pt.x, pt.y); started = true; }
+          else { this.ctx.lineTo(pt.x, pt.y); }
+        } else {
+          started = false;
+        }
+      }
+
+      this.ctx.stroke();
+      this.ctx.setLineDash([]);
+      this.ctx.restore();
     }
 
     private getGalaxyGenome(dIdx: number, d: any, con = this.currentConstellation): GalaxyMorphology {
@@ -1298,6 +1746,18 @@ const { featuredConstellationId = null } = Astro.props;
         const hash = Math.abs(Math.sin(rawX * 12.9898 + rawY * 78.233)) * 43758.5453;
         genome = deriveGalaxyGenome(hash, rawType, label);
         this.galaxyGenomes.set(key, genome);
+      }
+      return genome;
+    }
+
+    private getNebulaGenome(dIdx: number, d: any, con = this.currentConstellation): NebulaMorphology {
+      const key = `${con?.id || 'sky'}_neb_${dIdx}_${d[6] || ''}`;
+      let genome = this.nebulaGenomes.get(key);
+      if (!genome) {
+        const [rawX, rawY, , , , rawType, label] = d;
+        const hash = Math.abs(Math.sin(rawX * 12.9898 + rawY * 78.233)) * 43758.5453;
+        genome = deriveNebulaGenome(hash, rawType, label);
+        this.nebulaGenomes.set(key, genome);
       }
       return genome;
     }
@@ -1313,13 +1773,11 @@ const { featuredConstellationId = null } = Astro.props;
     ) {
       if (!con || !con.deepFieldObjects || alphaMultiplier <= 0.01) return;
 
-      const genomeNeb = this.getPlateNebulaGenome(con, salt);
-      const currentHueShift = (genomeNeb.plateBaseHueOffset + now * genomeNeb.hueShiftSpeed) % 360;
-
       const cx = w * 0.5;
       const cy = h * 0.5;
       const scale = Math.min(w, h) / 10000;
       let prevLabelPos: { x: number, y: number } | null = null;
+      const labelQueue: Array<{ text: string; x: number; y: number }> = [];
 
       for (let dIdx = 0; dIdx < con.deepFieldObjects.length; dIdx++) {
         const d = con.deepFieldObjects[dIdx];
@@ -1351,29 +1809,29 @@ const { featuredConstellationId = null } = Astro.props;
           const pa = genome.pa;
           this.ctx.rotate(pa);
 
-          const majR = Math.max(22, Math.min(48, rad * scale * 1.6));
+          const majR = Math.max(20, Math.min(46, rad * scale * 1.5));
           const cosI = genome.cosI;
           // Hubble (1926) oblate spheroid intrinsic thickness: prevents flat 2D wafer collapse
-          const q0 = 0.15;
+          const q0 = 0.18;
           const sinI = Math.sqrt(Math.max(0, 1 - cosI * cosI));
           const effectiveCosI = Math.sqrt(cosI * cosI + q0 * q0 * sinI * sinI);
           const minR = majR * effectiveCosI;
-          const isEdgeOn = genome.hubbleType === 'edge_on' || cosI < 0.22;
+          const isEdgeOn = genome.hubbleType === 'edge_on' || cosI < 0.24;
 
           const discRgb = isDark ? genome.discRgbDark : genome.discRgbLight;
           const coreRgb = isDark ? genome.coreRgbDark : genome.coreRgbLight;
 
-          // (a) Volumetric Multi-Layer Exponential Stellar Disc
-          // Layer 1: Diffuse Outer Gaseous Corona / Stellar Halo (extends to 1.35x majR)
+          // (a) Diffuse Exponential Stellar Disc (100% smooth, feathered gradients)
+          // Layer 1: Diffuse Outer Gaseous Corona / Stellar Halo
           const haloR = majR * 1.35;
-          const haloGrad = this.ctx.createRadialGradient(0, 0, majR * 0.2, 0, 0, haloR);
+          const haloGrad = this.ctx.createRadialGradient(0, 0, majR * 0.15, 0, 0, haloR);
           if (isDark) {
-            haloGrad.addColorStop(0, `rgba(${discRgb[0]}, ${discRgb[1]}, ${discRgb[2]}, ${0.16 * alphaMultiplier})`);
-            haloGrad.addColorStop(0.55, `rgba(${discRgb[0] * 0.85 | 0}, ${discRgb[1] * 0.9 | 0}, ${discRgb[2]}, ${0.05 * alphaMultiplier})`);
+            haloGrad.addColorStop(0, `rgba(${discRgb[0]}, ${discRgb[1]}, ${discRgb[2]}, ${0.11 * alphaMultiplier})`);
+            haloGrad.addColorStop(0.55, `rgba(${discRgb[0] * 0.85 | 0}, ${discRgb[1] * 0.9 | 0}, ${discRgb[2]}, ${0.04 * alphaMultiplier})`);
             haloGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
           } else {
-            haloGrad.addColorStop(0, `rgba(${discRgb[0]}, ${discRgb[1]}, ${discRgb[2]}, ${0.09 * alphaMultiplier})`);
-            haloGrad.addColorStop(0.60, `rgba(${discRgb[0]}, ${discRgb[1]}, ${discRgb[2]}, ${0.03 * alphaMultiplier})`);
+            haloGrad.addColorStop(0, `rgba(${discRgb[0]}, ${discRgb[1]}, ${discRgb[2]}, ${0.07 * alphaMultiplier})`);
+            haloGrad.addColorStop(0.60, `rgba(${discRgb[0]}, ${discRgb[1]}, ${discRgb[2]}, ${0.02 * alphaMultiplier})`);
             haloGrad.addColorStop(1, 'rgba(255, 255, 255, 0)');
           }
           this.ctx.save();
@@ -1385,16 +1843,16 @@ const { featuredConstellationId = null } = Astro.props;
           this.ctx.restore();
 
           // Layer 2: Main Exponential Stellar Disc (I(R) = I0 * exp(-R/Rd))
-          const discGrad = this.ctx.createRadialGradient(0, 0, 1.5, 0, 0, majR);
+          const discGrad = this.ctx.createRadialGradient(0, 0, 1.0, 0, 0, majR);
           if (isDark) {
-            discGrad.addColorStop(0, `rgba(${coreRgb[0]}, ${coreRgb[1]}, ${coreRgb[2]}, ${0.48 * alphaMultiplier})`);
-            discGrad.addColorStop(0.32, `rgba(${discRgb[0]}, ${discRgb[1]}, ${discRgb[2]}, ${0.24 * alphaMultiplier})`);
-            discGrad.addColorStop(0.70, `rgba(${discRgb[0] * 0.9 | 0}, ${discRgb[1] * 0.95 | 0}, ${discRgb[2]}, ${0.08 * alphaMultiplier})`);
+            discGrad.addColorStop(0, `rgba(${coreRgb[0]}, ${coreRgb[1]}, ${coreRgb[2]}, ${0.38 * alphaMultiplier})`);
+            discGrad.addColorStop(0.35, `rgba(${discRgb[0]}, ${discRgb[1]}, ${discRgb[2]}, ${0.18 * alphaMultiplier})`);
+            discGrad.addColorStop(0.75, `rgba(${discRgb[0] * 0.9 | 0}, ${discRgb[1] * 0.95 | 0}, ${discRgb[2]}, ${0.05 * alphaMultiplier})`);
             discGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
           } else {
-            discGrad.addColorStop(0, `rgba(${coreRgb[0]}, ${coreRgb[1]}, ${coreRgb[2]}, ${0.35 * alphaMultiplier})`);
-            discGrad.addColorStop(0.38, `rgba(${discRgb[0]}, ${discRgb[1]}, ${discRgb[2]}, ${0.16 * alphaMultiplier})`);
-            discGrad.addColorStop(0.75, `rgba(${discRgb[0]}, ${discRgb[1]}, ${discRgb[2]}, ${0.04 * alphaMultiplier})`);
+            discGrad.addColorStop(0, `rgba(${coreRgb[0]}, ${coreRgb[1]}, ${coreRgb[2]}, ${0.28 * alphaMultiplier})`);
+            discGrad.addColorStop(0.40, `rgba(${discRgb[0]}, ${discRgb[1]}, ${discRgb[2]}, ${0.12 * alphaMultiplier})`);
+            discGrad.addColorStop(0.80, `rgba(${discRgb[0]}, ${discRgb[1]}, ${discRgb[2]}, ${0.03 * alphaMultiplier})`);
             discGrad.addColorStop(1, 'rgba(255, 255, 255, 0)');
           }
           this.ctx.save();
@@ -1405,21 +1863,21 @@ const { featuredConstellationId = null } = Astro.props;
           this.ctx.fill();
           this.ctx.restore();
 
-          // (b) Central Stellar Bar (for Barred Spirals e.g. SBb, SBc)
+          // (b) Central Stellar Bar (for Barred Spirals e.g. SBb, SBc) - Feathered radial ellipse
           if (genome.hubbleType === 'barred_spiral' && !isEdgeOn) {
             const barHalf = majR * genome.barLength;
-            const barW = barHalf * 0.36;
+            const barW = barHalf * 0.38;
             this.ctx.save();
             this.ctx.rotate(genome.barAngle);
             this.ctx.scale(1.0, effectiveCosI);
             const barGrad = this.ctx.createRadialGradient(0, 0, 0, 0, 0, barHalf);
             if (isDark) {
-              barGrad.addColorStop(0, `rgba(255, 248, 230, ${0.60 * alphaMultiplier})`);
-              barGrad.addColorStop(0.55, `rgba(${coreRgb[0]}, ${coreRgb[1]}, ${coreRgb[2]}, ${0.28 * alphaMultiplier})`);
+              barGrad.addColorStop(0, `rgba(255, 248, 230, ${0.40 * alphaMultiplier})`);
+              barGrad.addColorStop(0.55, `rgba(${coreRgb[0]}, ${coreRgb[1]}, ${coreRgb[2]}, ${0.18 * alphaMultiplier})`);
               barGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
             } else {
-              barGrad.addColorStop(0, `rgba(45, 36, 30, ${0.48 * alphaMultiplier})`);
-              barGrad.addColorStop(0.55, `rgba(95, 75, 55, ${0.20 * alphaMultiplier})`);
+              barGrad.addColorStop(0, `rgba(45, 36, 30, ${0.32 * alphaMultiplier})`);
+              barGrad.addColorStop(0.55, `rgba(95, 75, 55, ${0.14 * alphaMultiplier})`);
               barGrad.addColorStop(1, 'rgba(255, 255, 255, 0)');
             }
             this.ctx.fillStyle = barGrad;
@@ -1429,184 +1887,144 @@ const { featuredConstellationId = null } = Astro.props;
             this.ctx.restore();
           }
 
-          // (c) Spiral Density Wave Ribbons (Flaring volumetric polygons replacing line strokes)
+          // (c) Spiral Density Waves (Overlapping soft feathered starlight puffs - ZERO strokes, ZERO lines)
           if (!isEdgeOn && genome.hubbleType !== 'lenticular') {
-            const armSteps = 24;
             const armCount = genome.armCount;
             const winding = genome.winding;
             const pitch = genome.pitch;
-            const startR = genome.hubbleType === 'barred_spiral' ? (majR * genome.barLength * 0.88) : 4.5;
+            const startR = genome.hubbleType === 'barred_spiral' ? (majR * genome.barLength * 0.85) : 3.8;
             const nearSide = genome.dustAsymmetry; // +1 or -1 near-side orientation
+            const armSteps = 18;
 
             for (let arm = 0; arm < armCount; arm++) {
               const armBasePhase = (arm * 2 * Math.PI) / armCount;
-              const outerPts: Array<{ x: number, y: number }> = [];
-              const innerPts: Array<{ x: number, y: number }> = [];
-              const spinePts: Array<{ x: number, y: number, r: number, yc: number }> = [];
 
               for (let i = 0; i <= armSteps; i++) {
                 const t = i / armSteps;
-                const r = startR + t * (majR - startR - 3.0);
+                const r = startR + t * (majR - startR - 1.5);
                 const theta = armBasePhase + winding * Math.log(Math.max(0.01, r / startR)) / Math.tan(pitch);
                 const xc = r * Math.cos(theta);
-                const yc = r * Math.sin(theta);
+                const yc = r * Math.sin(theta) * effectiveCosI;
 
-                // Flaring ribbon normal vector: expands from 1.2px at root to 5.2px at outer rim
-                const normAngle = theta + winding * (Math.PI * 0.5 - pitch * 0.5);
-                const halfW = 1.1 + 3.8 * Math.pow(t, 1.2);
-                const nx = Math.cos(normAngle) * halfW;
-                const ny = Math.sin(normAngle) * halfW;
+                // Flaring soft density wave nodule radius (feathered starlight compression)
+                const armR = Math.max(2.0, 1.8 + 4.2 * Math.pow(t, 0.9));
+                const armA = (0.12 + (1.0 - t * 0.45) * 0.10) * alphaMultiplier;
 
-                outerPts.push({ x: xc + nx, y: (yc + ny) * effectiveCosI });
-                innerPts.push({ x: xc - nx, y: (yc - ny) * effectiveCosI });
-                spinePts.push({ x: xc, y: yc * effectiveCosI, r, yc });
-              }
+                const puffGrad = this.ctx.createRadialGradient(xc, yc, 0, xc, yc, armR);
+                puffGrad.addColorStop(0, `rgba(${discRgb[0]}, ${discRgb[1]}, ${discRgb[2]}, ${armA})`);
+                puffGrad.addColorStop(0.35, `rgba(${discRgb[0]}, ${discRgb[1]}, ${discRgb[2]}, ${armA * 0.50})`);
+                puffGrad.addColorStop(0.70, `rgba(${discRgb[0]}, ${discRgb[1]}, ${discRgb[2]}, ${armA * 0.15})`);
+                puffGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+                this.ctx.fillStyle = puffGrad;
+                this.ctx.beginPath();
+                this.ctx.arc(xc, yc, armR, 0, Math.PI * 2);
+                this.ctx.fill();
 
-              // 1. Broad Volumetric Density Ribbon Fill (smooth stellar density compression)
-              this.ctx.beginPath();
-              for (let i = 0; i < outerPts.length; i++) {
-                if (i === 0) this.ctx.moveTo(outerPts[i].x, outerPts[i].y);
-                else this.ctx.lineTo(outerPts[i].x, outerPts[i].y);
-              }
-              for (let i = innerPts.length - 1; i >= 0; i--) {
-                this.ctx.lineTo(innerPts[i].x, innerPts[i].y);
-              }
-              this.ctx.closePath();
-              this.ctx.fillStyle = isDark
-                ? `rgba(${discRgb[0]}, ${discRgb[1]}, ${discRgb[2]}, ${0.18 * alphaMultiplier})`
-                : `rgba(${discRgb[0]}, ${discRgb[1]}, ${discRgb[2]}, ${0.12 * alphaMultiplier})`;
-              this.ctx.fill();
+                // Asymmetric near-side dust absorption nodule along the inner concave edge (feathered, NO strokes)
+                const isNearSide = (yc * nearSide) > -majR * 0.15;
+                if (isNearSide && i > 1 && i < armSteps - 1 && i % 2 === 0) {
+                  const dustOffset = armR * 0.55;
+                  const normAngle = theta + winding * Math.PI * 0.5;
+                  const dx = xc - Math.cos(normAngle) * dustOffset;
+                  const dy = yc - Math.sin(normAngle) * dustOffset * effectiveCosI;
+                  const dRadius = armR * 0.85;
 
-              // 2. Luminous Spine (crest of the density wave)
-              this.ctx.beginPath();
-              for (let i = 0; i < spinePts.length; i++) {
-                if (i === 0) this.ctx.moveTo(spinePts[i].x, spinePts[i].y);
-                else this.ctx.lineTo(spinePts[i].x, spinePts[i].y);
-              }
-              this.ctx.strokeStyle = isDark
-                ? `rgba(${discRgb[0]}, ${discRgb[1]}, ${discRgb[2]}, ${0.35 * alphaMultiplier})`
-                : `rgba(${discRgb[0]}, ${discRgb[1]}, ${discRgb[2]}, ${0.28 * alphaMultiplier})`;
-              this.ctx.lineWidth = 1.35;
-              this.ctx.stroke();
-
-              // 3. Tilted Near-Side Dust Silhouette Ribbon (asymmetric absorption)
-              // Only renders along the inner concave edge on the near-side hemisphere
-              this.ctx.beginPath();
-              let dustStarted = false;
-              for (let i = 1; i < innerPts.length - 2; i++) {
-                const sp = spinePts[i];
-                // Check if this segment lies on the near-side tilted hemisphere
-                const isNearSide = (sp.yc * nearSide) > -majR * 0.15;
-                if (isNearSide) {
-                  if (!dustStarted) {
-                    this.ctx.moveTo(innerPts[i].x, innerPts[i].y);
-                    dustStarted = true;
-                  } else {
-                    this.ctx.lineTo(innerPts[i].x, innerPts[i].y);
-                  }
+                  const dGrad = this.ctx.createRadialGradient(dx, dy, 0, dx, dy, dRadius);
+                  const dustA = (isDark ? 0.32 : 0.36) * genome.dustOpacity * alphaMultiplier;
+                  dGrad.addColorStop(0, isDark ? `rgba(6, 8, 12, ${dustA})` : `rgba(248, 245, 238, ${dustA})`);
+                  dGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+                  this.ctx.fillStyle = dGrad;
+                  this.ctx.beginPath();
+                  this.ctx.arc(dx, dy, dRadius, 0, Math.PI * 2);
+                  this.ctx.fill();
                 }
-              }
-              if (dustStarted) {
-                this.ctx.strokeStyle = isDark
-                  ? `rgba(7, 9, 14, ${genome.dustOpacity * 0.95 * alphaMultiplier})`
-                  : `rgba(248, 245, 238, ${genome.dustOpacity * 1.15 * alphaMultiplier})`;
-                this.ctx.lineWidth = 1.6;
-                this.ctx.stroke();
               }
             }
 
-            // Starburst Knots: Volumetric H II Ionized Pink Nodules & Azure OB Stellar Clusters
+            // Starburst Knots: Authentic H II Ionized Ruby Nodules & Azure OB Stellar Clusters (Fixed Spectra)
             if (isDark && genome.knots && genome.knots.length > 0) {
-              const h2Base: [number, number, number] = [255, 185, 215];
-              const obBase: [number, number, number] = [125, 205, 255];
-              const [h2R, h2G, h2B] = rotateRgbHue(h2Base, currentHueShift);
-              const [obR, obG, obB] = rotateRgbHue(obBase, currentHueShift);
+              const h2Base: [number, number, number] = [205, 75, 95]; // H-alpha ruby
+              const obBase: [number, number, number] = [140, 195, 255]; // OB young stellar cluster azure
 
               for (let kIdx = 0; kIdx < genome.knots.length; kIdx++) {
                 const knot = genome.knots[kIdx];
                 const kR = (startR + knot.rNorm * (majR - startR));
                 const kX = kR * Math.cos(knot.theta);
                 const kY = kR * Math.sin(knot.theta) * effectiveCosI;
-                const kAlpha = (0.42 + knot.size * 0.18) * alphaMultiplier;
-                const kRadius = Math.max(1.0, knot.size * 0.95);
+                const kAlpha = (0.18 + knot.size * 0.08) * alphaMultiplier;
+                const kRadius = Math.max(0.70, knot.size * 0.65);
 
-                const knotGrad = this.ctx.createRadialGradient(kX, kY, 0, kX, kY, kRadius * 1.8);
+                const knotGrad = this.ctx.createRadialGradient(kX, kY, 0, kX, kY, kRadius * 1.6);
                 if (knot.isH2) {
-                  // H-alpha ruby/magenta emission (hue rotated)
-                  knotGrad.addColorStop(0, `rgba(${h2R}, ${h2G}, ${h2B}, ${kAlpha})`);
-                  knotGrad.addColorStop(0.45, `rgba(${h2R * 0.94 | 0}, ${h2G * 0.5 | 0}, ${h2B * 0.7 | 0}, ${kAlpha * 0.75})`);
+                  // H-alpha ruby emission
+                  knotGrad.addColorStop(0, `rgba(${h2Base[0]}, ${h2Base[1]}, ${h2Base[2]}, ${kAlpha})`);
+                  knotGrad.addColorStop(0.5, `rgba(${h2Base[0]}, ${h2Base[1]}, ${h2Base[2]}, ${kAlpha * 0.4})`);
                   knotGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
                 } else {
-                  // Young OB stellar cluster azure/cyan (hue rotated)
-                  knotGrad.addColorStop(0, `rgba(${obR * 0.9 + 25 | 0}, ${obG * 0.95 + 12 | 0}, 255, ${kAlpha})`);
-                  knotGrad.addColorStop(0.45, `rgba(${obR}, ${obG}, ${obB}, ${kAlpha * 0.75})`);
+                  // Young OB stellar cluster azure
+                  knotGrad.addColorStop(0, `rgba(${obBase[0]}, ${obBase[1]}, ${obBase[2]}, ${kAlpha})`);
+                  knotGrad.addColorStop(0.5, `rgba(${obBase[0]}, ${obBase[1]}, ${obBase[2]}, ${kAlpha * 0.35})`);
                   knotGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
                 }
                 this.ctx.fillStyle = knotGrad;
                 this.ctx.beginPath();
-                this.ctx.arc(kX, kY, kRadius * 1.8, 0, Math.PI * 2);
+                this.ctx.arc(kX, kY, kRadius * 1.6, 0, Math.PI * 2);
                 this.ctx.fill();
               }
             }
           }
 
-          // (d) Edge-on Galaxies (Volumetric spindle discs & tilted near-side dust silhouettes)
+          // (d) Edge-on Galaxies (Volumetric spindle discs & tapered absorption belts - ZERO line strokes)
           if (isEdgeOn) {
-            // Spheroidal Bulge (Sombrero profile) popping out above and below the thin equatorial plane
+            // Spheroidal Bulge (Sombrero profile)
             const bulgeR = majR * genome.bulgeRatio;
             const bGrad = this.ctx.createRadialGradient(0, 0, 0, 0, 0, bulgeR);
             if (isDark) {
-              bGrad.addColorStop(0, `rgba(255, 255, 255, ${0.92 * alphaMultiplier})`);
-              bGrad.addColorStop(0.35, `rgba(255, 235, 198, ${0.60 * alphaMultiplier})`);
-              bGrad.addColorStop(0.75, `rgba(${coreRgb[0]}, ${coreRgb[1]}, ${coreRgb[2]}, ${0.25 * alphaMultiplier})`);
+              bGrad.addColorStop(0, `rgba(255, 250, 235, ${0.55 * alphaMultiplier})`);
+              bGrad.addColorStop(0.40, `rgba(255, 235, 205, ${0.28 * alphaMultiplier})`);
+              bGrad.addColorStop(0.75, `rgba(${coreRgb[0]}, ${coreRgb[1]}, ${coreRgb[2]}, ${0.10 * alphaMultiplier})`);
               bGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
             } else {
-              bGrad.addColorStop(0, `rgba(25, 20, 16, ${0.88 * alphaMultiplier})`);
-              bGrad.addColorStop(0.40, `rgba(90, 65, 45, ${0.45 * alphaMultiplier})`);
+              bGrad.addColorStop(0, `rgba(25, 20, 16, ${0.50 * alphaMultiplier})`);
+              bGrad.addColorStop(0.40, `rgba(90, 65, 45, ${0.22 * alphaMultiplier})`);
               bGrad.addColorStop(1, 'rgba(255, 255, 255, 0)');
             }
             this.ctx.save();
-            this.ctx.scale(0.85, 1.45); // Vertically pronounced spheroidal bulge
+            this.ctx.scale(0.85, 1.40);
             this.ctx.fillStyle = bGrad;
             this.ctx.beginPath();
             this.ctx.arc(0, 0, bulgeR, 0, Math.PI * 2);
             this.ctx.fill();
             this.ctx.restore();
 
-            // Tilted Near-Side Equatorial Dust Silhouette (Volumetric absorbing belt)
-            const dustLen = majR * 0.96;
-            const nearOffset = 0.85 * genome.dustAsymmetry; // Asymmetric near-side offset
-
-            // Pass 1: Broad semi-opaque absorption veil
-            this.ctx.strokeStyle = isDark
-              ? `rgba(8, 10, 14, ${0.65 * alphaMultiplier})`
-              : `rgba(248, 245, 238, ${0.75 * alphaMultiplier})`;
-            this.ctx.lineWidth = 3.2;
-            this.ctx.beginPath();
-            this.ctx.moveTo(-dustLen * 0.85, nearOffset);
-            this.ctx.lineTo(dustLen * 0.85, nearOffset);
-            this.ctx.stroke();
-
-            // Pass 2: Dense central opaque absorption rift cutting across the bulge
-            this.ctx.strokeStyle = isDark
-              ? `rgba(5, 7, 10, ${0.92 * alphaMultiplier})`
-              : `rgba(252, 250, 244, ${0.95 * alphaMultiplier})`;
-            this.ctx.lineWidth = 1.45;
-            this.ctx.beginPath();
-            this.ctx.moveTo(-dustLen, nearOffset);
-            this.ctx.lineTo(dustLen, nearOffset);
-            this.ctx.stroke();
+            // Tapered Equatorial Dust Absorption Belt (Smooth overlapping gradient spots - ZERO straight cuts)
+            const nearOffset = 0.70 * genome.dustAsymmetry;
+            const dustSteps = 16;
+            for (let s = -dustSteps; s <= dustSteps; s++) {
+              const t = s / dustSteps;
+              const dx = t * majR * 0.92;
+              const dy = nearOffset;
+              const dRad = Math.max(0.9, (1.0 - Math.abs(t) * 0.65) * 2.4);
+              const dGrad = this.ctx.createRadialGradient(dx, dy, 0, dx, dy, dRad);
+              const dustA = (isDark ? 0.48 : 0.52) * (1.0 - Math.abs(t) * 0.35) * alphaMultiplier;
+              dGrad.addColorStop(0, isDark ? `rgba(6, 8, 12, ${dustA})` : `rgba(248, 245, 238, ${dustA})`);
+              dGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+              this.ctx.fillStyle = dGrad;
+              this.ctx.beginPath();
+              this.ctx.arc(dx, dy, dRad, 0, Math.PI * 2);
+              this.ctx.fill();
+            }
           } else {
             // (e) Standard Galactic Spheroidal Bulge & Nucleus
-            const coreRadius = Math.max(3.5, minR * genome.bulgeRatio);
+            const coreRadius = Math.max(3.2, minR * genome.bulgeRatio);
             const coreGrad = this.ctx.createRadialGradient(0, 0, 0, 0, 0, coreRadius);
             if (isDark) {
-              coreGrad.addColorStop(0, `rgba(255, 255, 255, ${0.90 * alphaMultiplier})`);
-              coreGrad.addColorStop(0.35, `rgba(${coreRgb[0]}, ${coreRgb[1]}, ${coreRgb[2]}, ${0.52 * alphaMultiplier})`);
+              coreGrad.addColorStop(0, `rgba(255, 250, 240, ${0.55 * alphaMultiplier})`);
+              coreGrad.addColorStop(0.40, `rgba(${coreRgb[0]}, ${coreRgb[1]}, ${coreRgb[2]}, ${0.28 * alphaMultiplier})`);
               coreGrad.addColorStop(1, `rgba(${coreRgb[0]}, ${coreRgb[1]}, ${coreRgb[2]}, 0)`);
             } else {
-              coreGrad.addColorStop(0, `rgba(28, 22, 18, ${0.88 * alphaMultiplier})`);
-              coreGrad.addColorStop(0.40, `rgba(${coreRgb[0]}, ${coreRgb[1]}, ${coreRgb[2]}, ${0.42 * alphaMultiplier})`);
+              coreGrad.addColorStop(0, `rgba(28, 22, 18, ${0.48 * alphaMultiplier})`);
+              coreGrad.addColorStop(0.40, `rgba(${coreRgb[0]}, ${coreRgb[1]}, ${coreRgb[2]}, ${0.22 * alphaMultiplier})`);
               coreGrad.addColorStop(1, `rgba(${coreRgb[0]}, ${coreRgb[1]}, ${coreRgb[2]}, 0)`);
             }
             this.ctx.fillStyle = coreGrad;
@@ -1617,28 +2035,28 @@ const { featuredConstellationId = null } = Astro.props;
             // Starlike central supermassive black hole stellar cusp
             this.ctx.fillStyle = isDark ? '#ffffff' : '#221d19';
             this.ctx.beginPath();
-            this.ctx.arc(0, 0, 1.25, 0, Math.PI * 2);
+            this.ctx.arc(0, 0, 0.95, 0, Math.PI * 2);
             this.ctx.fill();
           }
         }
 
-        // 2. ELLIPTICAL GALAXIES ('E', 'L') - e.g. M32, M87, M110, DFG spheroids
+        // 2. ELLIPTICAL GALAXIES ('E', 'L') - e.g. M32, M87, M110, DFG spheroids (Pure de Vaucouleurs - ZERO contour rings)
         else if (type === 'E' || (genome && genome.hubbleType === 'elliptical')) {
           const pa = genome ? genome.pa : baseAngle;
           this.ctx.rotate(pa);
-          const rEll = Math.max(14, Math.min(32, rad * scale * 1.1));
+          const rEll = Math.max(14, Math.min(30, rad * scale * 1.05));
           const cosI = genome ? genome.cosI : 0.72;
 
           const ellGrad = this.ctx.createRadialGradient(0, 0, 0, 0, 0, rEll);
           if (isDark) {
-            ellGrad.addColorStop(0, `rgba(255, 255, 255, ${0.82 * alphaMultiplier})`);
-            ellGrad.addColorStop(0.25, `rgba(255, 238, 205, ${0.45 * alphaMultiplier})`);
-            ellGrad.addColorStop(0.65, `rgba(215, 225, 245, ${0.12 * alphaMultiplier})`);
+            ellGrad.addColorStop(0, `rgba(255, 250, 235, ${0.55 * alphaMultiplier})`);
+            ellGrad.addColorStop(0.30, `rgba(255, 238, 205, ${0.25 * alphaMultiplier})`);
+            ellGrad.addColorStop(0.70, `rgba(215, 225, 245, ${0.06 * alphaMultiplier})`);
             ellGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
           } else {
-            ellGrad.addColorStop(0, `rgba(28, 24, 20, ${0.80 * alphaMultiplier})`);
-            ellGrad.addColorStop(0.30, `rgba(115, 80, 50, ${0.35 * alphaMultiplier})`);
-            ellGrad.addColorStop(0.70, `rgba(150, 120, 90, ${0.08 * alphaMultiplier})`);
+            ellGrad.addColorStop(0, `rgba(28, 24, 20, ${0.48 * alphaMultiplier})`);
+            ellGrad.addColorStop(0.35, `rgba(115, 80, 50, ${0.18 * alphaMultiplier})`);
+            ellGrad.addColorStop(0.75, `rgba(150, 120, 90, ${0.04 * alphaMultiplier})`);
             ellGrad.addColorStop(1, 'rgba(255, 255, 255, 0)');
           }
           this.ctx.save();
@@ -1647,33 +2065,22 @@ const { featuredConstellationId = null } = Astro.props;
           this.ctx.beginPath();
           this.ctx.arc(0, 0, rEll, 0, Math.PI * 2);
           this.ctx.fill();
-
-          // Classical concentric astrometric contour ring in light mode
-          if (!isDark) {
-            this.ctx.strokeStyle = `rgba(60, 50, 42, ${0.30 * alphaMultiplier})`;
-            this.ctx.lineWidth = 0.65;
-            this.ctx.setLineDash([2, 3]);
-            this.ctx.beginPath();
-            this.ctx.arc(0, 0, rEll * 0.75, 0, Math.PI * 2);
-            this.ctx.stroke();
-            this.ctx.setLineDash([]);
-          }
           this.ctx.restore();
         }
 
         // 3. GLOBULAR CLUSTERS ('GC') - e.g. M13 Hercules, M22, Omega Centauri
         else if (type === 'GC') {
-          const rCluster = Math.max(14, Math.min(30, rad * scale * 1.0));
+          const rCluster = Math.max(14, Math.min(28, rad * scale * 0.95));
 
           // Soft central unresolved star core
           const coreGrad = this.ctx.createRadialGradient(0, 0, 0, 0, 0, rCluster * 0.65);
           if (isDark) {
-            coreGrad.addColorStop(0, `rgba(255, 250, 240, ${0.65 * alphaMultiplier})`);
-            coreGrad.addColorStop(0.4, `rgba(220, 235, 255, ${0.25 * alphaMultiplier})`);
+            coreGrad.addColorStop(0, `rgba(255, 250, 240, ${0.48 * alphaMultiplier})`);
+            coreGrad.addColorStop(0.45, `rgba(220, 235, 255, ${0.16 * alphaMultiplier})`);
             coreGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
           } else {
-            coreGrad.addColorStop(0, `rgba(40, 34, 30, ${0.55 * alphaMultiplier})`);
-            coreGrad.addColorStop(0.4, `rgba(100, 85, 75, ${0.18 * alphaMultiplier})`);
+            coreGrad.addColorStop(0, `rgba(40, 34, 30, ${0.40 * alphaMultiplier})`);
+            coreGrad.addColorStop(0.45, `rgba(100, 85, 75, ${0.12 * alphaMultiplier})`);
             coreGrad.addColorStop(1, 'rgba(255, 255, 255, 0)');
           }
           this.ctx.fillStyle = coreGrad;
@@ -1682,7 +2089,7 @@ const { featuredConstellationId = null } = Astro.props;
           this.ctx.fill();
 
           // Swarm of resolved micro-stars with isotropic King profile radial distribution
-          const starCount = 45;
+          const starCount = 36;
           for (let sIdx = 0; sIdx < starCount; sIdx++) {
             let sH = ((sIdx + 1) ^ (hash * 1000 | 0)) * 0x45d9f3b;
             sH = ((sH >>> 16) ^ sH) * 0x45d9f3b;
@@ -1695,137 +2102,227 @@ const { featuredConstellationId = null } = Astro.props;
             const dist = distNorm * rCluster;
             const starX = Math.cos(theta) * dist;
             const starY = Math.sin(theta) * dist;
-            const starR = Math.max(0.65, (1.0 - distNorm * 0.45) * 1.15);
-            const starAlpha = (0.35 + (1.0 - distNorm) * 0.60) * alphaMultiplier;
+            const starR = Math.max(0.55, (1.0 - distNorm * 0.45) * 0.95);
+            const starAlpha = (0.25 + (1.0 - distNorm) * 0.45) * alphaMultiplier;
 
             this.ctx.fillStyle = isDark
               ? `rgba(240, 245, 255, ${starAlpha})`
-              : `rgba(45, 40, 35, ${starAlpha * 0.9})`;
+              : `rgba(45, 40, 35, ${starAlpha * 0.85})`;
             this.ctx.beginPath();
             this.ctx.arc(starX, starY, starR, 0, Math.PI * 2);
             this.ctx.fill();
           }
-
-          // Cartographic cluster circle mark in light mode
-          if (!isDark) {
-            this.ctx.strokeStyle = `rgba(50, 44, 38, ${0.35 * alphaMultiplier})`;
-            this.ctx.lineWidth = 0.65;
-            this.ctx.setLineDash([1, 2]);
-            this.ctx.beginPath();
-            this.ctx.arc(0, 0, rCluster, 0, Math.PI * 2);
-            this.ctx.stroke();
-            this.ctx.setLineDash([]);
-          }
         }
 
-        // 4. PLANETARY NEBULAE ('PN') - e.g. M57 Ring Nebula, M27 Dumbbell
+        // 4. PLANETARY NEBULAE ('PN') - e.g. M97 Owl, M57 Ring, M27 Dumbbell
         else if (type === 'PN') {
+          const nebGenome = this.getNebulaGenome(dIdx, d, con);
           const rPn = Math.max(12, Math.min(24, rad * scale * 0.95));
           this.ctx.rotate(baseAngle);
 
-          const pnOuterBase: [number, number, number] = isDark ? [225, 90, 160] : [165, 50, 95];
-          const pnInnerBase: [number, number, number] = isDark ? [60, 240, 215] : [30, 115, 120];
-          const pnCoreBase: [number, number, number] = isDark ? [40, 180, 170] : [40, 100, 100];
+          const pDark = nebGenome.primaryRgbDark;
+          const sDark = nebGenome.secondaryRgbDark;
 
-          const [pnOutR, pnOutG, pnOutB] = rotateRgbHue(pnOuterBase, currentHueShift);
-          const [pnInR, pnInG, pnInB] = rotateRgbHue(pnInnerBase, currentHueShift);
-          const [pnCorR, pnCorG, pnCorB] = rotateRgbHue(pnCoreBase, currentHueShift);
-
-          // Outer H-alpha / [N II] ruby shell (hue rotated)
-          this.ctx.strokeStyle = `rgba(${pnOutR}, ${pnOutG}, ${pnOutB}, ${(isDark ? 0.45 : 0.38) * alphaMultiplier})`;
-          this.ctx.lineWidth = 2.0;
+          // Outer diffuse envelope
+          const pnGrad = this.ctx.createRadialGradient(0, 0, rPn * 0.25, 0, 0, rPn);
+          const pnA = (isDark ? 0.16 : 0.11) * alphaMultiplier;
+          pnGrad.addColorStop(0, `rgba(${sDark[0]}, ${sDark[1]}, ${sDark[2]}, ${pnA * 0.6})`);
+          pnGrad.addColorStop(0.50, `rgba(${pDark[0]}, ${pDark[1]}, ${pDark[2]}, ${pnA})`);
+          pnGrad.addColorStop(0.85, `rgba(${sDark[0]}, ${sDark[1]}, ${sDark[2]}, ${pnA * 0.3})`);
+          pnGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+          this.ctx.fillStyle = pnGrad;
           this.ctx.beginPath();
-          this.ctx.ellipse(0, 0, rPn, rPn * 0.72, 0, 0, Math.PI * 2);
-          this.ctx.stroke();
-
-          // Inner [O III] cyan/teal torus (hue rotated)
-          this.ctx.strokeStyle = `rgba(${pnInR}, ${pnInG}, ${pnInB}, ${(isDark ? 0.60 : 0.50) * alphaMultiplier})`;
-          this.ctx.lineWidth = 1.3;
-          this.ctx.beginPath();
-          this.ctx.ellipse(0, 0, rPn * 0.75, rPn * 0.54, 0, 0, Math.PI * 2);
-          this.ctx.stroke();
-
-          // Faint interior hollow
-          const innerGrad = this.ctx.createRadialGradient(0, 0, 0, 0, 0, rPn * 0.5);
-          const inA = (isDark ? 0.18 : 0.12) * alphaMultiplier;
-          innerGrad.addColorStop(0, `rgba(${pnCorR}, ${pnCorG}, ${pnCorB}, ${inA})`);
-          innerGrad.addColorStop(1, `rgba(${pnCorR}, ${pnCorG}, ${pnCorB}, 0)`);
-          this.ctx.fillStyle = innerGrad;
-          this.ctx.beginPath();
-          this.ctx.ellipse(0, 0, rPn * 0.5, rPn * 0.36, 0, 0, Math.PI * 2);
+          this.ctx.ellipse(0, 0, rPn, rPn * 0.82, 0, 0, Math.PI * 2);
           this.ctx.fill();
 
-          // Central 15th-mag white dwarf star
+          // Inner high-ionization cavity gas fill
+          const o3CoreGrad = this.ctx.createRadialGradient(0, 0, 0, 0, 0, rPn * 0.52);
+          const o3CoreA = (isDark ? 0.18 : 0.12) * alphaMultiplier;
+          o3CoreGrad.addColorStop(0, isDark ? `rgba(${pDark[0]}, ${pDark[1]}, ${pDark[2]}, ${o3CoreA})` : `rgba(${pDark[0] * 0.7 | 0}, ${pDark[1] * 0.7 | 0}, ${pDark[2] * 0.7 | 0}, ${o3CoreA})`);
+          o3CoreGrad.addColorStop(0.70, isDark ? `rgba(${pDark[0]}, ${pDark[1]}, ${pDark[2]}, ${o3CoreA * 0.35})` : `rgba(${pDark[0] * 0.7 | 0}, ${pDark[1] * 0.7 | 0}, ${pDark[2] * 0.7 | 0}, ${o3CoreA * 0.35})`);
+          o3CoreGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+          this.ctx.fillStyle = o3CoreGrad;
+          this.ctx.beginPath();
+          this.ctx.arc(0, 0, rPn * 0.52, 0, Math.PI * 2);
+          this.ctx.fill();
+
+          // Central 15th-mag white dwarf remnant star
           this.ctx.fillStyle = isDark ? '#ffffff' : '#1a1614';
           this.ctx.beginPath();
-          this.ctx.arc(0, 0, 0.9, 0, Math.PI * 2);
+          this.ctx.arc(0, 0, 0.85, 0, Math.PI * 2);
           this.ctx.fill();
         }
 
-        // 5. EMISSION NEBULAE / STAR FORMING REGIONS / SUPERNOVA REMNANTS ('SFR', 'RN', 'SNR')
-        // e.g. M42 Great Orion Nebula, Carina, Crab M1
-        else if (type === 'SFR' || type === 'RN' || type === 'SNR') {
+        // 5. REFLECTION NEBULAE ('RN') - e.g. M78, Pleiades nebulosity (Pure Rayleigh sapphire - ZERO red)
+        else if (type === 'RN') {
+          const nebGenome = this.getNebulaGenome(dIdx, d, con);
+          const rNeb = Math.max(18, Math.min(42, rad * scale * 1.30));
+          this.ctx.rotate(baseAngle);
+
+          const pDark = nebGenome.primaryRgbDark;
+          const sDark = nebGenome.secondaryRgbDark;
+          const vDark = nebGenome.veilRgbDark;
+
+          // Layer 1: Diffuse Outer Rayleigh Scatter Veil (Deep Royal Sapphire)
+          const rnGrad = this.ctx.createRadialGradient(0, 0, 1, 0, 0, rNeb);
+          const rnA = (isDark ? 0.14 : 0.09) * alphaMultiplier;
+          rnGrad.addColorStop(0, `rgba(${pDark[0]}, ${pDark[1]}, ${pDark[2]}, ${rnA})`);
+          rnGrad.addColorStop(0.5, `rgba(${sDark[0]}, ${sDark[1]}, ${sDark[2]}, ${rnA * 0.45})`);
+          rnGrad.addColorStop(0.85, `rgba(${vDark[0]}, ${vDark[1]}, ${vDark[2]}, ${rnA * 0.15})`);
+          rnGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+          this.ctx.fillStyle = rnGrad;
+          this.ctx.beginPath();
+          this.ctx.ellipse(0, 0, rNeb, rNeb * 0.72, 0.15, 0, Math.PI * 2);
+          this.ctx.fill();
+
+          // Layer 2: Frost Cyan Reflection Core around B-class star
+          const cGrad = this.ctx.createRadialGradient(0, 0, 0, 0, 0, rNeb * 0.35);
+          const cA = (isDark ? 0.25 : 0.15) * alphaMultiplier;
+          cGrad.addColorStop(0, `rgba(${sDark[0]}, ${sDark[1]}, ${sDark[2]}, ${cA})`);
+          cGrad.addColorStop(0.6, `rgba(${pDark[0]}, ${pDark[1]}, ${pDark[2]}, ${cA * 0.3})`);
+          cGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+          this.ctx.fillStyle = cGrad;
+          this.ctx.beginPath();
+          this.ctx.arc(0, 0, rNeb * 0.35, 0, Math.PI * 2);
+          this.ctx.fill();
+
+          // Central illuminating star
+          this.ctx.fillStyle = isDark ? '#ffffff' : '#1a1614';
+          this.ctx.beginPath();
+          this.ctx.arc(0, 0, 0.95, 0, Math.PI * 2);
+          this.ctx.fill();
+        }
+
+        // 6. SUPERNOVA REMNANTS ('SNR') - e.g. Crab Nebula (M1), Veil (Tangled Synchrotron Filaments)
+        else if (type === 'SNR') {
+          const nebGenome = this.getNebulaGenome(dIdx, d, con);
+          const rNeb = Math.max(18, Math.min(42, rad * scale * 1.30));
+          this.ctx.rotate(baseAngle);
+
+          const pDark = nebGenome.primaryRgbDark;
+          const sDark = nebGenome.secondaryRgbDark;
+          const cDark = nebGenome.coreRgbDark;
+
+          // Relativistic synchrotron diffuse core
+          const synGrad = this.ctx.createRadialGradient(0, 0, 0, 0, 0, rNeb * 0.65);
+          const synA = (isDark ? 0.13 : 0.08) * alphaMultiplier;
+          synGrad.addColorStop(0, `rgba(${cDark[0]}, ${cDark[1]}, ${cDark[2]}, ${synA})`);
+          synGrad.addColorStop(0.55, `rgba(${sDark[0]}, ${sDark[1]}, ${sDark[2]}, ${synA * 0.35})`);
+          synGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+          this.ctx.fillStyle = synGrad;
+          this.ctx.beginPath();
+          this.ctx.ellipse(0, 0, rNeb * 0.65, rNeb * 0.50, 0, 0, Math.PI * 2);
+          this.ctx.fill();
+
+          // Tangled chaotic synchrotron filaments
+          if (nebGenome.filaments && nebGenome.filaments.length > 0) {
+            for (let f = 0; f < nebGenome.filaments.length; f++) {
+              const fil = nebGenome.filaments[f];
+              const fDist = fil.length * rNeb * 0.85;
+              const fX = Math.cos(fil.angle) * fDist;
+              const fY = Math.sin(fil.angle) * fDist;
+              const fR = Math.max(1.2, fil.width * rNeb * 0.35);
+              const fGrad = this.ctx.createRadialGradient(fX, fY, 0, fX, fY, fR);
+              const fCol = fil.isO3 ? sDark : pDark;
+              const fA = (isDark ? 0.18 : 0.12) * alphaMultiplier;
+              fGrad.addColorStop(0, `rgba(${fCol[0]}, ${fCol[1]}, ${fCol[2]}, ${fA})`);
+              fGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+              this.ctx.fillStyle = fGrad;
+              this.ctx.beginPath();
+              this.ctx.arc(fX, fY, fR, 0, Math.PI * 2);
+              this.ctx.fill();
+            }
+          }
+        }
+
+        // 7. EMISSION NEBULAE / STAR FORMING REGIONS ('SFR') - e.g. M42 Great Orion Nebula, Carina, Lagoon
+        else if (type === 'SFR') {
+          const nebGenome = this.getNebulaGenome(dIdx, d, con);
           const rNeb = Math.max(20, Math.min(45, rad * scale * 1.35));
           this.ctx.rotate(baseAngle);
 
-          // Rotate the H-alpha (pink/rose) and O-III (cyan/teal) hues by the current dynamic plate hue shift
-          const hAlphaBase: [number, number, number] = isDark ? [235, 105, 155] : [165, 55, 85];
-          const [haR, haG, haB] = rotateRgbHue(hAlphaBase, currentHueShift);
+          const pDark = nebGenome.primaryRgbDark;
+          const sDark = nebGenome.secondaryRgbDark;
+          const cDark = nebGenome.coreRgbDark;
+          const vDark = nebGenome.veilRgbDark;
 
-          const o3Base: [number, number, number] = isDark ? [80, 220, 215] : [45, 120, 115];
-          const [o3R, o3G, o3B] = rotateRgbHue(o3Base, currentHueShift);
-
-          // Asymmetric multi-lobed ionized cloud
-          // Lobe A: Hydrogen-Alpha Ruby/Rose wing (hue rotated)
-          const lobeAGrad = this.ctx.createRadialGradient(-rNeb * 0.25, -rNeb * 0.15, 2, -rNeb * 0.25, -rNeb * 0.15, rNeb * 0.85);
-          const haA = (isDark ? 0.28 : 0.18) * alphaMultiplier;
-          lobeAGrad.addColorStop(0, `rgba(${haR}, ${haG}, ${haB}, ${haA})`);
-          lobeAGrad.addColorStop(0.55, `rgba(${haR}, ${haG}, ${haB}, ${haA * 0.35})`);
-          lobeAGrad.addColorStop(1, `rgba(${haR}, ${haG}, ${haB}, 0)`);
-          this.ctx.fillStyle = lobeAGrad;
+          // Layer 1: Diffuse Outer H-alpha Ionization Cloud
+          const haGrad = this.ctx.createRadialGradient(0, 0, 1, 0, 0, rNeb);
+          const haA = (isDark ? 0.15 : 0.10) * alphaMultiplier;
+          haGrad.addColorStop(0, `rgba(${pDark[0]}, ${pDark[1]}, ${pDark[2]}, ${haA})`);
+          haGrad.addColorStop(0.5, `rgba(${pDark[0]}, ${pDark[1]}, ${pDark[2]}, ${haA * 0.40})`);
+          haGrad.addColorStop(0.85, `rgba(${vDark[0]}, ${vDark[1]}, ${vDark[2]}, ${haA * 0.15})`);
+          haGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+          this.ctx.fillStyle = haGrad;
           this.ctx.beginPath();
-          this.ctx.ellipse(-rNeb * 0.25, -rNeb * 0.15, rNeb * 0.85, rNeb * 0.55, 0.4, 0, Math.PI * 2);
+          this.ctx.ellipse(0, 0, rNeb, rNeb * 0.68, 0.2, 0, Math.PI * 2);
           this.ctx.fill();
 
-          // Lobe B: Oxygen-III Teal/Cyan pocket (hue rotated)
-          const lobeBGrad = this.ctx.createRadialGradient(rNeb * 0.2, rNeb * 0.25, 1, rNeb * 0.2, rNeb * 0.25, rNeb * 0.70);
-          const o3A = (isDark ? 0.24 : 0.14) * alphaMultiplier;
-          lobeBGrad.addColorStop(0, `rgba(${o3R}, ${o3G}, ${o3B}, ${o3A})`);
-          lobeBGrad.addColorStop(0.55, `rgba(${o3R}, ${o3G}, ${o3B}, ${o3A * 0.33})`);
-          lobeBGrad.addColorStop(1, `rgba(${o3R}, ${o3G}, ${o3B}, 0)`);
-          this.ctx.fillStyle = lobeBGrad;
+          // Layer 2: Nested High-Ionization [O III] Core
+          const o3Grad = this.ctx.createRadialGradient(0, 0, 0, 0, 0, rNeb * 0.48);
+          const o3A = (isDark ? 0.14 : 0.08) * alphaMultiplier;
+          o3Grad.addColorStop(0, `rgba(${sDark[0]}, ${sDark[1]}, ${sDark[2]}, ${o3A})`);
+          o3Grad.addColorStop(0.55, `rgba(${sDark[0]}, ${sDark[1]}, ${sDark[2]}, ${o3A * 0.30})`);
+          o3Grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+          this.ctx.fillStyle = o3Grad;
           this.ctx.beginPath();
-          this.ctx.ellipse(rNeb * 0.2, rNeb * 0.25, rNeb * 0.70, rNeb * 0.45, -0.35, 0, Math.PI * 2);
+          this.ctx.ellipse(0, 0, rNeb * 0.48, rNeb * 0.35, -0.15, 0, Math.PI * 2);
           this.ctx.fill();
 
-          // Embedded ionization cluster (e.g. Trapezium cluster)
-          const trapCoords = [
-            [-2.5, -1.5],
-            [2.0, -2.0],
-            [-1.0, 2.5],
-            [2.5, 1.8]
-          ];
-          for (const [tx, ty] of trapCoords) {
-            this.ctx.fillStyle = isDark ? '#ffffff' : '#1a1614';
+          // Layer 3: Central High-Dynamic-Range Ionization Bloom
+          const coreGrad = this.ctx.createRadialGradient(0, 0, 0, 0, 0, rNeb * 0.22);
+          const coreA = (isDark ? 0.28 : 0.18) * alphaMultiplier;
+          coreGrad.addColorStop(0, `rgba(${cDark[0]}, ${cDark[1]}, ${cDark[2]}, ${coreA})`);
+          coreGrad.addColorStop(0.5, `rgba(215, 230, 255, ${coreA * 0.30})`);
+          coreGrad.addColorStop(1, isDark ? 'rgba(0, 0, 0, 0)' : 'rgba(255, 255, 255, 0)');
+          this.ctx.fillStyle = coreGrad;
+          this.ctx.beginPath();
+          this.ctx.arc(0, 0, rNeb * 0.22, 0, Math.PI * 2);
+          this.ctx.fill();
+
+          // Layer 4: Interstellar Dark Dust Notch
+          if (nebGenome.hasDustLane) {
+            const dustNotch = this.ctx.createRadialGradient(rNeb * 0.16, -rNeb * 0.10, 0, rNeb * 0.16, -rNeb * 0.10, rNeb * 0.28);
+            const dAlpha = (isDark ? 0.38 : 0.42) * alphaMultiplier;
+            dustNotch.addColorStop(0, isDark ? 'rgba(6, 8, 12, ' + dAlpha + ')' : 'rgba(245, 240, 230, ' + dAlpha + ')');
+            dustNotch.addColorStop(0.65, isDark ? 'rgba(6, 8, 12, ' + (dAlpha * 0.4) + ')' : 'rgba(245, 240, 230, ' + (dAlpha * 0.4) + ')');
+            dustNotch.addColorStop(1, 'rgba(0, 0, 0, 0)');
+            this.ctx.fillStyle = dustNotch;
             this.ctx.beginPath();
-            this.ctx.arc(tx, ty, 0.95, 0, Math.PI * 2);
+            this.ctx.ellipse(rNeb * 0.16, -rNeb * 0.10, rNeb * 0.28, rNeb * 0.12, -0.35, 0, Math.PI * 2);
             this.ctx.fill();
+          }
+
+          // Layer 5: Embedded Trapezium Ionizing Stellar Cluster (Only for M42)
+          if (nebGenome.hasTrapezium) {
+            const trapCoords = [
+              [-2.0, -1.2],
+              [1.8, -1.6],
+              [-0.8, 2.0],
+              [2.0, 1.4]
+            ];
+            for (const [tx, ty] of trapCoords) {
+              this.ctx.fillStyle = isDark ? '#ffffff' : '#1a1614';
+              this.ctx.beginPath();
+              this.ctx.arc(tx, ty, 0.85, 0, Math.PI * 2);
+              this.ctx.fill();
+            }
           }
         }
 
         // 6. ELLIPTICAL & LENTICULAR GALAXIES ('E', 'L') - e.g. M87, M49, M105, DFG field galaxies
         else if (type === 'E') {
-          const rE = Math.max(12, Math.min(28, rad * scale * 1.0));
+          const rE = Math.max(12, Math.min(26, rad * scale * 0.95));
           this.ctx.rotate(baseAngle);
 
           const eGrad = this.ctx.createRadialGradient(0, 0, 0, 0, 0, rE);
           if (isDark) {
-            eGrad.addColorStop(0, `rgba(255, 245, 225, ${0.72 * alphaMultiplier})`);
-            eGrad.addColorStop(0.35, `rgba(225, 215, 195, ${0.28 * alphaMultiplier})`);
+            eGrad.addColorStop(0, `rgba(255, 245, 225, ${0.52 * alphaMultiplier})`);
+            eGrad.addColorStop(0.35, `rgba(225, 215, 195, ${0.20 * alphaMultiplier})`);
             eGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
           } else {
-            eGrad.addColorStop(0, `rgba(45, 38, 32, ${0.60 * alphaMultiplier})`);
-            eGrad.addColorStop(0.35, `rgba(95, 82, 70, ${0.20 * alphaMultiplier})`);
+            eGrad.addColorStop(0, `rgba(45, 38, 32, ${0.44 * alphaMultiplier})`);
+            eGrad.addColorStop(0.35, `rgba(95, 82, 70, ${0.15 * alphaMultiplier})`);
             eGrad.addColorStop(1, 'rgba(255, 255, 255, 0)');
           }
           this.ctx.fillStyle = eGrad;
@@ -1836,48 +2333,33 @@ const { featuredConstellationId = null } = Astro.props;
           // Central stellar core
           this.ctx.fillStyle = isDark ? '#ffffff' : '#1a1614';
           this.ctx.beginPath();
-          this.ctx.arc(0, 0, 1.1, 0, Math.PI * 2);
+          this.ctx.arc(0, 0, 0.95, 0, Math.PI * 2);
           this.ctx.fill();
         }
 
-        // 7. OPEN CLUSTERS & ASTERISMS ('OC', 'POS') - e.g. Pleiades M45, Praesepe M44
+        // 7. OPEN CLUSTERS & ASTERISMS ('OC', 'POS') - e.g. Pleiades M45, Praesepe M44, WN 4
         else {
-          const rOc = Math.max(14, Math.min(28, rad * scale * 1.0));
-          const starCount = 16;
+          const rOc = Math.max(12, Math.min(26, rad * scale * 0.95));
+          const starCount = 14;
           for (let sIdx = 0; sIdx < starCount; sIdx++) {
             const seed = ((sIdx * 197.3 + hash) % 1000) / 1000;
             const theta = seed * Math.PI * 2;
             const dist = (0.2 + 0.8 * Math.sqrt(seed)) * rOc;
             const starX = Math.cos(theta) * dist;
             const starY = Math.sin(theta) * dist;
-            const starR = Math.max(0.75, 1.25 - (dist / rOc) * 0.5);
+            const starR = Math.max(0.65, 1.05 - (dist / rOc) * 0.4);
 
-            this.ctx.fillStyle = isDark ? 'rgba(235, 245, 255, 0.90)' : 'rgba(38, 34, 30, 0.88)';
+            this.ctx.fillStyle = isDark ? 'rgba(235, 245, 255, 0.75)' : 'rgba(38, 34, 30, 0.75)';
             this.ctx.beginPath();
             this.ctx.arc(starX, starY, starR, 0, Math.PI * 2);
             this.ctx.fill();
-          }
-
-          // In Light mode, dashed cartographic bounding circle
-          if (!isDark) {
-            this.ctx.strokeStyle = `rgba(55, 48, 42, ${0.30 * alphaMultiplier})`;
-            this.ctx.lineWidth = 0.65;
-            this.ctx.setLineDash([2, 3]);
-            this.ctx.beginPath();
-            this.ctx.arc(0, 0, rOc, 0, Math.PI * 2);
-            this.ctx.stroke();
-            this.ctx.setLineDash([]);
           }
         }
 
         this.ctx.restore();
 
-        // Delicate italic cartographic label for showpieces (top 2 features)
+        // Queue delicate italic cartographic label for showpieces (top 2 features) to render outside blur
         if (dIdx < 2) {
-          this.ctx.fillStyle = isDark
-            ? `rgba(225, 218, 205, ${0.72 * alphaMultiplier})`
-            : `rgba(65, 56, 48, ${0.75 * alphaMultiplier})`;
-          this.ctx.font = 'italic 11px Newsreader, serif';
           let displayLabel = label.split('·')[0].trim();
           const parenMatch = label.match(/\((M\d+)\)/);
           if (parenMatch) {
@@ -1893,9 +2375,1436 @@ const { featuredConstellationId = null } = Astro.props;
             labelY = py - 14;
           }
           prevLabelPos = { x: labelX, y: labelY };
-
-          this.ctx.fillText(displayLabel, labelX, labelY);
+          labelQueue.push({ text: displayLabel, x: labelX, y: labelY });
         }
+      }
+
+      // Render showpiece labels with crisp, unblurred typography
+      for (let i = 0; i < labelQueue.length; i++) {
+        const item = labelQueue[i];
+        this.ctx.fillStyle = isDark
+          ? `rgba(215, 208, 195, ${0.55 * alphaMultiplier})`
+          : `rgba(65, 56, 48, ${0.58 * alphaMultiplier})`;
+        this.ctx.font = 'italic 10px Newsreader, serif';
+        this.ctx.fillText(item.text, item.x, item.y);
+      }
+    }
+
+    /**
+     * Variable Star Pulsation Light Curves
+     * Computes real-time physical flux, radius & B-V temperature shifts for classical variable stars:
+     * - Betelgeuse (HIP 27989): Semi-regular supergiant pulsation (~14.6s & ~57s beat)
+     * - Algol (HIP 14576): "Demon Star" eclipsing binary dip (+1.15 mag over 12% of orbit)
+     * - Mira (HIP 10826): Pulsating asymptotic giant (+/-0.85 mag breathing)
+     * - Delta Cephei (HIP 110991): Archetypal Cepheid saw-tooth curve (rapid rise, slow decline)
+     * - Polaris (HIP 11767): Classical low-amplitude Cepheid micro-pulsation
+     */
+    private getVariableStarModulation(hip: number, now: number): { dMag: number; rScale: number; dBv: number } | null {
+      if (this.staticScintillation) return null;
+
+      if (hip === 27989) { // Betelgeuse (α Orionis)
+        const phase1 = (now * 0.00043) % (Math.PI * 2);
+        const phase2 = (now * 0.00011) % (Math.PI * 2);
+        const wave = Math.sin(phase1) * 0.75 + Math.sin(phase2) * 0.25;
+        return { dMag: -0.35 * wave, rScale: 1.0 + 0.16 * wave, dBv: -0.08 * wave };
+      }
+      if (hip === 14576) { // Algol (β Persei)
+        const phase = ((now * 0.00076) % 1 + 1) % 1;
+        if (phase < 0.06 || phase > 0.94) {
+          const dist = Math.min(phase, 1.0 - phase);
+          const frac = 0.5 * (1 + Math.cos((dist / 0.06) * Math.PI));
+          return { dMag: +1.15 * frac, rScale: 1.0 - 0.28 * frac, dBv: +0.12 * frac };
+        }
+        return null;
+      }
+      if (hip === 10826) { // Mira (o Ceti)
+        const phase = (now * 0.00035) % (Math.PI * 2);
+        const wave = Math.sin(phase);
+        return { dMag: -0.85 * wave, rScale: 1.0 + 0.25 * wave, dBv: -0.15 * wave };
+      }
+      if (hip === 110991) { // Delta Cephei (δ Cephei)
+        const phase = ((now * 0.00098) % 1 + 1) % 1;
+        const wave = phase < 0.22
+          ? Math.sin((phase / 0.22) * Math.PI * 0.5)
+          : Math.cos(((phase - 0.22) / 0.78) * Math.PI * 0.5);
+        return { dMag: -0.75 * (wave - 0.5), rScale: 1.0 + 0.18 * (wave - 0.5), dBv: -0.12 * (wave - 0.5) };
+      }
+      if (hip === 11767) { // Polaris (α Ursae Minoris)
+        const phase = (now * 0.0012) % (Math.PI * 2);
+        const wave = Math.sin(phase);
+        return { dMag: -0.08 * wave, rScale: 1.0 + 0.04 * wave, dBv: -0.02 * wave };
+      }
+      return null;
+    }
+
+    /**
+     * 4-Vane Secondary Mirror Spider Fraunhofer Diffraction Spikes
+     * Renders crisp, needle-thin Fraunhofer cross spikes on bright stars (mag <= 1.6),
+     * tapering and fading outward with linear gradients, plus subtle 45° secondary
+     * diagonal diamond spikes on hyper-bright stars (mag <= 0.6: Sirius, Vega, Betelgeuse, Rigel).
+     */
+    private drawDiffractionSpikes(
+      px: number,
+      py: number,
+      mag: number,
+      scint: number,
+      isDark: boolean,
+      starFill: string,
+      spectralRgb: [number, number, number],
+      alphaMultiplier: number
+    ) {
+      if (mag > 1.6 || alphaMultiplier <= 0.01) return;
+
+      const spikeLenBase = Math.max(22, (2.0 - mag) * 44);
+      const spikeLen = spikeLenBase * (0.92 + 0.16 * Math.max(0, (scint + 0.8) / 1.8));
+      const [sr, sg, sb] = spectralRgb;
+      const coreAlpha = Math.min(0.9, (0.42 + 0.28 * Math.max(0, 1.6 - mag))) * alphaMultiplier;
+
+      this.ctx.save();
+      if (isDark) {
+        this.ctx.globalCompositeOperation = 'lighter';
+
+        // Horizontal Needle
+        const hGrad = this.ctx.createLinearGradient(px - spikeLen, py, px + spikeLen, py);
+        hGrad.addColorStop(0, `rgba(${sr}, ${sg}, ${sb}, 0)`);
+        hGrad.addColorStop(0.38, `rgba(${sr}, ${sg}, ${sb}, ${coreAlpha * 0.22})`);
+        hGrad.addColorStop(0.5, `rgba(255, 255, 255, ${coreAlpha})`);
+        hGrad.addColorStop(0.62, `rgba(${sr}, ${sg}, ${sb}, ${coreAlpha * 0.22})`);
+        hGrad.addColorStop(1, `rgba(${sr}, ${sg}, ${sb}, 0)`);
+
+        this.ctx.strokeStyle = hGrad;
+        this.ctx.lineWidth = Math.max(0.65, 1.25 - mag * 0.22);
+        this.ctx.beginPath();
+        this.ctx.moveTo(px - spikeLen, py);
+        this.ctx.lineTo(px + spikeLen, py);
+        this.ctx.stroke();
+
+        // Vertical Needle
+        const vGrad = this.ctx.createLinearGradient(px, py - spikeLen, px, py + spikeLen);
+        vGrad.addColorStop(0, `rgba(${sr}, ${sg}, ${sb}, 0)`);
+        vGrad.addColorStop(0.38, `rgba(${sr}, ${sg}, ${sb}, ${coreAlpha * 0.22})`);
+        vGrad.addColorStop(0.5, `rgba(255, 255, 255, ${coreAlpha})`);
+        vGrad.addColorStop(0.62, `rgba(${sr}, ${sg}, ${sb}, ${coreAlpha * 0.22})`);
+        vGrad.addColorStop(1, `rgba(${sr}, ${sg}, ${sb}, 0)`);
+
+        this.ctx.strokeStyle = vGrad;
+        this.ctx.beginPath();
+        this.ctx.moveTo(px, py - spikeLen);
+        this.ctx.lineTo(px, py + spikeLen);
+        this.ctx.stroke();
+
+        // Secondary 45° diagonal diamond spikes for super-luminous stars (mag <= 0.6)
+        if (mag <= 0.6) {
+          const diagLen = spikeLen * 0.38;
+          const dAlpha = coreAlpha * 0.32;
+          this.ctx.strokeStyle = `rgba(${sr}, ${sg}, ${sb}, ${dAlpha})`;
+          this.ctx.lineWidth = 0.55;
+          this.ctx.beginPath();
+          const dOff = diagLen * 0.7071;
+          this.ctx.moveTo(px - dOff, py - dOff);
+          this.ctx.lineTo(px + dOff, py + dOff);
+          this.ctx.moveTo(px - dOff, py + dOff);
+          this.ctx.lineTo(px + dOff, py - dOff);
+          this.ctx.stroke();
+        }
+      } else {
+        // Light theme: crisp archival ink hairlines
+        const hGrad = this.ctx.createLinearGradient(px - spikeLen, py, px + spikeLen, py);
+        hGrad.addColorStop(0, 'rgba(40, 35, 30, 0)');
+        hGrad.addColorStop(0.5, `rgba(40, 35, 30, ${coreAlpha * 0.85})`);
+        hGrad.addColorStop(1, 'rgba(40, 35, 30, 0)');
+
+        this.ctx.strokeStyle = hGrad;
+        this.ctx.lineWidth = Math.max(0.5, 0.85 - mag * 0.15);
+        this.ctx.beginPath();
+        this.ctx.moveTo(px - spikeLen, py);
+        this.ctx.lineTo(px + spikeLen, py);
+        this.ctx.stroke();
+
+        const vGrad = this.ctx.createLinearGradient(px, py - spikeLen, px, py + spikeLen);
+        vGrad.addColorStop(0, 'rgba(40, 35, 30, 0)');
+        vGrad.addColorStop(0.5, `rgba(40, 35, 30, ${coreAlpha * 0.85})`);
+        vGrad.addColorStop(1, 'rgba(40, 35, 30, 0)');
+
+        this.ctx.strokeStyle = vGrad;
+        this.ctx.beginPath();
+        this.ctx.moveTo(px, py - spikeLen);
+        this.ctx.lineTo(px, py + spikeLen);
+        this.ctx.stroke();
+      }
+      this.ctx.restore();
+    }
+
+    /**
+     * Atmospheric Optical Dispersion (Prismatic Horizon Refraction)
+     * Due to wavelength-dependent atmospheric refraction n(λ), light near the horizon
+     * (airmass > 1.22) disperses into a vertical spectrum: blue wavelengths bend more
+     * (displaced upward toward zenith) while red wavelengths bend less (displaced downward toward horizon).
+     */
+    private drawAtmosphericDispersion(
+      px: number,
+      py: number,
+      r: number,
+      mag: number,
+      airmass: number,
+      isDark: boolean,
+      alphaMultiplier: number
+    ) {
+      if (airmass <= 1.22 || mag > 3.5 || alphaMultiplier <= 0.01) return;
+
+      const dispOffset = Math.min(2.8, Math.max(0.65, (airmass - 1.15) * 0.85));
+      const dispAlpha = Math.min(0.55, (0.18 + 0.12 * Math.max(0, 3.0 - mag)) * (airmass - 1.15)) * alphaMultiplier;
+
+      this.ctx.save();
+      if (isDark) {
+        this.ctx.globalCompositeOperation = 'lighter';
+        // Blue/cyan upper fringe shifted zenith-ward (-dispOffset)
+        this.ctx.fillStyle = `rgba(100, 185, 255, ${dispAlpha * 0.75})`;
+        this.ctx.beginPath();
+        this.ctx.arc(px, py - dispOffset, r * 0.95, 0, Math.PI * 2);
+        this.ctx.fill();
+
+        // Red/amber lower fringe shifted horizon-ward (+dispOffset)
+        this.ctx.fillStyle = `rgba(255, 110, 80, ${dispAlpha * 0.75})`;
+        this.ctx.beginPath();
+        this.ctx.arc(px, py + dispOffset, r * 0.95, 0, Math.PI * 2);
+        this.ctx.fill();
+      } else {
+        // Light theme: faint chromatic ink fringing
+        this.ctx.fillStyle = `rgba(30, 80, 160, ${dispAlpha * 0.35})`;
+        this.ctx.beginPath();
+        this.ctx.arc(px, py - dispOffset * 0.7, r * 0.9, 0, Math.PI * 2);
+        this.ctx.fill();
+
+        this.ctx.fillStyle = `rgba(180, 60, 30, ${dispAlpha * 0.35})`;
+        this.ctx.beginPath();
+        this.ctx.arc(px, py + dispOffset * 0.7, r * 0.9, 0, Math.PI * 2);
+        this.ctx.fill();
+      }
+      this.ctx.restore();
+    }
+
+    /**
+     * Vintage Biconvex Spherical Fisheye Projector
+     * Maps an unmagnified sky coordinate (px, py) relative to loupe center (mx, my)
+     * through a classical non-linear spherical barrel distortion lens profile.
+     */
+    private projectFisheye(
+      px: number,
+      py: number,
+      mx: number,
+      my: number,
+      R: number,
+      fovLimit: number
+    ): { lx: number; ly: number; u: number; angle: number; inAperture: boolean } {
+      const dx = px - mx;
+      const dy = py - my;
+      const r = Math.hypot(dx, dy);
+      const safeFov = fovLimit || 1;
+      const u = r / safeFov;
+      const angle = (dx === 0 && dy === 0) ? 0 : Math.atan2(dy, dx);
+
+      // Vintage spherical barrel distortion:
+      // Linear component + sinusoidal spherical bulge bowing outward
+      const alpha = 0.44;
+      const uClamp = Math.min(2.5, u);
+      const rFish = R * ((1.0 - alpha) * uClamp + alpha * Math.sin(Math.min(1.0, uClamp) * Math.PI * 0.5) + Math.max(0, uClamp - 1.0));
+
+      const lx = mx + Math.cos(angle) * rFish;
+      const ly = my + Math.sin(angle) * rFish;
+
+      return {
+        lx,
+        ly,
+        u,
+        angle,
+        inAperture: rFish <= R && u <= 1.0
+      };
+    }
+
+    /**
+     * Antique Brass Inspection Loupe (2.5x Magnifier, Vintage Fisheye & Materialization Engine)
+     * Renders an authentic turned-brass astronomical field loupe under the cursor:
+     * - Materialization Animation: Blossoms from a pinpoint caustic golden spark into full aperture,
+     *   screwing into place with a 42° lathe spin and a diagonal glass sheen glint sweep.
+     * - Vintage Biconvex Fisheye Optics: Authentic spherical barrel distortion bows straight
+     *   constellation lines into circular arcs across the curved glass.
+     * - Transverse Chromatic Aberration: Splits edge stars radially (red outward, blue inward).
+     * - Coma / Field Curvature: Gently elongates star PSFs tangentially along the lens perimeter.
+     * - Resolves true physical double & multiple star systems:
+     *   * Albireo (HIP 95947): Golden Topaz K3 giant primary & Sapphire Azure B8 dwarf companion
+     *   * Mizar & Alcor (HIP 65378 / 65477): Mizar A/B binary pair and unmasked Alcor
+     *   * Castor (HIP 36850): Twin diamond-white components
+     * - Turned brass bezel with concentric rings, 360° Vernier ticks, etched hairline crosshairs,
+     *   archival "OCULUS DUPLEX · 2.5×" inscription, and live astrometric badge.
+     */
+    /**
+     * Renders an authentic optical Point Spread Function (PSF) under the loupe.
+     * Guaranteed to be slightly blurred (never a razor circle) with deterministic
+     * optical micro-ellipticity and chromatic dispersion.
+     */
+    private drawLoupeStarPsf(
+      lx: number,
+      ly: number,
+      rBase: number,
+      sr: number,
+      sg: number,
+      sb: number,
+      alpha: number,
+      ptAngle: number,
+      edgeBlur: number,
+      animScale: number,
+      starSeed: number,
+      isDark: boolean
+    ) {
+      // Deterministic non-circular micro-ellipticity (aspect ratio 0.86 to 0.94)
+      const psfAspect = 0.86 + ((Math.abs(starSeed) % 100) / 100) * 0.08;
+      const intrinsicAngle = ((Math.abs(starSeed) * 17.3) % 360) * (Math.PI / 180);
+      const tangAngle = ptAngle + Math.PI * 0.5;
+      const rotAngle = intrinsicAngle * (1.0 - edgeBlur) + tangAngle * edgeBlur;
+
+      const baseBlur = 0.22; // Always slightly blurred even at optical center!
+      const totalBlur = baseBlur + edgeBlur * 0.78;
+      const rPsf = rBase * (1.20 + totalBlur * 3.8);
+
+      // Transverse Chromatic Aberration flares when approaching edge
+      if (edgeBlur > 0.10) {
+        const dChroma = edgeBlur * 5.0 * animScale;
+        const redX = lx + Math.cos(ptAngle) * dChroma;
+        const redY = ly + Math.sin(ptAngle) * dChroma;
+        const redR = rPsf * 0.88;
+        const redGrad = this.ctx.createRadialGradient(redX, redY, 0, redX, redY, redR);
+        redGrad.addColorStop(0, isDark ? `rgba(255, 80, 50, ${0.50 * edgeBlur})` : `rgba(180, 45, 25, ${0.38 * edgeBlur})`);
+        redGrad.addColorStop(1, 'rgba(255, 80, 50, 0)');
+        this.ctx.fillStyle = redGrad;
+        this.ctx.beginPath();
+        this.ctx.arc(redX, redY, redR, 0, Math.PI * 2);
+        this.ctx.fill();
+
+        const blueX = lx - Math.cos(ptAngle) * dChroma;
+        const blueY = ly - Math.sin(ptAngle) * dChroma;
+        const blueR = rPsf * 0.88;
+        const blueGrad = this.ctx.createRadialGradient(blueX, blueY, 0, blueX, blueY, blueR);
+        blueGrad.addColorStop(0, isDark ? `rgba(80, 185, 255, ${0.50 * edgeBlur})` : `rgba(30, 80, 165, ${0.38 * edgeBlur})`);
+        blueGrad.addColorStop(1, 'rgba(80, 185, 255, 0)');
+        this.ctx.fillStyle = blueGrad;
+        this.ctx.beginPath();
+        this.ctx.arc(blueX, blueY, blueR, 0, Math.PI * 2);
+        this.ctx.fill();
+      }
+
+      this.ctx.save();
+      this.ctx.translate(lx, ly);
+      this.ctx.rotate(rotAngle);
+      // Asymmetric scale: elongated along rotAngle, NEVER a perfect mathematical circle!
+      const stretchTang = 1.0 + edgeBlur * 1.80;
+      const stretchRad = Math.max(0.55, 1.0 - edgeBlur * 0.35);
+      this.ctx.scale(stretchTang, stretchRad * psfAspect);
+
+      const psfGrad = this.ctx.createRadialGradient(0, 0, 0, 0, 0, rPsf);
+      if (isDark) {
+        psfGrad.addColorStop(0, `rgba(255, 255, 255, ${alpha * (0.95 - edgeBlur * 0.35)})`);
+        psfGrad.addColorStop(0.20, `rgba(${sr}, ${sg}, ${sb}, ${alpha * (0.85 - edgeBlur * 0.20)})`);
+        psfGrad.addColorStop(0.55, `rgba(${sr}, ${sg}, ${sb}, ${alpha * (0.32 + 0.18 * totalBlur)})`);
+        psfGrad.addColorStop(0.85, `rgba(${sr}, ${sg}, ${sb}, ${alpha * 0.10 * totalBlur})`);
+        psfGrad.addColorStop(1.0, `rgba(${sr}, ${sg}, ${sb}, 0)`);
+      } else {
+        psfGrad.addColorStop(0, `rgba(30, 24, 20, ${alpha * 0.85 * (1.0 - edgeBlur * 0.35)})`);
+        psfGrad.addColorStop(0.35, `rgba(65, 55, 48, ${alpha * 0.50 * (1.0 - edgeBlur * 0.20)})`);
+        psfGrad.addColorStop(0.75, `rgba(90, 80, 70, ${alpha * 0.15 * totalBlur})`);
+        psfGrad.addColorStop(1.0, 'rgba(65, 55, 48, 0)');
+      }
+
+      this.ctx.fillStyle = psfGrad;
+      this.ctx.beginPath();
+      this.ctx.arc(0, 0, rPsf, 0, Math.PI * 2);
+      this.ctx.fill();
+      this.ctx.restore();
+    }
+
+    private drawLoupe(w: number, h: number, isDark: boolean, now: number) {
+      const animScale = this.loupeAnim.scale;
+      const animAlpha = this.loupeAnim.opacity;
+      const spinAngle = this.loupeAnim.spinAngle;
+
+      if (animScale <= 0.001 || animAlpha <= 0.001) return;
+
+      const mx = (this.mousePos.x > 0 && this.mousePos.x < w) ? this.mousePos.x : w * 0.5;
+      const my = (this.mousePos.y > 0 && this.mousePos.y < h) ? this.mousePos.y : h * 0.5;
+
+      const R_BASE = 115;
+      const R = R_BASE * animScale;
+      const zoom = 3.6;
+      const fovLimit = R_BASE / (zoom * 0.82);
+      const fovLimitSq = fovLimit * fovLimit;
+
+      const cx = w * 0.5;
+      const cy = h * 0.5;
+      const scale = Math.min(w, h) / 10000;
+
+      this.ctx.save();
+
+      // Drop shadow for the loupe bezel (scales with materialization)
+      this.ctx.save();
+      this.ctx.beginPath();
+      this.ctx.arc(mx, my, (R_BASE + 17) * animScale, 0, Math.PI * 2);
+      this.ctx.shadowColor = 'rgba(0, 0, 0, 0.45)';
+      this.ctx.shadowBlur = 18 * animScale;
+      this.ctx.shadowOffsetX = 0;
+      this.ctx.shadowOffsetY = 8 * animScale;
+      this.ctx.fillStyle = isDark ? '#080c14' : '#f5f2eb';
+      this.ctx.fill();
+      this.ctx.restore();
+
+      // Pinpoint Spark / Caustic Starburst during Initial Materialization
+      if (animScale < 0.45 && this.loupeAnim.active) {
+        const sparkAlpha = (1.0 - animScale / 0.45) * animAlpha;
+        const sparkLen = 22 * (1.0 - animScale);
+        this.ctx.save();
+        this.ctx.strokeStyle = '#ffe494';
+        this.ctx.lineWidth = 1.0;
+        this.ctx.globalAlpha = sparkAlpha;
+        this.ctx.beginPath();
+        this.ctx.moveTo(mx - sparkLen, my); this.ctx.lineTo(mx + sparkLen, my);
+        this.ctx.moveTo(mx, my - sparkLen); this.ctx.lineTo(mx, my + sparkLen);
+        const dL = sparkLen * 0.65;
+        this.ctx.moveTo(mx - dL, my - dL); this.ctx.lineTo(mx + dL, my + dL);
+        this.ctx.moveTo(mx - dL, my + dL); this.ctx.lineTo(mx + dL, my - dL);
+        this.ctx.stroke();
+        this.ctx.restore();
+      }
+
+      // --- Optical Aperture Clip ---
+      this.ctx.save();
+      this.ctx.globalAlpha = animAlpha;
+      this.ctx.beginPath();
+      this.ctx.arc(mx, my, R, 0, Math.PI * 2);
+      this.ctx.clip();
+
+      // 1. Magical Deep Glass Cosmos (The Optical Realm Foundation)
+      const lensGrad = this.ctx.createRadialGradient(mx, my, 0, mx, my, R);
+      if (isDark) {
+        lensGrad.addColorStop(0, 'rgba(14, 22, 42, 0.98)');
+        lensGrad.addColorStop(0.50, 'rgba(22, 14, 36, 0.98)');
+        lensGrad.addColorStop(0.82, 'rgba(10, 14, 26, 0.99)');
+        lensGrad.addColorStop(1, 'rgba(4, 6, 12, 1.0)');
+      } else {
+        lensGrad.addColorStop(0, 'rgba(252, 250, 244, 0.97)');
+        lensGrad.addColorStop(0.65, 'rgba(246, 241, 230, 0.98)');
+        lensGrad.addColorStop(1, 'rgba(232, 222, 204, 0.99)');
+      }
+      this.ctx.fillStyle = lensGrad;
+      this.ctx.fillRect(mx - R, my - R, R * 2, R * 2);
+
+      // Iridescent Achromatic Coating Sheen (Prismatic Violet & Amber Glint Arc)
+      if (isDark) {
+        const causticGrad = this.ctx.createRadialGradient(mx - R * 0.4, my - R * 0.4, R * 0.05, mx, my, R);
+        causticGrad.addColorStop(0, 'rgba(110, 175, 255, 0.12)');
+        causticGrad.addColorStop(0.45, 'rgba(195, 120, 245, 0.06)');
+        causticGrad.addColorStop(0.85, 'rgba(235, 185, 95, 0.03)');
+        causticGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+        this.ctx.fillStyle = causticGrad;
+        this.ctx.fillRect(mx - R, my - R, R * 2, R * 2);
+      }
+
+      // 2. Volumetric Deep-Sky Nebulae, Galaxies & Star Clusters inside the Loupe
+      if (this.currentConstellation?.deepFieldObjects) {
+        this.ctx.save();
+        if (isDark) this.ctx.globalCompositeOperation = 'lighter';
+
+        for (let dIdx = 0; dIdx < this.currentConstellation.deepFieldObjects.length; dIdx++) {
+          const d = this.currentConstellation.deepFieldObjects[dIdx];
+          const [rawX, rawY, rad, , , rawType, label] = d;
+          const type = (rawType || '').toUpperCase();
+          const baseX = cx + (rawX - 5000) * scale;
+          const baseY = cy + (rawY - 5000) * scale;
+          const z = 0.22;
+          const objPx = baseX + this.parallax.x * z;
+          const objPy = baseY + this.parallax.y * z;
+
+          const distToCursor = Math.hypot(objPx - mx, objPy - my);
+          const objR = Math.max(34, Math.min(85, rad * scale * 3.8)) * animScale;
+          // Guard distance so objects outside the glass perimeter never compute or snap
+          if (distToCursor > fovLimit + (objR / 2.5) + 14) continue;
+
+          const pt = this.projectFisheye(objPx, objPy, mx, my, R, fovLimit);
+          const isGalaxy = type === 'S' || type === 'I' || type === 'E';
+          const galGenome = isGalaxy ? this.getGalaxyGenome(dIdx, d, this.currentConstellation) : null;
+          const nebGenome = !isGalaxy ? this.getNebulaGenome(dIdx, d, this.currentConstellation) : null;
+
+          // Rim feathering: fade smoothly as the object core approaches the glass edge (never pop or snap)
+          const uDist = Math.hypot(pt.lx - mx, pt.ly - my) / R;
+          const rimFade = uDist > 0.85 ? Math.max(0, 1.0 - (uDist - 0.85) / 0.35) : 1.0;
+          if (rimFade <= 0.01) continue;
+
+          this.ctx.save();
+          this.ctx.globalAlpha = animAlpha * rimFade;
+
+          // (A) DIVERSE MAGNIFIED GALAXIES (Spirals, Barred, Edge-on, Ellipticals)
+          if (galGenome) {
+            this.ctx.save();
+            this.ctx.translate(pt.lx, pt.ly);
+            this.ctx.rotate(galGenome.pa + spinAngle * 0.3);
+            const cosI = galGenome.cosI || 0.45;
+            this.ctx.scale(1.0, cosI);
+
+            const discRgb = isDark ? galGenome.discRgbDark : galGenome.discRgbLight;
+            const coreRgb = isDark ? galGenome.coreRgbDark : galGenome.coreRgbLight;
+
+            // Outer Gaseous Corona
+            const coronaR = objR * 1.35;
+            const cGrad = this.ctx.createRadialGradient(0, 0, objR * 0.2, 0, 0, coronaR);
+            cGrad.addColorStop(0, `rgba(${discRgb[0]}, ${discRgb[1]}, ${discRgb[2]}, 0.22)`);
+            cGrad.addColorStop(0.65, `rgba(${discRgb[0]}, ${discRgb[1]}, ${discRgb[2]}, 0.06)`);
+            cGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+            this.ctx.fillStyle = cGrad;
+            this.ctx.beginPath();
+            this.ctx.arc(0, 0, coronaR, 0, Math.PI * 2);
+            this.ctx.fill();
+
+            // Exponential Stellar Disc
+            const dGrad = this.ctx.createRadialGradient(0, 0, 1.0, 0, 0, objR);
+            dGrad.addColorStop(0, `rgba(${coreRgb[0]}, ${coreRgb[1]}, ${coreRgb[2]}, 0.65)`);
+            dGrad.addColorStop(0.35, `rgba(${discRgb[0]}, ${discRgb[1]}, ${discRgb[2]}, 0.38)`);
+            dGrad.addColorStop(0.75, `rgba(${discRgb[0]}, ${discRgb[1]}, ${discRgb[2]}, 0.12)`);
+            dGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+            this.ctx.fillStyle = dGrad;
+            this.ctx.beginPath();
+            this.ctx.arc(0, 0, objR, 0, Math.PI * 2);
+            this.ctx.fill();
+
+            // Central Bar for Barred Spirals
+            if (galGenome.hubbleType === 'barred_spiral') {
+              const barHalf = objR * (galGenome.barLength || 0.40);
+              const barW = barHalf * 0.36;
+              this.ctx.save();
+              this.ctx.rotate(galGenome.barAngle || 0);
+              const barGrad = this.ctx.createRadialGradient(0, 0, 0, 0, 0, barHalf);
+              barGrad.addColorStop(0, `rgba(255, 250, 235, 0.65)`);
+              barGrad.addColorStop(0.55, `rgba(${coreRgb[0]}, ${coreRgb[1]}, ${coreRgb[2]}, 0.35)`);
+              barGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+              this.ctx.fillStyle = barGrad;
+              this.ctx.beginPath();
+              this.ctx.ellipse(0, 0, barHalf, barW, 0, 0, Math.PI * 2);
+              this.ctx.fill();
+              this.ctx.restore();
+            }
+
+            // Starburst H II & OB Knots
+            if (galGenome.knots && galGenome.knots.length > 0) {
+              for (let k = 0; k < galGenome.knots.length; k++) {
+                const knot = galGenome.knots[k];
+                const kDist = knot.rNorm * objR * 0.88;
+                const kX = Math.cos(knot.theta) * kDist;
+                const kY = Math.sin(knot.theta) * kDist;
+                const kRad = Math.max(1.2, knot.size * 1.6);
+                const kGrad = this.ctx.createRadialGradient(kX, kY, 0, kX, kY, kRad * 1.8);
+                if (knot.isH2) {
+                  kGrad.addColorStop(0, 'rgba(255, 75, 125, 0.75)');
+                  kGrad.addColorStop(0.6, 'rgba(235, 45, 95, 0.30)');
+                  kGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+                } else {
+                  kGrad.addColorStop(0, 'rgba(145, 220, 255, 0.75)');
+                  kGrad.addColorStop(0.6, 'rgba(90, 185, 255, 0.30)');
+                  kGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+                }
+                this.ctx.fillStyle = kGrad;
+                this.ctx.beginPath();
+                this.ctx.arc(kX, kY, kRad * 1.8, 0, Math.PI * 2);
+                this.ctx.fill();
+              }
+            }
+
+            // Bulge & Nucleus
+            const bR = objR * (galGenome.bulgeRatio || 0.25);
+            const bGrad = this.ctx.createRadialGradient(0, 0, 0, 0, 0, bR);
+            bGrad.addColorStop(0, 'rgba(255, 252, 245, 0.90)');
+            bGrad.addColorStop(0.45, `rgba(${coreRgb[0]}, ${coreRgb[1]}, ${coreRgb[2]}, 0.55)`);
+            bGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+            this.ctx.fillStyle = bGrad;
+            this.ctx.beginPath();
+            this.ctx.arc(0, 0, bR, 0, Math.PI * 2);
+            this.ctx.fill();
+
+            // Edge-on dust absorption band
+            if (galGenome.hubbleType === 'edge_on' || cosI < 0.24) {
+              const dustSteps = 16;
+              for (let s = -dustSteps; s <= dustSteps; s++) {
+                const t = s / dustSteps;
+                const dx = t * objR * 0.95;
+                const dy = 0.6;
+                const dRad = Math.max(1.4, (1.0 - Math.abs(t) * 0.6) * 3.6);
+                const dGrad = this.ctx.createRadialGradient(dx, dy, 0, dx, dy, dRad);
+                dGrad.addColorStop(0, isDark ? 'rgba(6, 8, 14, 0.78)' : 'rgba(240, 235, 225, 0.82)');
+                dGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+                this.ctx.fillStyle = dGrad;
+                this.ctx.beginPath();
+                this.ctx.arc(dx, dy, dRad, 0, Math.PI * 2);
+                this.ctx.fill();
+              }
+            }
+
+            this.ctx.restore();
+          }
+
+          // (B) DIVERSE NEBULAE & CLUSTERS (Emission, Reflection, Supernova Remnants, Planetary)
+          else if (nebGenome) {
+            this.ctx.save();
+            this.ctx.translate(pt.lx, pt.ly);
+            this.ctx.rotate(nebGenome.angle);
+
+            const pDark = nebGenome.primaryRgbDark;
+            const sDark = nebGenome.secondaryRgbDark;
+            const cDark = nebGenome.coreRgbDark;
+            const vDark = nebGenome.veilRgbDark;
+
+            if (nebGenome.type === 'RN') {
+              // Pure Reflection Nebula - Electric Sapphire / Frost Cyan Rayleigh scattering
+              const veilGrad = this.ctx.createRadialGradient(0, 0, objR * 0.2, 0, 0, objR * 1.25);
+              veilGrad.addColorStop(0, `rgba(${pDark[0]}, ${pDark[1]}, ${pDark[2]}, 0.42)`);
+              veilGrad.addColorStop(0.45, `rgba(${sDark[0]}, ${sDark[1]}, ${sDark[2]}, 0.24)`);
+              veilGrad.addColorStop(0.85, `rgba(${vDark[0]}, ${vDark[1]}, ${vDark[2]}, 0.08)`);
+              veilGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+              this.ctx.fillStyle = veilGrad;
+              this.ctx.beginPath();
+              this.ctx.ellipse(0, 0, objR * 1.25, objR * 0.95, 0.1, 0, Math.PI * 2);
+              this.ctx.fill();
+
+              const rCore = this.ctx.createRadialGradient(0, 0, 0, 0, 0, objR * 0.42);
+              rCore.addColorStop(0, `rgba(${cDark[0]}, ${cDark[1]}, ${cDark[2]}, 0.75)`);
+              rCore.addColorStop(0.5, `rgba(${sDark[0]}, ${sDark[1]}, ${sDark[2]}, 0.35)`);
+              rCore.addColorStop(1, 'rgba(0, 0, 0, 0)');
+              this.ctx.fillStyle = rCore;
+              this.ctx.beginPath();
+              this.ctx.arc(0, 0, objR * 0.42, 0, Math.PI * 2);
+              this.ctx.fill();
+            } else if (nebGenome.type === 'SNR') {
+              // Supernova Remnant - Tangled Synchrotron Shock Web (Crab / Veil)
+              const synGrad = this.ctx.createRadialGradient(0, 0, 0, 0, 0, objR * 0.55);
+              synGrad.addColorStop(0, `rgba(${cDark[0]}, ${cDark[1]}, ${cDark[2]}, 0.55)`);
+              synGrad.addColorStop(0.55, `rgba(${sDark[0]}, ${sDark[1]}, ${sDark[2]}, 0.22)`);
+              synGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+              this.ctx.fillStyle = synGrad;
+              this.ctx.beginPath();
+              this.ctx.ellipse(0, 0, objR * 0.55, objR * 0.42, 0, 0, Math.PI * 2);
+              this.ctx.fill();
+
+              if (nebGenome.filaments && nebGenome.filaments.length > 0) {
+                for (let f = 0; f < nebGenome.filaments.length; f++) {
+                  const fil = nebGenome.filaments[f];
+                  const fDist = fil.length * objR * 0.92;
+                  const fX = Math.cos(fil.angle) * fDist;
+                  const fY = Math.sin(fil.angle) * fDist;
+                  const fR = Math.max(1.8, fil.width * objR * 0.45);
+                  const fGrad = this.ctx.createRadialGradient(fX, fY, 0, fX, fY, fR);
+                  const fCol = fil.isO3 ? sDark : pDark;
+                  fGrad.addColorStop(0, `rgba(${fCol[0]}, ${fCol[1]}, ${fCol[2]}, 0.65)`);
+                  fGrad.addColorStop(0.55, `rgba(${fCol[0]}, ${fCol[1]}, ${fCol[2]}, 0.28)`);
+                  fGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+                  this.ctx.fillStyle = fGrad;
+                  this.ctx.beginPath();
+                  this.ctx.arc(fX, fY, fR, 0, Math.PI * 2);
+                  this.ctx.fill();
+                }
+              }
+            } else if (nebGenome.type === 'PN') {
+              // Planetary Nebula - Toroidal shell & central white dwarf
+              const pGrad = this.ctx.createRadialGradient(0, 0, objR * 0.22, 0, 0, objR * 0.85);
+              pGrad.addColorStop(0, `rgba(${sDark[0]}, ${sDark[1]}, ${sDark[2]}, 0.15)`);
+              pGrad.addColorStop(0.55, `rgba(${pDark[0]}, ${pDark[1]}, ${pDark[2]}, 0.48)`);
+              pGrad.addColorStop(0.85, `rgba(${sDark[0]}, ${sDark[1]}, ${sDark[2]}, 0.18)`);
+              pGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+              this.ctx.fillStyle = pGrad;
+              this.ctx.beginPath();
+              this.ctx.ellipse(0, 0, objR * 0.85, objR * 0.70, 0, 0, Math.PI * 2);
+              this.ctx.fill();
+
+              const cavGrad = this.ctx.createRadialGradient(0, 0, 0, 0, 0, objR * 0.42);
+              cavGrad.addColorStop(0, `rgba(${pDark[0]}, ${pDark[1]}, ${pDark[2]}, 0.45)`);
+              cavGrad.addColorStop(0.70, `rgba(${pDark[0]}, ${pDark[1]}, ${pDark[2]}, 0.12)`);
+              cavGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+              this.ctx.fillStyle = cavGrad;
+              this.ctx.beginPath();
+              this.ctx.arc(0, 0, objR * 0.42, 0, Math.PI * 2);
+              this.ctx.fill();
+            } else if (nebGenome.type === 'GC' || nebGenome.type === 'OC') {
+              // Star Cluster - Resolved core & swarm
+              const cGrad = this.ctx.createRadialGradient(0, 0, 0, 0, 0, objR * 0.50);
+              cGrad.addColorStop(0, `rgba(${cDark[0]}, ${cDark[1]}, ${cDark[2]}, 0.65)`);
+              cGrad.addColorStop(0.55, `rgba(${pDark[0]}, ${pDark[1]}, ${pDark[2]}, 0.22)`);
+              cGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+              this.ctx.fillStyle = cGrad;
+              this.ctx.beginPath();
+              this.ctx.arc(0, 0, objR * 0.50, 0, Math.PI * 2);
+              this.ctx.fill();
+
+              const count = nebGenome.type === 'GC' ? 36 : 20;
+              for (let sIdx = 0; sIdx < count; sIdx++) {
+                const sAngle = (sIdx * 137.5 * Math.PI) / 180;
+                const sNorm = Math.pow((sIdx + 1) / count, 1.8);
+                const sDist = sNorm * objR * 0.85;
+                const sx = Math.cos(sAngle) * sDist;
+                const sy = Math.sin(sAngle) * sDist;
+                this.ctx.fillStyle = isDark ? '#ffffff' : '#221e1a';
+                this.ctx.beginPath();
+                this.ctx.arc(sx, sy, 0.95, 0, Math.PI * 2);
+                this.ctx.fill();
+              }
+            } else {
+              // Emission Nebula (H II region / SFR e.g. M42)
+              const haGrad = this.ctx.createRadialGradient(0, 0, objR * 0.1, 0, 0, objR);
+              haGrad.addColorStop(0, `rgba(${pDark[0]}, ${pDark[1]}, ${pDark[2]}, 0.38)`);
+              haGrad.addColorStop(0.40, `rgba(${pDark[0]}, ${pDark[1]}, ${pDark[2]}, 0.22)`);
+              haGrad.addColorStop(0.75, `rgba(${vDark[0]}, ${vDark[1]}, ${vDark[2]}, 0.08)`);
+              haGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+              this.ctx.fillStyle = haGrad;
+              this.ctx.beginPath();
+              this.ctx.ellipse(0, 0, objR, objR * 0.78, 0.15, 0, Math.PI * 2);
+              this.ctx.fill();
+
+              const o3Grad = this.ctx.createRadialGradient(-objR * 0.12, objR * 0.08, 0, 0, 0, objR * 0.65);
+              o3Grad.addColorStop(0, `rgba(${sDark[0]}, ${sDark[1]}, ${sDark[2]}, 0.42)`);
+              o3Grad.addColorStop(0.45, `rgba(${sDark[0]}, ${sDark[1]}, ${sDark[2]}, 0.22)`);
+              o3Grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+              this.ctx.fillStyle = o3Grad;
+              this.ctx.beginPath();
+              this.ctx.ellipse(0, 0, objR * 0.65, objR * 0.52, -0.1, 0, Math.PI * 2);
+              this.ctx.fill();
+
+              const coreGrad = this.ctx.createRadialGradient(0, 0, 0, 0, 0, objR * 0.28);
+              coreGrad.addColorStop(0, `rgba(${cDark[0]}, ${cDark[1]}, ${cDark[2]}, 0.70)`);
+              coreGrad.addColorStop(0.50, `rgba(${cDark[0]}, ${cDark[1]}, ${cDark[2]}, 0.28)`);
+              coreGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+              this.ctx.fillStyle = coreGrad;
+              this.ctx.beginPath();
+              this.ctx.arc(0, 0, objR * 0.28, 0, Math.PI * 2);
+              this.ctx.fill();
+
+              if (nebGenome.hasDustLane) {
+                const dNotch = this.ctx.createRadialGradient(objR * 0.22, -objR * 0.12, 0, objR * 0.22, -objR * 0.12, objR * 0.35);
+                dNotch.addColorStop(0, isDark ? 'rgba(8, 10, 16, 0.65)' : 'rgba(240, 235, 225, 0.70)');
+                dNotch.addColorStop(1, 'rgba(0, 0, 0, 0)');
+                this.ctx.fillStyle = dNotch;
+                this.ctx.beginPath();
+                this.ctx.ellipse(objR * 0.22, -objR * 0.12, objR * 0.35, objR * 0.16, -0.3, 0, Math.PI * 2);
+                this.ctx.fill();
+              }
+
+              if (nebGenome.hasTrapezium) {
+                const trap = [[-3, -2], [2.8, -2.4], [-1.2, 3], [3, 2.2]];
+                for (const [tx, ty] of trap) {
+                  this.ctx.fillStyle = '#ffffff';
+                  this.ctx.beginPath();
+                  this.ctx.arc(tx, ty, 1.25, 0, Math.PI * 2);
+                  this.ctx.fill();
+                }
+              }
+            }
+
+            if (nebGenome.hasCentralStar && nebGenome.type !== 'RN') {
+              this.ctx.fillStyle = '#ffffff';
+              this.ctx.beginPath();
+              this.ctx.arc(0, 0, 1.35, 0, Math.PI * 2);
+              this.ctx.fill();
+            }
+
+            this.ctx.restore();
+          }
+
+          this.ctx.restore();
+
+          // Archival Deep-Sky Callout in Gold Lettering
+          if (label && animScale > 0.65 && pt.inAperture) {
+            this.ctx.fillStyle = isDark ? 'rgba(245, 225, 175, 0.88)' : 'rgba(75, 55, 35, 0.88)';
+            this.ctx.font = '600 7px Newsreader, serif';
+            this.ctx.fillText(`⌖ ${label}`, pt.lx + objR * 0.35, pt.ly - objR * 0.25);
+          }
+        }
+        this.ctx.restore();
+      }
+
+      // 3. Distant Cosmological Micro-Galaxies inside the Loupe
+      if (this.universalFieldGalaxies && this.universalFieldGalaxies.length > 0) {
+        this.ctx.save();
+        if (isDark) this.ctx.globalCompositeOperation = 'lighter';
+        const chartScale = this.currentConstellation?.chartScale || 7500;
+        const fovScale = (chartScale / 5000) * (Math.min(w, h) * 0.5) * ((w >= 1024) ? 1.45 : 1.05);
+
+        for (let gIdx = 0; gIdx < this.universalFieldGalaxies.length; gIdx++) {
+          const [xi, eta, majR, genome, z, baseAlpha] = this.universalFieldGalaxies[gIdx];
+          const px = cx + xi * fovScale + this.parallax.x * z;
+          const py = cy - eta * fovScale + this.parallax.y * z;
+
+          if (Math.hypot(px - mx, py - my) > fovLimit) continue;
+          const pt = this.projectFisheye(px, py, mx, my, R, fovLimit);
+          if (!pt.inAperture) continue;
+
+          const magR = majR * 2.6 * animScale;
+          const discRgb = isDark ? genome.discRgbDark : genome.discRgbLight;
+          const coreRgb = isDark ? genome.coreRgbDark : genome.coreRgbLight;
+
+          this.ctx.save();
+          this.ctx.translate(pt.lx, pt.ly);
+          this.ctx.rotate(genome.pa + spinAngle * 0.3);
+          this.ctx.scale(1.0, genome.cosI || 0.45);
+
+          const galGrad = this.ctx.createRadialGradient(0, 0, 0, 0, 0, magR);
+          if (isDark) {
+            galGrad.addColorStop(0, `rgba(255, 252, 245, ${0.75 * baseAlpha})`);
+            galGrad.addColorStop(0.35, `rgba(${coreRgb[0]}, ${coreRgb[1]}, ${coreRgb[2]}, ${0.45 * baseAlpha})`);
+            galGrad.addColorStop(0.70, `rgba(${discRgb[0]}, ${discRgb[1]}, ${discRgb[2]}, ${0.22 * baseAlpha})`);
+            galGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+          } else {
+            galGrad.addColorStop(0, `rgba(35, 28, 22, ${0.70 * baseAlpha})`);
+            galGrad.addColorStop(0.40, `rgba(${coreRgb[0]}, ${coreRgb[1]}, ${coreRgb[2]}, ${0.35 * baseAlpha})`);
+            galGrad.addColorStop(1, 'rgba(255, 255, 255, 0)');
+          }
+          this.ctx.fillStyle = galGrad;
+          this.ctx.beginPath();
+          this.ctx.arc(0, 0, magR, 0, Math.PI * 2);
+          this.ctx.fill();
+          this.ctx.restore();
+        }
+        this.ctx.restore();
+      }
+
+      // 4. Magnified & Bowed Constellation Lines within Loupe
+      if (this.currentConstellation?.lines) {
+        this.ctx.save();
+        this.ctx.strokeStyle = isDark ? 'rgba(235, 230, 220, 0.45)' : 'rgba(45, 40, 36, 0.48)';
+        this.ctx.lineWidth = 1.15;
+
+        for (const line of this.currentConstellation.lines) {
+          const s1 = this.currentConstellation.stars[line[0]];
+          const s2 = this.currentConstellation.stars[line[1]];
+          if (!s1 || !s2) continue;
+          const z1 = calculateStarDepth(s1[2], s1[7]);
+          const z2 = calculateStarDepth(s2[2], s2[7]);
+          const p1x = cx + (s1[0] - 5000) * scale + this.parallax.x * z1;
+          const p1y = cy + (s1[1] - 5000) * scale + this.parallax.y * z1;
+          const p2x = cx + (s2[0] - 5000) * scale + this.parallax.x * z2;
+          const p2y = cy + (s2[1] - 5000) * scale + this.parallax.y * z2;
+
+          const dist1 = Math.hypot(p1x - mx, p1y - my);
+          const dist2 = Math.hypot(p2x - mx, p2y - my);
+          if (dist1 > fovLimit * 1.5 && dist2 > fovLimit * 1.5) continue;
+
+          // Subdivide line into 16 segments and apply spherical fisheye distortion along path
+          const segments = 16;
+          let drawing = false;
+          this.ctx.beginPath();
+
+          for (let k = 0; k <= segments; k++) {
+            const t = k / segments;
+            const sx = p1x + (p2x - p1x) * t;
+            const sy = p1y + (p2y - p1y) * t;
+            const pt = this.projectFisheye(sx, sy, mx, my, R, fovLimit);
+
+            if (pt.inAperture) {
+              if (!drawing) {
+                this.ctx.moveTo(pt.lx, pt.ly);
+                drawing = true;
+              } else {
+                this.ctx.lineTo(pt.lx, pt.ly);
+              }
+            } else {
+              drawing = false;
+            }
+          }
+          this.ctx.stroke();
+        }
+        this.ctx.restore();
+      }
+
+      // 5. Dense Diamond Dust Background Stars (Unmasked by Telescope Optics - Zero-Lag Bounding Box)
+      if (this.denseFieldStars && this.denseFieldStars.length > 0) {
+        this.ctx.save();
+        if (isDark) this.ctx.globalCompositeOperation = 'lighter';
+        const chartScale = this.currentConstellation?.chartScale || 7500;
+        const fovScale = (chartScale / 5000) * (Math.min(w, h) * 0.5) * ((w >= 1024) ? 1.45 : 1.05);
+
+        for (let i = 0; i < this.denseFieldStars.length; i++) {
+          const [xi, eta, mag, specSlot, z, phaseSeed, bv, alphaBase, rBase, noiseSeed] = this.denseFieldStars[i];
+          const px = cx + xi * fovScale + this.parallax.x * z;
+          const dx = px - mx;
+          if (dx > fovLimit || dx < -fovLimit) continue;
+          const py = cy - eta * fovScale + this.parallax.y * z;
+          const dy = py - my;
+          if (dy > fovLimit || dy < -fovLimit) continue;
+          if (dx * dx + dy * dy > fovLimitSq) continue;
+
+          const pt = this.projectFisheye(px, py, mx, my, R, fovLimit);
+          if (!pt.inAperture) continue;
+
+          const uFish = Math.min(1.0, Math.hypot(pt.lx - mx, pt.ly - my) / R);
+          const uEdge = Math.max(0, (uFish - 0.35) / 0.65);
+          const edgeBlur = uEdge * uEdge;
+
+          const twinkle = this.scintillation(noiseSeed, now, mag, 1.0, isDark);
+          const rMag = Math.max(1.1, rBase * 1.85) * animScale;
+          const aMag = Math.min(1.0, alphaBase * 2.2 * twinkle);
+          const [sr, sg, sb] = starTintRgb(bv, 0.75);
+
+          // Render micro-star as organic, slightly blurry optical PSF (never a razor circle)
+          this.drawLoupeStarPsf(
+            pt.lx, pt.ly, rMag,
+            sr, sg, sb, aMag,
+            pt.angle, edgeBlur, animScale,
+            phaseSeed, isDark
+          );
+        }
+        this.ctx.restore();
+      }
+
+      // Track closest star for bottom astrometry banner
+      let closestStarInfo: { name: string; mag: number; spec: string; doubleDesc?: string; dist: number } | null = null;
+
+      // 6. Magnified Background Catalog Stars (Hipparcos - Zero-Lag Bounding Box)
+      if (this.stars) {
+        const deg2rad = Math.PI / 180;
+        const chartScale = this.currentConstellation?.chartScale || 7500;
+        const fovMultiplier = (w >= 1024) ? 1.45 : 1.05;
+        const fovScale = (chartScale / 5000) * (Math.min(w, h) * 0.5) * fovMultiplier;
+        const camRaRad = this.camera.ra * deg2rad;
+        const camDecRad = this.camera.dec * deg2rad;
+        const sinCamDec = Math.sin(camDecRad);
+        const cosCamDec = Math.cos(camDecRad);
+
+        for (let i = 0; i < this.stars.length; i++) {
+          const s = this.stars[i];
+          const [hip, ra, dec, mag, bv] = s;
+          if (this.isConstellationStar(hip)) continue;
+
+          const dra = (ra * deg2rad) - camRaRad;
+          const dRad = dec * deg2rad;
+          const sinDec = Math.sin(dRad);
+          const cosDec = Math.cos(dRad);
+          const cosC = sinCamDec * sinDec + cosCamDec * cosDec * Math.cos(dra);
+          if (cosC <= 0.04) continue;
+
+          const xi = -(cosDec * Math.sin(dra)) / cosC;
+          const eta = (cosCamDec * sinDec - sinCamDec * cosDec * Math.cos(dra)) / cosC;
+          const z = Math.max(0.24, 0.72 - mag * 0.07);
+          const px = cx + xi * fovScale + this.parallax.x * z;
+          const dx = px - mx;
+          if (dx > fovLimit || dx < -fovLimit) continue;
+          const py = cy - eta * fovScale + this.parallax.y * z;
+          const dy = py - my;
+          if (dy > fovLimit || dy < -fovLimit) continue;
+          if (dx * dx + dy * dy > fovLimitSq) continue;
+
+          const pt = this.projectFisheye(px, py, mx, my, R, fovLimit);
+          if (!pt.inAperture) continue;
+
+          const lx = pt.lx;
+          const ly = pt.ly;
+          const rBase = Math.max(1.8, Math.min(5.6, (5.2 - mag) * 1.55)) * animScale;
+          const uFish = Math.min(1.0, Math.hypot(lx - mx, ly - my) / R);
+          const uEdge = Math.max(0, (uFish - 0.35) / 0.65);
+          const edgeBlur = uEdge * uEdge;
+
+          const sat = perceivedSaturation(mag);
+          const [sr, sg, sb] = starTintRgb(bv ?? 0.6, sat);
+
+          // Render catalog star as organic, slightly blurry optical PSF
+          this.drawLoupeStarPsf(
+            lx, ly, rBase,
+            sr, sg, sb, 0.95,
+            pt.angle, edgeBlur, animScale,
+            hip, isDark
+          );
+
+          const dist = Math.hypot(dx, dy);
+          if (dist < 18 && (!closestStarInfo || dist < closestStarInfo.dist)) {
+            closestStarInfo = {
+              name: `HIP ${hip}`,
+              mag,
+              spec: bv !== undefined ? (bv < 0.2 ? 'B-Class' : bv < 0.5 ? 'A-Class' : bv < 0.8 ? 'G-Class' : 'K/M-Class') : 'Field Star',
+              dist
+            };
+          }
+        }
+      }
+
+      // 7. Constellation Stars, Double-Star Systems, Stellar Nurseries & Bessel Rings
+      if (this.currentConstellation?.stars) {
+        for (let i = 0; i < this.currentConstellation.stars.length; i++) {
+          const star = this.currentConstellation.stars[i];
+          const [rawX, rawY, mag, specSlot, hip, properName, bayer, distLy] = star;
+
+          const varMod = this.getVariableStarModulation(hip, now);
+          const effMag = varMod ? mag + varMod.dMag : mag;
+          const effRScale = (varMod ? varMod.rScale : 1.0) * animScale;
+
+          const z = calculateStarDepth(effMag, distLy);
+          const px = cx + (rawX - 5000) * scale + this.parallax.x * z;
+          const dx = px - mx;
+          if (dx > fovLimit || dx < -fovLimit) continue;
+          const py = cy + (rawY - 5000) * scale + this.parallax.y * z;
+          const dy = py - my;
+          if (dy > fovLimit || dy < -fovLimit) continue;
+          if (dx * dx + dy * dy > fovLimitSq) continue;
+
+          const pt = this.projectFisheye(px, py, mx, my, R, fovLimit);
+          if (!pt.inAperture) continue;
+
+          const lx = pt.lx;
+          const ly = pt.ly;
+          const uFish = Math.min(1.0, Math.hypot(lx - mx, ly - my) / R);
+          const uEdge = Math.max(0, (uFish - 0.35) / 0.65);
+          const edgeBlur = uEdge * uEdge;
+
+          // Double Star Systems under the Loupe
+          if (hip === 95947) { // Albireo (β Cygni) - The Gold & Sapphire Jewel
+            const aX = lx - 7 * animScale;
+            const aY = ly - 6 * animScale;
+            const bX = lx + 10 * animScale;
+            const bY = ly + 8 * animScale;
+            const aR = 5.8 * effRScale;
+            const bR = 3.6 * effRScale;
+
+            if (isDark) {
+              const bridgeGrad = this.ctx.createLinearGradient(aX, aY, bX, bY);
+              bridgeGrad.addColorStop(0, 'rgba(247, 176, 69, 0.35)');
+              bridgeGrad.addColorStop(0.5, 'rgba(255, 235, 180, 0.22)');
+              bridgeGrad.addColorStop(1, 'rgba(84, 168, 255, 0.35)');
+              this.ctx.strokeStyle = bridgeGrad;
+              this.ctx.lineWidth = 1.0;
+              this.ctx.beginPath();
+              this.ctx.moveTo(aX, aY);
+              this.ctx.lineTo(bX, bY);
+              this.ctx.stroke();
+
+              this.ctx.strokeStyle = 'rgba(235, 215, 175, 0.25)';
+              this.ctx.lineWidth = 0.55;
+              this.ctx.setLineDash([1.5, 2.5]);
+              this.ctx.beginPath();
+              this.ctx.arc(aX, aY, Math.hypot(bX - aX, bY - aY), 0.7, 1.4);
+              this.ctx.stroke();
+              this.ctx.setLineDash([]);
+            }
+
+            // Component A: Amber-Golden K3 Giant (mag 3.1) - slightly blurry optical PSF
+            this.drawLoupeStarPsf(aX, aY, aR, 247, 176, 69, 1.0, pt.angle, edgeBlur, animScale, hip, isDark);
+
+            // Component B: Sapphire Azure B8 Dwarf (mag 5.1) - slightly blurry optical PSF
+            this.drawLoupeStarPsf(bX, bY, bR, 84, 168, 255, 1.0, pt.angle, edgeBlur, animScale, hip + 1, isDark);
+
+            if (animScale > 0.6) {
+              this.ctx.fillStyle = isDark ? '#f5e4ba' : '#4a3820';
+              this.ctx.font = '600 7.5px Newsreader, serif';
+              this.ctx.fillText('Albireo A (3.1ᵐ · Gold Giant)', aX - 34, aY - 10);
+              this.ctx.fillText('Albireo B (5.1ᵐ · Sapphire Dwarf)', bX + 6, bY + 14);
+            }
+
+            const dist = Math.hypot(dx, dy);
+            if (!closestStarInfo || dist < closestStarInfo.dist) {
+              closestStarInfo = {
+                name: 'Albireo (β Cyg)',
+                mag: 3.05,
+                spec: 'K3II + B8V',
+                doubleDesc: 'Physical Binary · Sep 34.3" · Gold & Sapphire',
+                dist
+              };
+            }
+          } else if (hip === 65378) { // Mizar (ζ Ursae Majoris)
+            const aX = lx - 5 * animScale;
+            const aY = ly + 4 * animScale;
+            const bX = lx + 5 * animScale;
+            const bY = ly - 5 * animScale;
+
+            this.drawLoupeStarPsf(aX, aY, 4.6 * effRScale, 235, 245, 255, 1.0, pt.angle, edgeBlur, animScale, hip, isDark);
+            this.drawLoupeStarPsf(bX, bY, 3.6 * effRScale, 220, 235, 255, 1.0, pt.angle, edgeBlur, animScale, hip + 1, isDark);
+
+            if (animScale > 0.6) {
+              this.ctx.fillStyle = isDark ? '#e0d8c8' : '#332a20';
+              this.ctx.font = '600 7px Newsreader, serif';
+              this.ctx.fillText('Mizar A', aX - 18, aY + 12);
+              this.ctx.fillText('Mizar B', bX + 6, bY - 4);
+            }
+
+            const dist = Math.hypot(dx, dy);
+            if (!closestStarInfo || dist < closestStarInfo.dist) {
+              closestStarInfo = {
+                name: 'Mizar (ζ UMa)',
+                mag: 2.23,
+                spec: 'A2V + A1V',
+                doubleDesc: 'Visual Binary · Sep 14.4" · Resolved A/B',
+                dist
+              };
+            }
+          } else if (hip === 36850) { // Castor (α Geminorum)
+            const aX = lx - 5 * animScale;
+            const aY = ly - 4 * animScale;
+            const bX = lx + 6 * animScale;
+            const bY = ly + 5 * animScale;
+
+            this.drawLoupeStarPsf(aX, aY, 4.8 * effRScale, 235, 245, 255, 1.0, pt.angle, edgeBlur, animScale, hip, isDark);
+            this.drawLoupeStarPsf(bX, bY, 3.8 * effRScale, 225, 240, 255, 1.0, pt.angle, edgeBlur, animScale, hip + 1, isDark);
+
+            if (animScale > 0.6) {
+              this.ctx.fillStyle = isDark ? '#e0d8c8' : '#332a20';
+              this.ctx.font = '600 7px Newsreader, serif';
+              this.ctx.fillText('Castor A (1.9ᵐ)', aX - 22, aY - 6);
+              this.ctx.fillText('Castor B (3.0ᵐ)', bX + 6, bY + 10);
+            }
+
+            const dist = Math.hypot(dx, dy);
+            if (!closestStarInfo || dist < closestStarInfo.dist) {
+              closestStarInfo = {
+                name: 'Castor (α Gem)',
+                mag: 1.58,
+                spec: 'A1V + A2V',
+                doubleDesc: 'Sextuple System · Sep 6.0" · Resolved Twins',
+                dist
+              };
+            }
+          } else {
+            // General magnified star
+            const rBase = Math.max(2.6, Math.min(7.5, (4.8 - effMag) * 1.65)) * effRScale;
+            const spectralRgb = specSlotToRgb(specSlot, isDark);
+
+            // Telescopic Stellar Nursery companions (cluster micro-stars)
+            if (effMag <= 4.2 && animScale > 0.5) {
+              const clusterSeed = (hip ^ 0x45d9f3b);
+              for (let k = 0; k < 6; k++) {
+                const cAngle = ((clusterSeed * (k + 1) * 31.7) % 360) * (Math.PI / 180);
+                const cDist = (15 + ((clusterSeed * (k + 3) * 17.3) % 30)) * animScale;
+                const cX = lx + Math.cos(cAngle) * cDist;
+                const cY = ly + Math.sin(cAngle) * cDist;
+                const cR = (0.8 + ((clusterSeed * (k + 5) * 7.1) % 1.2)) * animScale;
+                const cAlpha = (0.35 + ((clusterSeed * (k + 7) * 13.9) % 0.45));
+
+                if (Math.hypot(cX - mx, cY - my) < R - 2) {
+                  this.drawLoupeStarPsf(
+                    cX, cY, cR,
+                    235, 240, 255, cAlpha,
+                    cAngle, edgeBlur, animScale,
+                    clusterSeed + k, isDark
+                  );
+                }
+              }
+            }
+
+            // Concentric Bessel Airy Diffraction Rings on Bright Stars (mag <= 2.2)
+            if (effMag <= 2.2 && edgeBlur < 0.65) {
+              const airyFade = 1.0 - edgeBlur * 1.2;
+              if (airyFade > 0.05) {
+                // 1st Airy Ring
+                const airy1 = rBase * 2.35;
+                this.ctx.strokeStyle = isDark
+                  ? `rgba(${spectralRgb[0]}, ${spectralRgb[1]}, ${spectralRgb[2]}, ${0.38 * airyFade})`
+                  : `rgba(50, 44, 38, ${0.35 * airyFade})`;
+                this.ctx.lineWidth = 0.65;
+                this.ctx.beginPath();
+                this.ctx.arc(lx, ly, airy1, 0, Math.PI * 2);
+                this.ctx.stroke();
+
+                // 2nd Bessel Ring
+                const airy2 = rBase * 3.65;
+                this.ctx.strokeStyle = isDark
+                  ? `rgba(${spectralRgb[0]}, ${spectralRgb[1]}, ${spectralRgb[2]}, ${0.16 * airyFade})`
+                  : `rgba(50, 44, 38, ${0.16 * airyFade})`;
+                this.ctx.lineWidth = 0.50;
+                this.ctx.beginPath();
+                this.ctx.arc(lx, ly, airy2, 0, Math.PI * 2);
+                this.ctx.stroke();
+
+                // 4-Vane Fraunhofer Micro Spikes in the Loupe
+                const spikeLen = rBase * 3.8;
+                this.ctx.strokeStyle = isDark
+                  ? `rgba(${spectralRgb[0]}, ${spectralRgb[1]}, ${spectralRgb[2]}, ${0.42 * airyFade})`
+                  : `rgba(50, 44, 38, ${0.40 * airyFade})`;
+                this.ctx.lineWidth = 0.55;
+                this.ctx.beginPath();
+                this.ctx.moveTo(lx - spikeLen, ly); this.ctx.lineTo(lx + spikeLen, ly);
+                this.ctx.moveTo(lx, ly - spikeLen); this.ctx.lineTo(lx + spikeLen, ly);
+                this.ctx.stroke();
+              }
+            }
+
+            // Render nodal star with slightly blurry non-circular optical PSF
+            this.drawLoupeStarPsf(
+              lx, ly, rBase,
+              spectralRgb[0], spectralRgb[1], spectralRgb[2], 1.0,
+              pt.angle, edgeBlur, animScale,
+              hip, isDark
+            );
+
+            // Label
+            if (animScale > 0.6) {
+              const starName = properName || `${bayer || ''} ${this.currentConstellation.id}`;
+              this.ctx.fillStyle = isDark ? 'rgba(235, 226, 210, 0.85)' : 'rgba(50, 44, 38, 0.85)';
+              this.ctx.font = '600 7.5px Newsreader, serif';
+              this.ctx.fillText(`${starName} (${effMag.toFixed(1)}ᵐ)`, lx + rBase + 5, ly + 3);
+            }
+
+            const dist = Math.hypot(dx, dy);
+            if (!closestStarInfo || dist < closestStarInfo.dist) {
+              const specText = `${specSlotToClass(specSlot)} · ${Math.round(distLy)} ly`;
+              closestStarInfo = {
+                name: properName || `${bayer || 'Star'} ${this.currentConstellation.id}`,
+                mag: effMag,
+                spec: specText,
+                doubleDesc: varMod ? 'Variable Star · Physical Pulsation Active' : undefined,
+                dist
+              };
+            }
+          }
+        }
+      }
+
+      // 8. Archival Etched Astrometric Micrometer Rings in Glass (1', 2' Arcminutes)
+      this.ctx.save();
+      this.ctx.strokeStyle = isDark ? 'rgba(235, 215, 175, 0.14)' : 'rgba(75, 60, 42, 0.14)';
+      this.ctx.lineWidth = 0.5;
+      this.ctx.setLineDash([2, 4]);
+      this.ctx.beginPath();
+      this.ctx.arc(mx, my, R * 0.28, 0, Math.PI * 2); // 1' field
+      this.ctx.arc(mx, my, R * 0.56, 0, Math.PI * 2); // 2' field
+      this.ctx.stroke();
+      this.ctx.setLineDash([]);
+      this.ctx.restore();
+
+      // 9. Diagonal Caustic Sheen Sweep across Glass during Materialization
+      if (this.loupeAnim.active && this.loupeAnim.progress < 0.96) {
+        const sweepProgress = this.loupeAnim.progress;
+        const sweepCenter = (sweepProgress * 2.4 - 0.7) * R;
+        const sheenWidth = R * 0.65;
+        const g1x = mx + Math.cos(Math.PI * 0.25) * (sweepCenter - sheenWidth);
+        const g1y = my + Math.sin(Math.PI * 0.25) * (sweepCenter - sheenWidth);
+        const g2x = mx + Math.cos(Math.PI * 0.25) * (sweepCenter + sheenWidth);
+        const g2y = my + Math.sin(Math.PI * 0.25) * (sweepCenter + sheenWidth);
+
+        const sheenGrad = this.ctx.createLinearGradient(g1x, g1y, g2x, g2y);
+        sheenGrad.addColorStop(0, 'rgba(255, 245, 210, 0)');
+        sheenGrad.addColorStop(0.5, 'rgba(255, 255, 240, 0.28)');
+        sheenGrad.addColorStop(1, 'rgba(255, 245, 210, 0)');
+        this.ctx.fillStyle = sheenGrad;
+        this.ctx.fillRect(mx - R, my - R, R * 2, R * 2);
+      }
+
+      // 10. Concentric Vintage Glass Meniscus & Deep Rim Vignette
+      this.ctx.strokeStyle = isDark ? 'rgba(255, 240, 200, 0.14)' : 'rgba(100, 80, 50, 0.09)';
+      this.ctx.lineWidth = 0.65;
+      this.ctx.beginPath();
+      this.ctx.arc(mx, my, R * 0.86, 0, Math.PI * 2);
+      this.ctx.arc(mx, my, R * 0.93, 0, Math.PI * 2);
+      this.ctx.stroke();
+
+      // Deep Rim Vignetting / Barrel Occlusion Shadow
+      const innerVignette = this.ctx.createRadialGradient(mx, my, R * 0.65, mx, my, R);
+      innerVignette.addColorStop(0, 'rgba(0, 0, 0, 0)');
+      innerVignette.addColorStop(0.85, isDark ? 'rgba(0, 4, 12, 0.35)' : 'rgba(70, 60, 45, 0.18)');
+      innerVignette.addColorStop(1, isDark ? 'rgba(0, 6, 18, 0.68)' : 'rgba(70, 55, 38, 0.35)');
+      this.ctx.fillStyle = innerVignette;
+      this.ctx.beginPath();
+      this.ctx.arc(mx, my, R, 0, Math.PI * 2);
+      this.ctx.fill();
+
+      // Multi-layer Iridescent Anti-Reflective Rim Interference (Magenta-Cyan)
+      if (isDark) {
+        const arGrad = this.ctx.createRadialGradient(mx, my, R * 0.94, mx, my, R);
+        arGrad.addColorStop(0, 'rgba(0, 0, 0, 0)');
+        arGrad.addColorStop(0.5, 'rgba(180, 80, 240, 0.12)');
+        arGrad.addColorStop(1, 'rgba(60, 220, 240, 0.18)');
+        this.ctx.fillStyle = arGrad;
+        this.ctx.beginPath();
+        this.ctx.arc(mx, my, R, 0, Math.PI * 2);
+        this.ctx.fill();
+      }
+
+      this.ctx.restore(); // remove lens aperture clip
+
+      // =========================================================================
+      // --- PRECISION MACHINED METALLIC BRASS & GUNMETAL OPTICAL EYEPIECE BARREL ---
+      // =========================================================================
+      this.ctx.save();
+      this.ctx.globalAlpha = animAlpha;
+      this.ctx.translate(mx, my);
+      this.ctx.rotate(spinAngle); // Screws into position with lathe spin
+      this.ctx.scale(animScale, animScale);
+
+      // (A) Diamond Knurled Outer Gripping Ring (R_BASE + 8 to R_BASE + 17)
+      // Dark gunmetal under-collar
+      this.ctx.strokeStyle = isDark ? '#1a1204' : '#3d2e14';
+      this.ctx.lineWidth = 9;
+      this.ctx.beginPath();
+      this.ctx.arc(0, 0, R_BASE + 12.5, 0, Math.PI * 2);
+      this.ctx.stroke();
+
+      // 72 Precision Diamond-Knurled Gripping Teeth with Directional Lighting (135° key light)
+      const knurlCount = 72;
+      for (let k = 0; k < knurlCount; k++) {
+        const kAngle = (k * 360 / knurlCount) * (Math.PI / 180);
+        const kCos = Math.cos(kAngle);
+        const kSin = Math.sin(kAngle);
+        const lightDot = Math.cos(kAngle - Math.PI * 0.75); // 135° key light
+        const isHighlight = lightDot > 0;
+        const knurlAlpha = Math.abs(lightDot);
+
+        this.ctx.strokeStyle = isHighlight
+          ? `rgba(255, 242, 185, ${0.40 + 0.55 * knurlAlpha})`
+          : `rgba(18, 10, 2, ${0.45 + 0.45 * knurlAlpha})`;
+        this.ctx.lineWidth = 1.0;
+        this.ctx.beginPath();
+        this.ctx.moveTo(kCos * (R_BASE + 8.2), kSin * (R_BASE + 8.2));
+        this.ctx.lineTo(kCos * (R_BASE + 16.8), kSin * (R_BASE + 16.8));
+        this.ctx.stroke();
+      }
+
+      // Defining Lathe Grooves along Knurling Boundaries
+      this.ctx.strokeStyle = '#dfba52';
+      this.ctx.lineWidth = 1.1;
+      this.ctx.beginPath();
+      this.ctx.arc(0, 0, R_BASE + 17, 0, Math.PI * 2);
+      this.ctx.arc(0, 0, R_BASE + 8, 0, Math.PI * 2);
+      this.ctx.stroke();
+
+      this.ctx.strokeStyle = '#281a04';
+      this.ctx.lineWidth = 0.9;
+      this.ctx.beginPath();
+      this.ctx.arc(0, 0, R_BASE + 17.6, 0, Math.PI * 2);
+      this.ctx.arc(0, 0, R_BASE + 7.4, 0, Math.PI * 2);
+      this.ctx.stroke();
+
+      // (B) Main Cylindrical Turned Brass Bezel with Anisotropic Metallic Sheen (R_BASE to R_BASE + 8)
+      const brassBezel = this.ctx.createLinearGradient(
+        Math.cos(Math.PI * 0.75) * (R_BASE + 10), Math.sin(Math.PI * 0.75) * (R_BASE + 10),
+        Math.cos(Math.PI * -0.25) * (R_BASE + 10), Math.sin(Math.PI * -0.25) * (R_BASE + 10)
+      );
+      brassBezel.addColorStop(0, '#fffbe6');    // 135° Specular Glint
+      brassBezel.addColorStop(0.18, '#ecd068'); // Polished Golden Brass
+      brassBezel.addColorStop(0.38, '#9e731e'); // Rich Antique Bronze
+      brassBezel.addColorStop(0.62, '#483008'); // Cast Shadow Flank
+      brassBezel.addColorStop(0.85, '#e2b848'); // Warm Ambient Metal Bounce
+      brassBezel.addColorStop(1, '#6a4712');
+
+      this.ctx.strokeStyle = brassBezel;
+      this.ctx.lineWidth = 8;
+      this.ctx.beginPath();
+      this.ctx.arc(0, 0, R_BASE + 4, 0, Math.PI * 2);
+      this.ctx.stroke();
+
+      // Specular Bevel Highlights
+      this.ctx.strokeStyle = 'rgba(255, 252, 235, 0.90)';
+      this.ctx.lineWidth = 0.85;
+      this.ctx.beginPath();
+      this.ctx.arc(0, 0, R_BASE + 7.6, 0, Math.PI * 2);
+      this.ctx.stroke();
+
+      // (C) Deep Retaining Undercut (physical shadow cast into glass aperture)
+      this.ctx.strokeStyle = '#140c02';
+      this.ctx.lineWidth = 1.8;
+      this.ctx.beginPath();
+      this.ctx.arc(0, 0, R_BASE - 0.4, 0, Math.PI * 2);
+      this.ctx.stroke();
+
+      this.ctx.strokeStyle = '#e6c864';
+      this.ctx.lineWidth = 0.65;
+      this.ctx.beginPath();
+      this.ctx.arc(0, 0, R_BASE + 0.6, 0, Math.PI * 2);
+      this.ctx.stroke();
+
+      // (D) 360° Astrometric Vernier Graduations
+      this.ctx.strokeStyle = '#f8eab4';
+      this.ctx.fillStyle = '#f8eab4';
+      this.ctx.font = '600 5.5px Newsreader, serif';
+      this.ctx.textAlign = 'center';
+      this.ctx.textBaseline = 'middle';
+
+      for (let deg = 0; deg < 360; deg += 10) {
+        const rad = deg * (Math.PI / 180);
+        const cos = Math.cos(rad);
+        const sin = Math.sin(rad);
+        const isMajor = deg % 30 === 0;
+        const tickLen = isMajor ? 5.5 : 3.0;
+
+        this.ctx.lineWidth = isMajor ? 0.9 : 0.5;
+        this.ctx.beginPath();
+        this.ctx.moveTo(cos * (R_BASE + 0.5), sin * (R_BASE + 0.5));
+        this.ctx.lineTo(cos * (R_BASE - tickLen), sin * (R_BASE - tickLen));
+        this.ctx.stroke();
+
+        if (deg % 90 === 0) {
+          const labelR = R_BASE - 11;
+          this.ctx.fillText(`${deg}°`, cos * labelR, sin * labelR);
+        }
+      }
+
+      // (E) Hairline Sighting Reticle (Etched Glass Micrometer)
+      this.ctx.strokeStyle = isDark ? 'rgba(235, 215, 175, 0.48)' : 'rgba(75, 60, 42, 0.52)';
+      this.ctx.lineWidth = 0.55;
+
+      // Crosshairs with central 8px sight clearance
+      this.ctx.beginPath();
+      this.ctx.moveTo(-R_BASE + 14, 0);
+      this.ctx.lineTo(-8, 0);
+      this.ctx.moveTo(8, 0);
+      this.ctx.lineTo(R_BASE - 14, 0);
+      this.ctx.moveTo(0, -R_BASE + 14);
+      this.ctx.lineTo(0, -8);
+      this.ctx.moveTo(0, 8);
+      this.ctx.lineTo(0, R_BASE - 14);
+      this.ctx.stroke();
+
+      // Central sighting ring (radius 8px)
+      this.ctx.beginPath();
+      this.ctx.arc(0, 0, 8, 0, Math.PI * 2);
+      this.ctx.stroke();
+
+      // Concentric micrometer scale ring (radius 44px)
+      this.ctx.beginPath();
+      this.ctx.arc(0, 0, 44, 0, Math.PI * 2);
+      this.ctx.stroke();
+
+      // 4 Cardinal micrometer ticks on the 44px ring
+      this.ctx.beginPath();
+      this.ctx.moveTo(-46, 0); this.ctx.lineTo(-42, 0);
+      this.ctx.moveTo(42, 0); this.ctx.lineTo(46, 0);
+      this.ctx.moveTo(0, -46); this.ctx.lineTo(0, -42);
+      this.ctx.moveTo(0, 42); this.ctx.lineTo(0, 46);
+      this.ctx.stroke();
+
+      // (F) Debossed Engraved Inscription on Metallic Brass Bezel Rim
+      this.ctx.save();
+      this.ctx.font = '700 6.5px Newsreader, serif';
+      // Debossed dark inner shadow
+      this.ctx.fillStyle = 'rgba(20, 12, 3, 0.85)';
+      this.ctx.fillText('OCULUS MAJOR · 3.6×', 0.5, -R_BASE - 3.5);
+      // Embossed gold face
+      this.ctx.fillStyle = '#ffefa8';
+      this.ctx.fillText('OCULUS MAJOR · 3.6×', 0, -R_BASE - 4);
+      this.ctx.restore();
+
+      this.ctx.restore(); // restore bezel transform
+
+      // --- Live Astrometry Telemetry Banner beneath Loupe ---
+      if (closestStarInfo && animScale > 0.5) {
+        const badgeText = closestStarInfo.doubleDesc
+          ? `${closestStarInfo.name} · ${closestStarInfo.mag.toFixed(2)}ᵐ // ${closestStarInfo.doubleDesc}`
+          : `${closestStarInfo.name} · ${closestStarInfo.mag.toFixed(2)}ᵐ · ${closestStarInfo.spec}`;
+
+        this.ctx.font = '500 7px Newsreader, serif';
+        const txtWidth = this.ctx.measureText(badgeText).width;
+        const bW = txtWidth + 16;
+        const bH = 16;
+        const bX = mx - bW * 0.5;
+        const bY = my + (R_BASE + 22) * animScale;
+
+        this.ctx.save();
+        this.ctx.globalAlpha = animAlpha;
+        this.ctx.fillStyle = isDark ? 'rgba(7, 10, 16, 0.88)' : 'rgba(245, 240, 230, 0.92)';
+        this.ctx.fillRect(bX, bY, bW, bH);
+        this.ctx.strokeStyle = '#c5a038';
+        this.ctx.lineWidth = 0.65;
+        this.ctx.strokeRect(bX, bY, bW, bH);
+
+        this.ctx.fillStyle = isDark ? '#f0e4c5' : '#382e22';
+        this.ctx.textBaseline = 'middle';
+        this.ctx.textAlign = 'center';
+        this.ctx.fillText(badgeText, mx, bY + bH * 0.5);
+        this.ctx.restore();
       }
     }
 
@@ -1919,8 +3828,8 @@ const { featuredConstellationId = null } = Astro.props;
       const fovMultiplier = isDesktop ? 1.45 : 1.05;
       const fovScale = (chartScale / 5000) * (Math.min(w, h) * 0.5) * fovMultiplier;
 
-      // Celestial camera position with continuous sidereal diurnal drift
-      const camRaDeg = (this.camera.ra - this.siderealAngle + 360) % 360;
+      // Celestial camera position locked on constellation plate via observatory equatorial tracking
+      const camRaDeg = this.camera.ra;
       const camDecDeg = this.camera.dec;
 
       const camRaRad = camRaDeg * deg2rad;
@@ -1941,6 +3850,12 @@ const { featuredConstellationId = null } = Astro.props;
         // Skip constellation stars to avoid redundant double rendering
         if (this.isConstellationStar(hip)) continue;
 
+        // Astrophysics: Variable Star Modulation
+        const varMod = this.getVariableStarModulation(hip, now);
+        const effMag = varMod ? mag + varMod.dMag : mag;
+        const effRScale = varMod ? varMod.rScale : 1.0;
+        const effBv = varMod ? (bv ?? 0.6) + varMod.dBv : (bv ?? 0.6);
+
         // True Tangent Gnomonic Projection
         const dra = (ra * deg2rad) - camRaRad;
         const dRad = dec * deg2rad;
@@ -1954,7 +3869,7 @@ const { featuredConstellationId = null } = Astro.props;
         const eta = (cosCamDec * sinDec - sinCamDec * cosDec * Math.cos(dra)) / cosC;
 
         // 3D Astrometric Parallax: distant stars have minimal parallax shift
-        const z = Math.max(0.24, 0.72 - mag * 0.07);
+        const z = Math.max(0.24, 0.72 - effMag * 0.07);
         const x = cx + xi * fovScale + this.parallax.x * z;
         const y = cy - eta * fovScale + this.parallax.y * z;
 
@@ -1967,27 +3882,40 @@ const { featuredConstellationId = null } = Astro.props;
 
         // Log-normal scintillation: mostly steady, with brief sharp flares and dips
         const airmass = this.airmassAt(y, h);
-        const twinkle = this.scintillation(seed, now, mag, airmass, isDark);
+        const twinkle = this.scintillation(seed, now, effMag, airmass, isDark);
+        const scint = clamp(-1, Math.log(twinkle) / 0.45, 1);
 
-        let alpha = alphaBase * twinkle;
-        let r = rBase * (0.9 + 0.1 * Math.min(twinkle, 2));
+        // Beer-Lambert atmospheric extinction (dimming towards horizon)
+        const extinction = Math.exp(-0.16 * (airmass - 0.65));
+        let alpha = alphaBase * twinkle * extinction;
+        let r = rBase * (0.9 + 0.1 * Math.min(twinkle, 2)) * Math.sqrt(extinction) * effRScale;
         // Flux beyond full opacity spills into a wider bloom (eye reads brightness as size)
         if (alpha > 1) {
           r *= Math.pow(alpha, 0.35);
           alpha = 1;
         }
 
+        const reddenedBv = effBv + 0.14 * (airmass - 0.65);
+
+        // Atmospheric Optical Dispersion on low-elevation background stars
+        this.drawAtmosphericDispersion(x, y, r, effMag, airmass, isDark, alpha);
+
         if (isDark) {
-          const starBv = bv ?? 0.6;
-          this.drawStarSprite(x, y, r, starBv, perceivedSaturation(mag), alpha);
+          this.drawStarSprite(x, y, r, reddenedBv, perceivedSaturation(effMag), alpha);
           this.ctx.globalAlpha = 1;
-          this.drawChromaticScintillation(x, y, r, seed, now, mag, airmass);
+          this.drawChromaticScintillation(x, y, r, seed, now, effMag, airmass);
+
+          // Secondary mirror spider diffraction spikes on bright background stars (e.g. Sirius, Vega, Canopus, Rigel)
+          if (effMag <= 1.6) {
+            const [sr, sg, sb] = starTintRgb(reddenedBv, perceivedSaturation(effMag));
+            this.drawDiffractionSpikes(x, y, effMag, scint, isDark, '#ffffff', [sr, sg, sb], alpha);
+          }
         } else {
           // In Light mode: crisp archival pigments on cream rag paper
           const a = Math.min(1, alpha) * 0.88;
-          if (bv !== undefined && bv < 0.2) {
+          if (effBv < 0.2) {
             this.ctx.fillStyle = `rgba(35, 75, 145, ${a})`;
-          } else if (bv !== undefined && bv > 1.0) {
+          } else if (effBv > 1.0) {
             this.ctx.fillStyle = `rgba(160, 85, 30, ${a})`;
           } else {
             this.ctx.fillStyle = `rgba(45, 40, 36, ${a})`;
@@ -1995,6 +3923,10 @@ const { featuredConstellationId = null } = Astro.props;
           this.ctx.beginPath();
           this.ctx.arc(x, y, Math.min(r, 3.4), 0, Math.PI * 2);
           this.ctx.fill();
+
+          if (effMag <= 1.6) {
+            this.drawDiffractionSpikes(x, y, effMag, scint, isDark, this.ctx.fillStyle as string, [45, 40, 36], a);
+          }
         }
       }
 
@@ -2008,8 +3940,15 @@ const { featuredConstellationId = null } = Astro.props;
 
     private generateDenseFieldStars(con: any) {
       if (!con) return;
-      const count = con.inMilkyWay ? 2400 : 1600;
       this.denseFieldStars = [];
+
+      const bDeg = Math.abs(con.galacticLatDeg ?? 30);
+      // Realistic galactic latitude stellar concentration:
+      // Galactic equator (|b| ~ 0°): dense stellar clouds (~2,800 stars)
+      // Mid latitudes (|b| ~ 30°): standard field (~1,700 stars)
+      // Galactic poles (|b| ~ 80°): sparse deep-space window (~1,050 stars)
+      const densityFactor = 0.65 + 1.35 * Math.exp(-bDeg / 20.0);
+      const count = Math.round(1500 * densityFactor);
 
       // Deterministic PRNG seeded by constellation celestial barycenter
       let seed = Math.abs(Math.sin(con.barycenterRaDeg * 19.3 + con.barycenterDecDeg * 41.7)) * 100000;
@@ -2024,8 +3963,13 @@ const { featuredConstellationId = null } = Astro.props;
         // Radial distribution across wide hemisphere
         const rRad = Math.sqrt(-2.0 * Math.log(Math.max(0.0001, u1))) * 0.45;
         const theta = u2 * Math.PI * 2;
-        const xi = Math.cos(theta) * rRad;
-        const eta = Math.sin(theta) * rRad;
+        let xi = Math.cos(theta) * rRad;
+        let eta = Math.sin(theta) * rRad;
+
+        // For constellations in the Milky Way, bias a proportion of stars towards the galactic equator
+        if (bDeg < 25 && nextRnd() < 0.45) {
+          eta *= 0.45;
+        }
 
         // Magnitude distribution: exponential faint star scaling (6.5 to 11.2)
         const magRand = nextRnd();
@@ -2082,9 +4026,12 @@ const { featuredConstellationId = null } = Astro.props;
         if (px < margin || px > w - margin || py < margin || py > h - margin) continue;
 
         // Independent per-star log-normal scintillation (stronger toward the "horizon")
-        const twinkle = this.scintillation(noiseSeed, now, mag, this.airmassAt(py, h), isDark);
-        let alpha = alphaBase * twinkle;
-        let r = rBase;
+        const airmass = this.airmassAt(py, h);
+        const twinkle = this.scintillation(noiseSeed, now, mag, airmass, isDark);
+        // Beer-Lambert atmospheric extinction (dimming towards horizon)
+        const extinction = Math.exp(-0.18 * (airmass - 0.65));
+        let alpha = alphaBase * twinkle * extinction;
+        let r = rBase * Math.sqrt(extinction);
         // Flux that would exceed full opacity spills into a larger bloom instead of clipping
         if (alpha > 1) {
           r *= Math.pow(alpha, 0.35);
@@ -2092,7 +4039,8 @@ const { featuredConstellationId = null } = Astro.props;
         }
 
         if (isDark) {
-          this.drawStarSprite(px, py, r, bv, perceivedSaturation(mag), alpha);
+          const reddenedBv = bv + 0.14 * (airmass - 0.65);
+          this.drawStarSprite(px, py, r, reddenedBv, perceivedSaturation(mag), alpha);
         } else {
           // Light Mode: archival manuscript pigment pinpricks
           const a = alpha * 0.45;
@@ -2119,7 +4067,7 @@ const { featuredConstellationId = null } = Astro.props;
       // Zone of Avoidance: Milky Way dust obscures distant background galaxies at low galactic latitudes
       const bDeg = Math.abs(con.galacticLatDeg ?? 30);
       const zoneOfAvoidanceFactor = clamp(0.35, Math.sin((bDeg * Math.PI) / 180), 1.0);
-      const count = Math.round(20 + (con.inMilkyWay ? 8 : 22) * zoneOfAvoidanceFactor);
+      const count = Math.round(8 + (con.inMilkyWay ? 4 : 10) * zoneOfAvoidanceFactor);
 
       // Deterministic PRNG seeded by constellation coordinates
       let seed = Math.abs(Math.sin(con.barycenterRaDeg * 31.7 + con.barycenterDecDeg * 67.3)) * 100000;
@@ -2137,18 +4085,18 @@ const { featuredConstellationId = null } = Astro.props;
         const xi = Math.cos(theta) * rRad;
         const eta = Math.sin(theta) * rRad;
 
-        // Distant galaxy angular radius: miniature cosmic sizes (6.5px to 17px)
-        const majR = 6.5 + Math.pow(nextRnd(), 1.2) * 10.5;
+        // Distant galaxy angular radius: subtle miniature cosmological smudges (2.2px to 5.5px)
+        const majR = 2.2 + Math.pow(nextRnd(), 1.4) * 3.3;
 
         // Generate synthetic DFG catalog designation
         const dfgNum = Math.floor(1000 + nextRnd() * 8999);
         const label = `DFG-${dfgNum}`;
 
-        // Cosmological parallax depth factor: distant background (z in [0.04, 0.09])
-        const z = 0.04 + nextRnd() * 0.05;
+        // Cosmological parallax depth factor: distant background (z in [0.02, 0.05])
+        const z = 0.02 + nextRnd() * 0.03;
 
-        // Base opacity: subtle, non-distracting ethereal smudge (0.28 to 0.55)
-        const baseAlpha = 0.28 + nextRnd() * 0.27;
+        // Base opacity: subtle, ethereal deep-field smudge (0.08 to 0.16)
+        const baseAlpha = 0.08 + nextRnd() * 0.08;
 
         // Derive unique morphology genome for this background galaxy
         const gSeed = Math.abs(Math.sin(xi * 83.1 + eta * 47.9 + dfgNum)) * 100000;
@@ -2189,12 +4137,10 @@ const { featuredConstellationId = null } = Astro.props;
 
         const effectiveAlpha = baseAlpha * alphaMultiplier;
         const cosI = genome.cosI;
-        // Hubble (1926) intrinsic thickness: prevents distant wafer collapse
-        const q0 = 0.15;
+        const q0 = 0.18;
         const sinI = Math.sqrt(Math.max(0, 1 - cosI * cosI));
         const effectiveCosI = Math.sqrt(cosI * cosI + q0 * q0 * sinI * sinI);
-        const minR = Math.max(1.8, majR * effectiveCosI);
-        const isEdgeOn = genome.hubbleType === 'edge_on' || cosI < 0.22;
+        const isEdgeOn = genome.hubbleType === 'edge_on' || cosI < 0.25;
 
         const discRgb = isDark ? genome.discRgbDark : genome.discRgbLight;
         const coreRgb = isDark ? genome.coreRgbDark : genome.coreRgbLight;
@@ -2203,18 +4149,16 @@ const { featuredConstellationId = null } = Astro.props;
         this.ctx.translate(px, py);
         this.ctx.rotate(genome.pa);
 
-        // 1. Distant Ellipticals / Spheroids (de Vaucouleurs profile)
+        // 1. Distant Ellipticals / Spheroids (Soft de Vaucouleurs profile)
         if (genome.hubbleType === 'elliptical') {
           const ellGrad = this.ctx.createRadialGradient(0, 0, 0, 0, 0, majR);
           if (isDark) {
-            ellGrad.addColorStop(0, `rgba(255, 248, 230, ${0.72 * effectiveAlpha})`);
-            ellGrad.addColorStop(0.35, `rgba(${coreRgb[0]}, ${coreRgb[1]}, ${coreRgb[2]}, ${0.38 * effectiveAlpha})`);
-            ellGrad.addColorStop(0.75, `rgba(${discRgb[0]}, ${discRgb[1]}, ${discRgb[2]}, ${0.10 * effectiveAlpha})`);
+            ellGrad.addColorStop(0, `rgba(255, 248, 230, ${0.45 * effectiveAlpha})`);
+            ellGrad.addColorStop(0.35, `rgba(${coreRgb[0]}, ${coreRgb[1]}, ${coreRgb[2]}, ${0.25 * effectiveAlpha})`);
             ellGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
           } else {
-            ellGrad.addColorStop(0, `rgba(35, 28, 22, ${0.70 * effectiveAlpha})`);
-            ellGrad.addColorStop(0.35, `rgba(${coreRgb[0]}, ${coreRgb[1]}, ${coreRgb[2]}, ${0.32 * effectiveAlpha})`);
-            ellGrad.addColorStop(0.75, `rgba(${discRgb[0]}, ${discRgb[1]}, ${discRgb[2]}, ${0.08 * effectiveAlpha})`);
+            ellGrad.addColorStop(0, `rgba(35, 28, 22, ${0.40 * effectiveAlpha})`);
+            ellGrad.addColorStop(0.35, `rgba(${coreRgb[0]}, ${coreRgb[1]}, ${coreRgb[2]}, ${0.20 * effectiveAlpha})`);
             ellGrad.addColorStop(1, 'rgba(255, 255, 255, 0)');
           }
           this.ctx.scale(1.0, effectiveCosI);
@@ -2224,17 +4168,16 @@ const { featuredConstellationId = null } = Astro.props;
           this.ctx.fill();
         }
 
-        // 2. Distant Edge-on Spindles & Needles (Thin disc + prominent central bulge + dust cut)
+        // 2. Distant Edge-on Spindles & Needles (Soft thin disc + tiny bulge)
         else if (isEdgeOn) {
-          // Disc envelope
           const edgeGrad = this.ctx.createRadialGradient(0, 0, 0, 0, 0, majR);
           if (isDark) {
-            edgeGrad.addColorStop(0, `rgba(255, 250, 240, ${0.65 * effectiveAlpha})`);
-            edgeGrad.addColorStop(0.35, `rgba(${discRgb[0]}, ${discRgb[1]}, ${discRgb[2]}, ${0.32 * effectiveAlpha})`);
+            edgeGrad.addColorStop(0, `rgba(255, 250, 240, ${0.40 * effectiveAlpha})`);
+            edgeGrad.addColorStop(0.40, `rgba(${discRgb[0]}, ${discRgb[1]}, ${discRgb[2]}, ${0.20 * effectiveAlpha})`);
             edgeGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
           } else {
-            edgeGrad.addColorStop(0, `rgba(35, 28, 22, ${0.65 * effectiveAlpha})`);
-            edgeGrad.addColorStop(0.40, `rgba(${discRgb[0]}, ${discRgb[1]}, ${discRgb[2]}, ${0.22 * effectiveAlpha})`);
+            edgeGrad.addColorStop(0, `rgba(35, 28, 22, ${0.38 * effectiveAlpha})`);
+            edgeGrad.addColorStop(0.40, `rgba(${discRgb[0]}, ${discRgb[1]}, ${discRgb[2]}, ${0.15 * effectiveAlpha})`);
             edgeGrad.addColorStop(1, 'rgba(255, 255, 255, 0)');
           }
           this.ctx.save();
@@ -2245,48 +4188,26 @@ const { featuredConstellationId = null } = Astro.props;
           this.ctx.fill();
           this.ctx.restore();
 
-          // Spheroidal bulge
-          const bulgeR = majR * 0.36;
-          const bGrad = this.ctx.createRadialGradient(0, 0, 0, 0, 0, bulgeR);
-          if (isDark) {
-            bGrad.addColorStop(0, `rgba(255, 255, 255, ${0.80 * effectiveAlpha})`);
-            bGrad.addColorStop(0.5, `rgba(255, 230, 195, ${0.38 * effectiveAlpha})`);
-            bGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
-          } else {
-            bGrad.addColorStop(0, `rgba(25, 20, 15, ${0.80 * effectiveAlpha})`);
-            bGrad.addColorStop(0.5, `rgba(80, 60, 42, ${0.35 * effectiveAlpha})`);
-            bGrad.addColorStop(1, 'rgba(255, 255, 255, 0)');
-          }
-          this.ctx.save();
-          this.ctx.scale(0.85, 1.3);
-          this.ctx.fillStyle = bGrad;
+          // Spheroidal micro-bulge
+          const bulgeR = majR * 0.32;
+          this.ctx.fillStyle = isDark
+            ? `rgba(255, 250, 235, ${0.45 * effectiveAlpha})`
+            : `rgba(45, 36, 28, ${0.40 * effectiveAlpha})`;
           this.ctx.beginPath();
-          this.ctx.arc(0, 0, bulgeR, 0, Math.PI * 2);
+          this.ctx.arc(0, 0, Math.max(0.65, bulgeR), 0, Math.PI * 2);
           this.ctx.fill();
-          this.ctx.restore();
-
-          // Hairline dust cut
-          this.ctx.strokeStyle = isDark
-            ? `rgba(8, 10, 14, ${0.72 * effectiveAlpha})`
-            : `rgba(245, 242, 234, ${0.82 * effectiveAlpha})`;
-          this.ctx.lineWidth = 0.85;
-          this.ctx.beginPath();
-          this.ctx.moveTo(-majR * 0.85, 0);
-          this.ctx.lineTo(majR * 0.85, 0);
-          this.ctx.stroke();
         }
 
-        // 3. Distant Spirals (Barred, Grand Design, Flocculent)
+        // 3. Distant Spirals (Barred & Grand Design - Smooth Exponential Disk Smudge)
         else {
-          // Disc exponential glow
-          const discGrad = this.ctx.createRadialGradient(0, 0, 1, 0, 0, majR);
+          const discGrad = this.ctx.createRadialGradient(0, 0, 0.5, 0, 0, majR);
           if (isDark) {
-            discGrad.addColorStop(0, `rgba(${coreRgb[0]}, ${coreRgb[1]}, ${coreRgb[2]}, ${0.45 * effectiveAlpha})`);
-            discGrad.addColorStop(0.35, `rgba(${discRgb[0]}, ${discRgb[1]}, ${discRgb[2]}, ${0.20 * effectiveAlpha})`);
+            discGrad.addColorStop(0, `rgba(${coreRgb[0]}, ${coreRgb[1]}, ${coreRgb[2]}, ${0.35 * effectiveAlpha})`);
+            discGrad.addColorStop(0.40, `rgba(${discRgb[0]}, ${discRgb[1]}, ${discRgb[2]}, ${0.15 * effectiveAlpha})`);
             discGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
           } else {
-            discGrad.addColorStop(0, `rgba(${coreRgb[0]}, ${coreRgb[1]}, ${coreRgb[2]}, ${0.35 * effectiveAlpha})`);
-            discGrad.addColorStop(0.40, `rgba(${discRgb[0]}, ${discRgb[1]}, ${discRgb[2]}, ${0.14 * effectiveAlpha})`);
+            discGrad.addColorStop(0, `rgba(${coreRgb[0]}, ${coreRgb[1]}, ${coreRgb[2]}, ${0.28 * effectiveAlpha})`);
+            discGrad.addColorStop(0.40, `rgba(${discRgb[0]}, ${discRgb[1]}, ${discRgb[2]}, ${0.10 * effectiveAlpha})`);
             discGrad.addColorStop(1, 'rgba(255, 255, 255, 0)');
           }
           this.ctx.save();
@@ -2297,55 +4218,12 @@ const { featuredConstellationId = null } = Astro.props;
           this.ctx.fill();
           this.ctx.restore();
 
-          // Delicate spiral arm whorls
-          const armSteps = 16;
-          const armCount = genome.armCount;
-          const winding = genome.winding;
-          const pitch = genome.pitch;
-          const startR = majR * (genome.hubbleType === 'barred_spiral' ? 0.35 : 0.18);
-
-          this.ctx.strokeStyle = isDark
-            ? `rgba(${discRgb[0]}, ${discRgb[1]}, ${discRgb[2]}, ${0.32 * effectiveAlpha})`
-            : `rgba(${discRgb[0]}, ${discRgb[1]}, ${discRgb[2]}, ${0.22 * effectiveAlpha})`;
-          this.ctx.lineWidth = 0.65;
-
-          for (let arm = 0; arm < armCount; arm++) {
-            const armBasePhase = (arm * 2 * Math.PI) / armCount;
-            this.ctx.beginPath();
-            for (let s = 0; s <= armSteps; s++) {
-              const t = s / armSteps;
-              const r = startR + t * (majR - startR - 1.5);
-              const theta = armBasePhase + winding * Math.log(Math.max(0.01, r / startR)) / Math.tan(pitch);
-              const xArm = r * Math.cos(theta);
-              const yArm = r * Math.sin(theta) * effectiveCosI;
-              if (s === 0) this.ctx.moveTo(xArm, yArm);
-              else this.ctx.lineTo(xArm, yArm);
-            }
-            this.ctx.stroke();
-          }
-
-          // Micro Bar if barred spiral
-          if (genome.hubbleType === 'barred_spiral') {
-            const barHalf = majR * genome.barLength * 0.8;
-            this.ctx.save();
-            this.ctx.rotate(genome.barAngle);
-            this.ctx.scale(1.0, effectiveCosI);
-            this.ctx.fillStyle = isDark
-              ? `rgba(255, 245, 225, ${0.45 * effectiveAlpha})`
-              : `rgba(45, 36, 30, ${0.35 * effectiveAlpha})`;
-            this.ctx.beginPath();
-            this.ctx.ellipse(0, 0, barHalf, barHalf * 0.35, 0, 0, Math.PI * 2);
-            this.ctx.fill();
-            this.ctx.restore();
-          }
-
-          // Micro Starlike Nucleus
-          const nucR = Math.max(1.1, minR * 0.32);
+          // Soft starlike galactic nucleus
           this.ctx.fillStyle = isDark
-            ? `rgba(255, 255, 255, ${0.80 * effectiveAlpha})`
-            : `rgba(25, 20, 16, ${0.75 * effectiveAlpha})`;
+            ? `rgba(255, 255, 255, ${0.50 * effectiveAlpha})`
+            : `rgba(30, 24, 20, ${0.45 * effectiveAlpha})`;
           this.ctx.beginPath();
-          this.ctx.arc(0, 0, nucR, 0, Math.PI * 2);
+          this.ctx.arc(0, 0, 0.75, 0, Math.PI * 2);
           this.ctx.fill();
         }
 
@@ -2459,19 +4337,19 @@ const { featuredConstellationId = null } = Astro.props;
       // Render decaying ionized persistence wake
       if (this.meteorState.trail.length > 0) {
         this.ctx.save();
-        const maxAge = 2400; // ms
+        const maxAge = 3600; // ms: authentic lingering atmospheric ionization
         this.meteorState.trail = this.meteorState.trail.filter(pt => (now - pt.time) < maxAge);
 
         for (let i = 1; i < this.meteorState.trail.length; i++) {
           const ptA = this.meteorState.trail[i - 1];
           const ptB = this.meteorState.trail[i];
           const age = now - ptB.time;
-          const wakeAlpha = Math.max(0, 1.0 - age / maxAge) * 0.30;
+          const wakeAlpha = Math.max(0, 1.0 - age / maxAge) * 0.45;
 
           this.ctx.strokeStyle = isDark
             ? `rgba(200, 225, 255, ${wakeAlpha})`
             : `rgba(60, 50, 45, ${wakeAlpha * 0.75})`;
-          this.ctx.lineWidth = Math.max(0.4, (1.0 - age / maxAge) * 1.4);
+          this.ctx.lineWidth = Math.max(0.4, (1.0 - age / maxAge) * 1.6);
           this.ctx.beginPath();
           this.ctx.moveTo(ptA.x, ptA.y);
           this.ctx.lineTo(ptB.x, ptB.y);
@@ -2493,7 +4371,7 @@ const { featuredConstellationId = null } = Astro.props;
       this.meteorState.endX = startX + Math.cos(angle) * dist;
       this.meteorState.endY = startY + Math.sin(angle) * dist;
       this.meteorState.startTime = now;
-      this.meteorState.duration = 550 + Math.random() * 250;
+      this.meteorState.duration = 200 + Math.random() * 80; // Fast realistic atmospheric streak (200-280ms)
       this.meteorState.nextTrigger = now + 18000 + Math.random() * 12000;
     }
 
@@ -2610,8 +4488,15 @@ const { featuredConstellationId = null } = Astro.props;
         const star = stars[i];
         const [rawX, rawY, mag, specSlot, hip, properName, bayer, distLy] = star;
 
+        // Astrophysics: Physical Variable Star Modulation (Betelgeuse, Algol, Mira, Delta Cephei, Polaris)
+        const varMod = this.getVariableStarModulation(hip, now);
+        const effMag = varMod ? mag + varMod.dMag : mag;
+        const effRScale = varMod ? varMod.rScale : 1.0;
+        const baseBv = specSlotToBv(specSlot);
+        const effBv = varMod ? baseBv + varMod.dBv : baseBv;
+
         // True 5-Tier Logarithmic Astrometric Distance Layering
-        const z = calculateStarDepth(mag, distLy);
+        const z = calculateStarDepth(effMag, distLy);
 
         // Per-star hash seed for uncorrelated turbulence phasing
         let hVal = (hip ^ 0x9e3779b9);
@@ -2621,7 +4506,7 @@ const { featuredConstellationId = null } = Astro.props;
 
         // Atmospheric Seeing Micro-Wander (centroid shift 0.12 - 0.55px)
         const frozen = this.isScintillationFrozen();
-        const wanderAmp = frozen ? 0 : Math.max(0.12, Math.min(0.55, (4.8 - mag) * 0.12));
+        const wanderAmp = frozen ? 0 : Math.max(0.12, Math.min(0.55, (4.8 - effMag) * 0.12));
         const wanderX = wanderAmp * Math.sin(now * 0.00085 + seed * 45.1);
         const wanderY = wanderAmp * Math.cos(now * 0.00062 + seed * 23.7);
 
@@ -2631,11 +4516,12 @@ const { featuredConstellationId = null } = Astro.props;
         // Log-normal scintillation intensity (mean ≈ 1) and a signed [-1, 1] proxy
         // that drives the size of rings, spikes and halos below.
         const airmass = this.airmassAt(py, h);
-        const twinkle = this.scintillation(seed, now, mag, airmass, isDark);
+        const extinction = Math.exp(-0.16 * (airmass - 0.65));
+        const twinkle = this.scintillation(seed, now, effMag, airmass, isDark);
         const scint = clamp(-1, Math.log(twinkle) / 0.45, 1);
 
-        // Radius scaled by visual magnitude + atmospheric shimmer breathing
-        const rBase = Math.max(1.8, Math.min(5.5, (4.8 - mag) * 1.15));
+        // Radius scaled by visual magnitude + atmospheric shimmer breathing + extinction + physical variable radius
+        const rBase = Math.max(1.8, Math.min(5.5, (4.8 - effMag) * 1.15)) * Math.sqrt(extinction) * effRScale;
         const r = rBase * (0.92 + 0.16 * Math.max(0, (scint + 0.8) / 1.8));
 
         // Check if this star is hovered or selected
@@ -2645,33 +4531,55 @@ const { featuredConstellationId = null } = Astro.props;
         // Re-wet tint: hovered or selected stars instantly re-wet to full spectral color!
         const effectiveWet = (isHovered || isSelected) ? 1.0 : wetFactor;
 
+        // Rayleigh scattering reddens stars near the horizon
+        const reddenedBv = effBv + 0.14 * (airmass - 0.65);
+
         // Spectral color tint
         const spectralRgb = specSlotToRgb(specSlot, isDark);
         const starFill = effectiveWet > 0.02
           ? blendRgbWithMonochrome(spectralRgb, isDark, effectiveWet)
           : monochromeInk;
 
+        // Feature 4: Atmospheric Optical Dispersion on low-elevation stars
+        this.drawAtmosphericDispersion(px, py, r, effMag, airmass, isDark, alphaMultiplier * extinction);
+
         // Scattered-light PSF glow (dark sky only): keeps a faint spectral tint even once
         // the ink has dried, and blooms outward when the star flares.
         if (isDark) {
           this.ctx.save();
           this.ctx.globalCompositeOperation = 'lighter';
-          const glowSat = perceivedSaturation(mag) * (0.55 + 0.45 * effectiveWet);
+          const glowSat = perceivedSaturation(effMag) * (0.55 + 0.45 * effectiveWet);
           const glowR = rBase * 0.9 * Math.pow(twinkle, 0.35);
-          const glowAlpha = clamp(0, 0.5 * twinkle, 1) * alphaMultiplier;
-          this.drawStarSprite(px, py, glowR, specSlotToBv(specSlot), glowSat, glowAlpha);
-          this.ctx.globalAlpha = alphaMultiplier;
-          this.drawChromaticScintillation(px, py, rBase * 0.8, seed, now, mag, airmass);
+          const glowAlpha = clamp(0, 0.5 * twinkle, 1) * alphaMultiplier * extinction;
+          this.drawStarSprite(px, py, glowR, reddenedBv, glowSat, glowAlpha);
+          this.ctx.globalAlpha = alphaMultiplier * extinction;
+          this.drawChromaticScintillation(px, py, rBase * 0.8, seed, now, effMag, airmass);
+
+          // Extended Aerosol Veiling Glare / Corneal Scatter Halo for First-Magnitude Stars (mag <= 1.8)
+          if (effMag <= 1.8) {
+            const haloExtent = Math.max(38, (2.2 - effMag) * 42) * (1.0 + scint * 0.10);
+            const glareGrad = this.ctx.createRadialGradient(px, py, r * 0.5, px, py, haloExtent);
+            const [gr, gg, gb] = starTintRgb(reddenedBv, glowSat);
+            const glareAlpha = (0.045 + 0.025 * Math.max(0, 1.8 - effMag)) * alphaMultiplier * extinction;
+            glareGrad.addColorStop(0, `rgba(${gr}, ${gg}, ${gb}, ${glareAlpha})`);
+            glareGrad.addColorStop(0.35, `rgba(${gr}, ${gg}, ${gb}, ${glareAlpha * 0.32})`);
+            glareGrad.addColorStop(1, `rgba(${gr}, ${gg}, ${gb}, 0)`);
+            this.ctx.fillStyle = glareGrad;
+            this.ctx.beginPath();
+            this.ctx.arc(px, py, haloExtent, 0, Math.PI * 2);
+            this.ctx.fill();
+          }
+
           this.ctx.restore();
         }
 
-        // Ink core dims slightly in scintillation troughs (dark sky only)
+        // Ink core dims slightly in scintillation troughs and horizon extinction (dark sky only)
         this.ctx.globalAlpha = isDark
-          ? alphaMultiplier * clamp(0.5, 0.35 + 0.65 * twinkle, 1)
+          ? alphaMultiplier * extinction * clamp(0.5, 0.35 + 0.65 * twinkle, 1)
           : alphaMultiplier;
 
         // Radial Chromatic Dispersion during wet phase
-        if (effectiveWet > 0.10 && mag <= 2.8) {
+        if (effectiveWet > 0.10 && effMag <= 2.8) {
           const vX = (px - cx) / (Math.hypot(px - cx, py - cy) || 1);
           const vY = (py - cy) / (Math.hypot(px - cx, py - cy) || 1);
           const chromaticDist = 0.85 * effectiveWet * (1.0 + scint * 0.15);
@@ -2715,7 +4623,7 @@ const { featuredConstellationId = null } = Astro.props;
         }
 
         // Delicate Airy Diffraction Ring for First-Magnitude Stars (mag <= 1.8)
-        if (mag <= 1.8) {
+        if (effMag <= 1.8) {
           const airyR = r * 2.35 * (1.0 + scint * 0.06);
           const airyAlpha = (0.16 + 0.08 * ((scint + 1) * 0.5)) * alphaMultiplier;
           this.ctx.strokeStyle = isDark
@@ -2727,22 +4635,11 @@ const { featuredConstellationId = null } = Astro.props;
           this.ctx.stroke();
         }
 
-        // Classical 4-ray engraved spider cross spikes for bright stars (mag <= 1.8)
-        if (mag <= 1.8) {
-          const spikeLenBase = (2.2 - mag) * 8.5;
-          const spikeLen = spikeLenBase * (1.0 + scint * 0.14);
-          this.ctx.strokeStyle = starFill;
-          this.ctx.lineWidth = 0.65;
-          this.ctx.beginPath();
-          this.ctx.moveTo(px - spikeLen, py);
-          this.ctx.lineTo(px + spikeLen, py);
-          this.ctx.moveTo(px, py - spikeLen);
-          this.ctx.lineTo(px, py + spikeLen);
-          this.ctx.stroke();
-        }
+        // Feature 1: Secondary Mirror Spider Fraunhofer Diffraction Spikes (mag <= 1.6)
+        this.drawDiffractionSpikes(px, py, effMag, scint, isDark, starFill, spectralRgb, alphaMultiplier * extinction);
 
         // Optical Point-Spread Function (PSF) Lorentzian Core Falloff & Core Blowing
-        if (mag <= 2.4) {
+        if (effMag <= 2.4) {
           const haloR = r * (2.1 + scint * 0.12);
           const psfGrad = this.ctx.createRadialGradient(px, py, r * 0.3, px, py, haloR);
           if (isDark) {
@@ -2793,6 +4690,27 @@ const { featuredConstellationId = null } = Astro.props;
     }
 
     private bindEvents() {
+      // 0. Astronomical Inspection Loupe toggle (L key & button)
+      const loupeBtn = document.getElementById('btn-toggle-loupe');
+      loupeBtn?.addEventListener('click', () => {
+        this.toggleLoupe();
+      });
+
+      window.addEventListener('keydown', (e) => {
+        if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+        if (e.key === 'l' || e.key === 'L') {
+          this.toggleLoupe();
+        }
+      });
+
+      // User activity listeners to reset 30s idle fade of magnitude scale
+      const resetIdle = () => { this.lastUserActivityTime = performance.now(); };
+      window.addEventListener('pointermove', resetIdle, { passive: true });
+      window.addEventListener('pointerdown', resetIdle, { passive: true });
+      window.addEventListener('keydown', resetIdle, { passive: true });
+      window.addEventListener('touchstart', resetIdle, { passive: true });
+      window.addEventListener('wheel', resetIdle, { passive: true });
+
       // 1. Next Plate button with smooth celestial camera slewing
       const nextBtn = document.getElementById('btn-new-constellation');
       nextBtn?.addEventListener('click', () => {
@@ -2819,11 +4737,18 @@ const { featuredConstellationId = null } = Astro.props;
 
       // 4. Interactive pointer hover & click on stars
       this.canvas.addEventListener('mousemove', (e) => this.handlePointerMove(e));
+      this.canvas.addEventListener('mouseenter', () => {
+        if (this.loupeAnim.active) {
+          this.canvas.classList.add('loupe-engaged');
+          this.canvas.style.cursor = 'none';
+        }
+      });
       this.canvas.addEventListener('mouseleave', () => {
         this.hoveredStar = null;
         this.parallax.targetX = 0;
         this.parallax.targetY = 0;
         this.isInteracting = false;
+        this.canvas.style.cursor = 'default';
       });
       this.canvas.addEventListener('click', (e) => this.handlePointerClick(e));
 
@@ -2875,8 +4800,62 @@ const { featuredConstellationId = null } = Astro.props;
       });
     }
 
+    private toggleLoupe() {
+      const now = performance.now();
+      const willBeActive = !this.loupeAnim.active;
+      this.loupeAnim.active = willBeActive;
+      this.loupeAnim.startTime = now;
+
+      if (this.canvas) {
+        this.canvas.classList.toggle('loupe-engaged', willBeActive);
+        this.canvas.style.cursor = willBeActive ? 'none' : (this.hoveredStar ? 'pointer' : 'default');
+      }
+
+      const loupeBtn = document.getElementById('btn-toggle-loupe');
+      if (loupeBtn) {
+        loupeBtn.classList.toggle('is-active', willBeActive);
+        loupeBtn.setAttribute('aria-pressed', String(willBeActive));
+      }
+      this.lastUserActivityTime = now;
+      this.renderSingleFrame(now);
+    }
+
+    private updateLoupeAnim(now: number) {
+      if (this.loupeAnim.active) {
+        const elapsed = Math.max(0, now - this.loupeAnim.startTime);
+        const t = Math.min(1.0, elapsed / this.loupeAnim.duration);
+
+        // Elastic ease-out with subtle mechanical overshoot for turned brass seating
+        const s = 1.32;
+        const t1 = t - 1;
+        const eased = t1 * t1 * ((s + 1) * t1 + s) + 1;
+
+        this.loupeAnim.progress = t;
+        this.loupeAnim.scale = Math.max(0, eased);
+        this.loupeAnim.opacity = Math.min(1.0, t * 2.4);
+        // Screws in with 42° lathe rotation settling to 0°
+        this.loupeAnim.spinAngle = (1.0 - Math.min(1.0, t * 1.12)) * (42 * Math.PI / 180);
+      } else if (this.loupeAnim.scale > 0.001) {
+        const elapsed = Math.max(0, now - this.loupeAnim.startTime);
+        const t = Math.min(1.0, elapsed / this.loupeAnim.closeDuration);
+        const invT = 1.0 - Math.min(1.0, t);
+        const eased = invT * invT * invT;
+
+        this.loupeAnim.progress = eased;
+        this.loupeAnim.scale = eased;
+        this.loupeAnim.opacity = eased;
+        // Counter-twist back into the housing
+        this.loupeAnim.spinAngle = (1.0 - eased) * (-28 * Math.PI / 180);
+      } else {
+        this.loupeAnim.progress = 0;
+        this.loupeAnim.scale = 0;
+        this.loupeAnim.opacity = 0;
+        this.loupeAnim.spinAngle = 0;
+      }
+    }
+
     private handlePointerMove(e: MouseEvent) {
-      const rect = this.canvas.getBoundingClientRect();
+      const rect = this.canvasRect || (this.canvasRect = this.canvas.getBoundingClientRect());
       this.mousePos.x = e.clientX - rect.left;
       this.mousePos.y = e.clientY - rect.top;
 
@@ -2889,13 +4868,17 @@ const { featuredConstellationId = null } = Astro.props;
       const star = this.findStarAtPosition(this.mousePos.x, this.mousePos.y);
       if (star !== this.hoveredStar) {
         this.hoveredStar = star;
-        this.canvas.style.cursor = star ? 'pointer' : 'default';
         this.isInteracting = true;
+      }
+      if (this.loupeAnim.active) {
+        this.canvas.style.cursor = 'none';
+      } else {
+        this.canvas.style.cursor = star ? 'pointer' : 'default';
       }
     }
 
     private handlePointerClick(e: MouseEvent) {
-      const rect = this.canvas.getBoundingClientRect();
+      const rect = this.canvasRect || (this.canvasRect = this.canvas.getBoundingClientRect());
       const clickX = e.clientX - rect.left;
       const clickY = e.clientY - rect.top;
 
@@ -2948,7 +4931,16 @@ const { featuredConstellationId = null } = Astro.props;
       const name = properName || `${bayer || 'Star'} ${this.currentConstellation.genitive}`;
       if (titleEl) titleEl.textContent = name;
       if (catEl) catEl.textContent = `${bayer || '—'} · HIP ${hip} · IAU ${this.currentConstellation.id.toUpperCase()}`;
-      if (desigEl) desigEl.textContent = `ASTROMETRIC FOLIO // ${bayer || 'STAR'}`;
+      if (desigEl) {
+        if (hip === 27989) desigEl.textContent = 'ASTROMETRIC FOLIO // PULSATING SUPERGIANT';
+        else if (hip === 14576) desigEl.textContent = 'ASTROMETRIC FOLIO // ECLIPSING BINARY';
+        else if (hip === 10826) desigEl.textContent = 'ASTROMETRIC FOLIO // PULSATING MIRA VARIABLE';
+        else if (hip === 110991) desigEl.textContent = 'ASTROMETRIC FOLIO // CEPHEID VARIABLE';
+        else if (hip === 95947) desigEl.textContent = 'ASTROMETRIC FOLIO // PHYSICAL BINARY (ALBIREO)';
+        else if (hip === 36850) desigEl.textContent = 'ASTROMETRIC FOLIO // SEXTUPLE SYSTEM (CASTOR)';
+        else if (hip === 65378) desigEl.textContent = 'ASTROMETRIC FOLIO // VISUAL BINARY (MIZAR)';
+        else desigEl.textContent = `ASTROMETRIC FOLIO // ${bayer || 'STAR'}`;
+      }
       if (magEl) magEl.textContent = `${mag.toFixed(2)} MAG`;
 
       const isDark = this.isDarkTheme();
@@ -3136,6 +5128,64 @@ const { featuredConstellationId = null } = Astro.props;
   }
 
   // ---------------------------------------------------------------------------
+  // Astronomical Great-Circle Coordinate Transformations
+  // ---------------------------------------------------------------------------
+
+  const DEG2RAD = Math.PI / 180;
+  const RAD2DEG = 180 / Math.PI;
+  // IAU 1958 Galactic North Pole & Longitude of Celestial Pole
+  const RA_NGP = 192.85948 * DEG2RAD;
+  const DEC_NGP = 27.12825 * DEG2RAD;
+  const L_NCP = 122.93192 * DEG2RAD;
+  const SIN_NGP = Math.sin(DEC_NGP);
+  const COS_NGP = Math.cos(DEC_NGP);
+
+  // Mean Obliquity of the Ecliptic (J2000.0)
+  const EPSILON_OBLIQ = 23.43929 * DEG2RAD;
+  const SIN_EPSILON = Math.sin(EPSILON_OBLIQ);
+  const COS_EPSILON = Math.cos(EPSILON_OBLIQ);
+
+  /** Converts Equatorial (RA, Dec in degrees) to Galactic (l, b in degrees). */
+  function eq2gal(raDeg: number, decDeg: number): { l: number; b: number } {
+    const a = raDeg * DEG2RAD;
+    const d = decDeg * DEG2RAD;
+    const sinB = Math.sin(d) * SIN_NGP + Math.cos(d) * COS_NGP * Math.cos(a - RA_NGP);
+    const b = Math.asin(Math.max(-1, Math.min(1, sinB)));
+    const y = Math.cos(d) * Math.sin(a - RA_NGP);
+    const x = Math.sin(d) * COS_NGP - Math.cos(d) * SIN_NGP * Math.cos(a - RA_NGP);
+    let l = (L_NCP - Math.atan2(y, x)) * RAD2DEG;
+    while (l < 0) l += 360;
+    while (l >= 360) l -= 360;
+    return { l, b: b * RAD2DEG };
+  }
+
+  /** Converts Galactic (l, b in degrees) to Equatorial (RA, Dec in degrees). */
+  function gal2eq(lDeg: number, bDeg: number): { ra: number; dec: number } {
+    const l = lDeg * DEG2RAD;
+    const b = bDeg * DEG2RAD;
+    const sinD = Math.sin(b) * SIN_NGP + Math.cos(b) * COS_NGP * Math.cos(L_NCP - l);
+    const d = Math.asin(Math.max(-1, Math.min(1, sinD)));
+    const y = Math.cos(b) * Math.sin(L_NCP - l);
+    const x = Math.sin(b) * COS_NGP - Math.cos(b) * SIN_NGP * Math.cos(L_NCP - l);
+    let a = (RA_NGP + Math.atan2(y, x)) * RAD2DEG;
+    while (a < 0) a += 360;
+    while (a >= 360) a -= 360;
+    return { ra: a, dec: d * RAD2DEG };
+  }
+
+  /** Converts Ecliptic Longitude (lambda in degrees, beta=0) to Equatorial (RA, Dec in degrees). */
+  function ecl2eq(lambdaDeg: number): { ra: number; dec: number } {
+    const l = lambdaDeg * DEG2RAD;
+    const sinDec = SIN_EPSILON * Math.sin(l);
+    const dec = Math.asin(sinDec);
+    const y = COS_EPSILON * Math.sin(l);
+    const x = Math.cos(l);
+    let ra = Math.atan2(y, x) * RAD2DEG;
+    while (ra < 0) ra += 360;
+    return { ra, dec: dec * RAD2DEG };
+  }
+
+  // ---------------------------------------------------------------------------
   // Stellar Scintillation & Point-Spread-Function Glow Toolkit
   // ---------------------------------------------------------------------------
 
@@ -3200,7 +5250,11 @@ const { featuredConstellationId = null } = Astro.props;
    * to look coloured; faint stars read as near-white (scotopic / rod vision).
    */
   function perceivedSaturation(mag: number): number {
-    return clamp(0.12, 0.3 + (3.5 - mag) * 0.14, 0.9);
+    // True human scotopic vision: only stars brighter than mag ~2.5 excite
+    // sufficient photopic cone response to show spectral tint; faint stars read
+    // as purely monochromatic silver-white.
+    if (mag >= 3.2) return 0.0;
+    return clamp(0.0, (3.2 - mag) * 0.28, 0.9);
   }
 
   function starTintRgb(bv: number, saturation: number): [number, number, number] {
@@ -3373,11 +5427,9 @@ const { featuredConstellationId = null } = Astro.props;
       return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
     };
 
-    // Golden angle dispersion (137.508 deg) + plate seed ensures maximum chromatic diversity across all 88 constellations
-    const plateBaseHueOffset = (baseSeed * 137.5077 + salt * 83.19 + nextRnd() * 360) % 360;
-
-    // Organic, continuous celestial hue shift speed (0.005 to 0.0075 deg/ms -> ~50s to 80s full harmonic cycle)
-    const hueShiftSpeed = 0.005 + nextRnd() * 0.0025;
+    // Fixed astrophysical spectral chemistry (H-alpha ruby, O-III teal, dust reflection blue)
+    const plateBaseHueOffset = 0;
+    const hueShiftSpeed = 0;
 
     // 6 Volumetric Nebular Clouds, distributed dynamically across the plate
     const clouds: NebularCloudSpec[] = [
@@ -3617,13 +5669,81 @@ const { featuredConstellationId = null } = Astro.props;
       knots.push({ theta, rNorm, size, isH2 });
     }
 
-    // Stellar population color gradients
-    const coreRgbDark: [number, number, number] = [255, 240, 210]; // warm Pop II
-    const discRgbDark: [number, number, number] = (hubbleType === 'elliptical' || hubbleType === 'lenticular')
-      ? [245, 230, 205]
-      : [180, 212, 255]; // Pop I starlight
-    const coreRgbLight: [number, number, number] = [45, 36, 30]; // archival umber
-    const discRgbLight: [number, number, number] = [115, 88, 65]; // sepia wash
+    // Stellar population color gradients based on morphology & astrophysical subtype
+    let coreRgbDark: [number, number, number];
+    let discRgbDark: [number, number, number];
+    let coreRgbLight: [number, number, number];
+    let discRgbLight: [number, number, number];
+
+    if (hubbleType === 'elliptical') {
+      // Old, metal-rich Pop II stars: warm golden amber to antique ivory
+      const hueRoll = nextRnd();
+      if (hueRoll < 0.4) {
+        coreRgbDark = [255, 238, 195];
+        discRgbDark = [240, 218, 175];
+      } else if (hueRoll < 0.75) {
+        coreRgbDark = [255, 246, 225];
+        discRgbDark = [248, 232, 205];
+      } else {
+        coreRgbDark = [255, 225, 170];
+        discRgbDark = [235, 200, 150];
+      }
+      coreRgbLight = [48, 36, 24];
+      discRgbLight = [120, 85, 55];
+    } else if (hubbleType === 'lenticular') {
+      // Dust-poor S0 lenticulars: pearlescent silver-ivory disc with soft apricot bulge
+      coreRgbDark = [255, 232, 198];
+      discRgbDark = [218, 226, 242];
+      coreRgbLight = [42, 34, 30];
+      discRgbLight = [95, 88, 85];
+    } else if (hubbleType === 'irregular') {
+      // Starburst irregular (e.g. M82): violent young OB stars, high-excitation starbursts
+      const starburstType = nextRnd();
+      if (starburstType < 0.5) {
+        // M82-like: smoky violet disc with warm nucleus
+        coreRgbDark = [255, 230, 210];
+        discRgbDark = [190, 180, 245];
+      } else {
+        // Electric starburst: vivid cyan and icy sapphire
+        coreRgbDark = [240, 248, 255];
+        discRgbDark = [130, 225, 255];
+      }
+      coreRgbLight = [35, 28, 40];
+      discRgbLight = [85, 75, 115];
+    } else if (hubbleType === 'edge_on') {
+      // Edge-on disk: prominent warm apricot/champagne central bulge, cooler disc perimeter
+      coreRgbDark = [255, 228, 175];
+      discRgbDark = [175, 205, 245];
+      coreRgbLight = [45, 32, 20];
+      discRgbLight = [90, 78, 70];
+    } else {
+      // Spirals & Barred Spirals (Grand design, Flocculent, Barred)
+      // High diversity of star-formation histories:
+      const spiralPaletteRoll = nextRnd();
+      if (spiralPaletteRoll < 0.25) {
+        // Active star-forming spiral (M51-like): bright electric cyan arms, topaz bulge
+        coreRgbDark = [255, 225, 165];
+        discRgbDark = [125, 208, 255];
+      } else if (spiralPaletteRoll < 0.50) {
+        // Massive Andromeda-like (M31): creamy gold-ivory bulge, slate-cerulean disk
+        coreRgbDark = [255, 240, 205];
+        discRgbDark = [165, 198, 245];
+      } else if (spiralPaletteRoll < 0.72) {
+        // Flocculent / Soft Spiral (M33-like): pearlescent azure/lavender disc, peach nucleus
+        coreRgbDark = [255, 235, 215];
+        discRgbDark = [185, 195, 255];
+      } else if (spiralPaletteRoll < 0.88) {
+        // Teal-tinted young spiral: aqua-emerald arms, warm cream core
+        coreRgbDark = [255, 242, 220];
+        discRgbDark = [135, 228, 235];
+      } else {
+        // Older intermediate spiral: warm amber-gold arms with antique ivory core
+        coreRgbDark = [255, 215, 150];
+        discRgbDark = [225, 205, 175];
+      }
+      coreRgbLight = [40, 32, 25];
+      discRgbLight = [75, 82, 105];
+    }
 
     return {
       hubbleType,
@@ -3645,6 +5765,221 @@ const { featuredConstellationId = null } = Astro.props;
       discRgbDark,
       coreRgbLight,
       discRgbLight
+    };
+  }
+
+  interface NebulaFilament {
+    angle: number;
+    length: number;
+    width: number;
+    isO3: boolean;
+  }
+
+  interface NebulaMorphology {
+    type: string;
+    name: string;
+    angle: number;
+    aspectRatio: number;
+    primaryRgbDark: [number, number, number];
+    secondaryRgbDark: [number, number, number];
+    coreRgbDark: [number, number, number];
+    veilRgbDark: [number, number, number];
+    primaryRgbLight: [number, number, number];
+    secondaryRgbLight: [number, number, number];
+    isFilamentary: boolean;
+    hasTrapezium: boolean;
+    hasCentralStar: boolean;
+    hasDustLane: boolean;
+    filaments: NebulaFilament[];
+  }
+
+  function deriveNebulaGenome(seedVal: number, rawType = 'SFR', label = ''): NebulaMorphology {
+    let seed = Math.abs(seedVal);
+    const nextRnd = () => {
+      seed = (seed * 9301 + 49297) % 233280;
+      return seed / 233280;
+    };
+
+    const clean = (label || '').toUpperCase();
+    const type = (rawType || 'SFR').toUpperCase();
+
+    const isOrion = clean.includes('M42') || clean.includes('ORION');
+    const isCarina = clean.includes('CARINA') || clean.includes('ETA CAR') || clean.includes('3372');
+    const isTrifid = clean.includes('M20') || clean.includes('TRIFID');
+    const isLagoon = clean.includes('M8') || clean.includes('LAGOON');
+    const isCrab = clean.includes('M1') || clean.includes('CRAB') || clean.includes('1952');
+    const isVeil = clean.includes('VEIL') || clean.includes('CYGNUS LOOP') || clean.includes('6960') || clean.includes('6992');
+    const isRing = clean.includes('M57') || clean.includes('RING');
+    const isDumbbell = clean.includes('M27') || clean.includes('M76') || clean.includes('DUMBBELL');
+    const isOwl = clean.includes('M97') || clean.includes('OWL');
+    const isM78 = clean.includes('M78') || clean.includes('2068');
+    const isPleiades = clean.includes('M45') || clean.includes('PLEIADES');
+    const isWitchHead = clean.includes('WITCH HEAD') || clean.includes('1909');
+    const isIris = clean.includes('IRIS') || clean.includes('7023');
+
+    const angle = nextRnd() * Math.PI;
+    const aspectRatio = 0.65 + nextRnd() * 0.35;
+
+    let primaryRgbDark: [number, number, number];
+    let secondaryRgbDark: [number, number, number];
+    let coreRgbDark: [number, number, number];
+    let veilRgbDark: [number, number, number];
+    let primaryRgbLight: [number, number, number];
+    let secondaryRgbLight: [number, number, number];
+    let isFilamentary = false;
+    let hasTrapezium = false;
+    let hasCentralStar = false;
+    let hasDustLane = false;
+
+    if (isOrion) {
+      primaryRgbDark = [242, 60, 108]; // H-alpha ruby/rose
+      secondaryRgbDark = [65, 235, 205]; // O-III emerald
+      coreRgbDark = [255, 252, 245]; // Trapezium illumination
+      veilRgbDark = [135, 35, 85]; // Smoky dusky plum
+      primaryRgbLight = [165, 45, 75];
+      secondaryRgbLight = [40, 125, 115];
+      hasTrapezium = true;
+      hasDustLane = true;
+    } else if (isCarina) {
+      primaryRgbDark = [255, 72, 55]; // Fiery scarlet H-alpha
+      secondaryRgbDark = [255, 165, 55]; // Sulfur amber
+      coreRgbDark = [255, 248, 220];
+      veilRgbDark = [125, 30, 48];
+      primaryRgbLight = [170, 45, 35];
+      secondaryRgbLight = [150, 95, 30];
+      hasDustLane = true;
+    } else if (isTrifid) {
+      primaryRgbDark = [240, 55, 102]; // Ruby emission lobe
+      secondaryRgbDark = [75, 172, 255]; // Azure reflection lobe
+      coreRgbDark = [255, 250, 242];
+      veilRgbDark = [120, 38, 90];
+      primaryRgbLight = [155, 40, 70];
+      secondaryRgbLight = [40, 95, 160];
+      hasDustLane = true;
+    } else if (isLagoon) {
+      primaryRgbDark = [238, 65, 118];
+      secondaryRgbDark = [82, 218, 198];
+      coreRgbDark = [255, 248, 230];
+      veilRgbDark = [115, 32, 75];
+      primaryRgbLight = [150, 42, 75];
+      secondaryRgbLight = [45, 115, 105];
+      hasDustLane = true;
+    } else if (isCrab || (type === 'SNR' && (clean.includes('CRAB') || nextRnd() < 0.5))) {
+      // Supernova Remnant - relativistic synchrotron + tangled fiery shock web
+      primaryRgbDark = [255, 138, 42]; // Fiery orange/amber filaments
+      secondaryRgbDark = [52, 242, 222]; // Electric neon-cyan O-III shock
+      coreRgbDark = [218, 235, 255]; // Relativistic pulsar synchrotron mist
+      veilRgbDark = [185, 85, 35];
+      primaryRgbLight = [160, 85, 25];
+      secondaryRgbLight = [30, 135, 125];
+      isFilamentary = true;
+    } else if (isVeil || type === 'SNR') {
+      primaryRgbDark = [245, 65, 95]; // Shocked crimson
+      secondaryRgbDark = [55, 238, 218]; // Oxygen lace
+      coreRgbDark = [235, 248, 255];
+      veilRgbDark = [140, 45, 80];
+      primaryRgbLight = [155, 42, 60];
+      secondaryRgbLight = [35, 130, 120];
+      isFilamentary = true;
+    } else if (isRing || (type === 'PN' && nextRnd() < 0.4)) {
+      primaryRgbDark = [60, 245, 215]; // O-III cyan/emerald inner ring
+      secondaryRgbDark = [218, 58, 138]; // N-II outer violet-ruby rim
+      coreRgbDark = [255, 255, 255]; // Central white dwarf
+      veilRgbDark = [110, 40, 115];
+      primaryRgbLight = [35, 130, 115];
+      secondaryRgbLight = [135, 38, 85];
+      hasCentralStar = true;
+    } else if (isDumbbell || isOwl || type === 'PN') {
+      primaryRgbDark = [68, 242, 222]; // O-III emerald lobes
+      secondaryRgbDark = [225, 68, 112]; // H-alpha outer halo
+      coreRgbDark = [255, 255, 255];
+      veilRgbDark = [85, 40, 95];
+      primaryRgbLight = [40, 135, 120];
+      secondaryRgbLight = [140, 42, 70];
+      hasCentralStar = true;
+    } else if (isM78 || isPleiades || isWitchHead || isIris || type === 'RN') {
+      // Pure Reflection Nebula - Rayleigh scattering by interstellar grains (NO red!)
+      const blueTintRoll = nextRnd();
+      if (blueTintRoll < 0.4) {
+        primaryRgbDark = [82, 178, 255]; // Electric sapphire
+        secondaryRgbDark = [145, 228, 255]; // Frost cyan
+        veilRgbDark = [55, 105, 215]; // Royal cobalt
+      } else if (blueTintRoll < 0.75) {
+        primaryRgbDark = [98, 192, 255]; // Ice azure
+        secondaryRgbDark = [165, 235, 255]; // Pale frost
+        veilRgbDark = [75, 125, 230];
+      } else {
+        primaryRgbDark = [115, 168, 255]; // Periwinkle/lavender-blue
+        secondaryRgbDark = [155, 218, 255];
+        veilRgbDark = [85, 105, 220];
+      }
+      coreRgbDark = [248, 252, 255]; // Brilliant B-star core
+      primaryRgbLight = [45, 100, 165];
+      secondaryRgbLight = [75, 135, 185];
+      hasCentralStar = true;
+    } else if (type === 'SFR') {
+      // General procedural H II Star Forming Region - varied chemistry
+      const sfrRoll = nextRnd();
+      if (sfrRoll < 0.3) {
+        primaryRgbDark = [238, 55, 105]; // Ruby rose
+        secondaryRgbDark = [70, 232, 205]; // Emerald
+        veilRgbDark = [125, 32, 78];
+      } else if (sfrRoll < 0.6) {
+        primaryRgbDark = [252, 78, 62]; // Coral scarlet
+        secondaryRgbDark = [255, 172, 60]; // Amber
+        veilRgbDark = [135, 38, 45];
+      } else if (sfrRoll < 0.85) {
+        primaryRgbDark = [225, 52, 135]; // Magenta / violet
+        secondaryRgbDark = [85, 215, 235]; // Cyan
+        veilRgbDark = [110, 30, 95];
+      } else {
+        primaryRgbDark = [245, 95, 75]; // Apricot rose
+        secondaryRgbDark = [110, 235, 195]; // Mint teal
+        veilRgbDark = [120, 45, 65];
+      }
+      coreRgbDark = [255, 250, 240];
+      primaryRgbLight = [150, 42, 68];
+      secondaryRgbLight = [40, 120, 110];
+      hasDustLane = nextRnd() < 0.6;
+    } else {
+      // Clusters (GC, OC, POS)
+      primaryRgbDark = [255, 235, 195];
+      secondaryRgbDark = [215, 230, 255];
+      coreRgbDark = [255, 252, 245];
+      veilRgbDark = [135, 115, 85];
+      primaryRgbLight = [120, 95, 55];
+      secondaryRgbLight = [65, 85, 120];
+    }
+
+    // Generate filament seeds for SNR or turbulent emission nebulae
+    const filaments: NebulaFilament[] = [];
+    if (isFilamentary || type === 'SNR') {
+      const fCount = 12 + Math.floor(nextRnd() * 10);
+      for (let f = 0; f < fCount; f++) {
+        const fAngle = nextRnd() * Math.PI * 2;
+        const fLen = 0.35 + nextRnd() * 0.60;
+        const fW = 0.15 + nextRnd() * 0.25;
+        const isO3 = nextRnd() < 0.45;
+        filaments.push({ angle: fAngle, length: fLen, width: fW, isO3 });
+      }
+    }
+
+    return {
+      type,
+      name: label || 'Nebula',
+      angle,
+      aspectRatio,
+      primaryRgbDark,
+      secondaryRgbDark,
+      coreRgbDark,
+      veilRgbDark,
+      primaryRgbLight,
+      secondaryRgbLight,
+      isFilamentary,
+      hasTrapezium,
+      hasCentralStar,
+      hasDustLane,
+      filaments
     };
   }
 

@@ -1,0 +1,382 @@
+/**
+ * The Study: Administrative Button Design System
+ * Aesthetic Archetype: Academic Ink & Folio Archetype · Sovereign Astrolabe & Scriptoria
+ * 5 Contextual Weight Classes:
+ *   - Tier 1: .study-btn--seal (Sovereign Commits / Binding State)
+ *   - Tier 2: .study-btn--ignite (Illumination / Generative & Ingest)
+ *   - Tier 3: .study-btn--instrument (Astrolabe Precision Tools & Toggles)
+ *   - Tier 4: .study-btn--ledger (Vellum Ledger & Table Marginalia)
+ *   - Tier 5: .study-btn--hazard & .study-btn--purge (Caution & Excisors)
+ *
+ * Anti-Fatigue / Optical Ergonomics:
+ *   - Deep velvety midnight indigo backgrounds without cyan or electric flare.
+ *   - Soft moonlight typography (#cbd5e1 / #8da0be) eliminating irradiation glare.
+ *   - Whisper-thin translucent hairlines (rgba(255, 255, 255, 0.055)) preventing box clutter.
+ *   - Antique burnished gold focal points (#c9a84e) without neon green tinting.
+ */
+
+/* ==========================================================================
+   0. Base Button Engine (.study-btn)
+   ========================================================================== */
+
+.study-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  min-block-size: 34px;
+  padding: 0.42rem 0.85rem;
+  border-radius: 4px;
+  border: 1px solid transparent;
+  font-family: var(--font-serif);
+  font-size: 0.84rem;
+  font-weight: 500;
+  line-height: 1;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+  user-select: none;
+  box-sizing: border-box;
+  position: relative;
+  transition: 
+    background 0.16s ease,
+    color 0.16s ease,
+    border-color 0.16s ease,
+    box-shadow 0.16s ease,
+    transform 0.08s cubic-bezier(0.2, 0, 0, 1);
+}
+
+/* Accessibility Focus Ring (Dual-Ring Geometry) */
+.study-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2.5px;
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 25%, transparent);
+}
+
+/* Universal Tactile Displacement on Press */
+.study-btn:active:not(:disabled):not([aria-disabled="true"]) {
+  transform: translateY(1.5px) scale(0.985);
+}
+
+/* Disabled & Inactive States */
+.study-btn:disabled,
+.study-btn[aria-disabled="true"],
+.study-btn.is-disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  pointer-events: none;
+  box-shadow: none !important;
+  filter: grayscale(0.5);
+}
+
+/* Keycap Keystroke Hints (.btn-keycap) */
+.study-btn .btn-keycap {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  padding: 0.12rem 0.32rem;
+  border-radius: 3px;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: inset 0 -1px 0 rgba(0, 0, 0, 0.35);
+  color: var(--text-secondary);
+  margin-inline-start: 0.25rem;
+  pointer-events: none;
+}
+
+/* Glyph / Icon inside Button */
+.study-btn .btn-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.9em;
+  line-height: 1;
+  opacity: 0.88;
+  transition: transform 0.15s ease;
+}
+
+.study-btn:hover:not(:disabled) .btn-icon {
+  opacity: 1;
+}
+
+/* ==========================================================================
+   1. Tier 1: Sovereign Seals (.study-btn--seal)
+   Max Visual Weight · Binding Archival Persistence · Gilded Intaglio Stamp
+   ========================================================================== */
+
+.study-btn--seal {
+  background: var(--accent);
+  color: #070a16;
+  border: 1px solid color-mix(in srgb, var(--accent) 85%, #ffffff);
+  box-shadow: 
+    0 2px 6px -1px rgba(0, 0, 0, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.35);
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.study-btn--seal:hover:not(:disabled) {
+  transform: translateY(-0.75px);
+  box-shadow: 
+    0 4px 14px -2px color-mix(in srgb, var(--accent) 55%, transparent),
+    0 0 1px var(--accent),
+    inset 0 1px 0 rgba(255, 255, 255, 0.5);
+}
+
+.study-btn--seal:active:not(:disabled) {
+  transform: translateY(1.5px) scale(0.985);
+  box-shadow: 
+    inset 0 2px 4px rgba(0, 0, 0, 0.5),
+    0 0 0 1px color-mix(in srgb, var(--accent) 70%, transparent);
+}
+
+.study-btn--seal .btn-keycap {
+  background: rgba(0, 0, 0, 0.25);
+  color: #070a16;
+  border-color: rgba(0, 0, 0, 0.2);
+}
+
+/* ==========================================================================
+   2. Tier 2: Illumination & Ignition (.study-btn--ignite)
+   Generative Synthesis · Ingestion · Crafting New Folios · Soft Velvet Ember
+   ========================================================================== */
+
+.study-btn--ignite {
+  background: color-mix(in srgb, var(--accent) 10%, var(--bg-surface));
+  color: var(--accent);
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+  box-shadow: 
+    0 1px 3px -1px rgba(0, 0, 0, 0.25),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  font-weight: 500;
+}
+
+.study-btn--ignite:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--accent) 18%, var(--bg-surface));
+  border-color: color-mix(in srgb, var(--accent) 65%, transparent);
+  color: var(--accent);
+  transform: translateY(-0.75px);
+  box-shadow: 
+    0 4px 12px -2px color-mix(in srgb, var(--accent) 28%, transparent),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+
+.study-btn--ignite:active:not(:disabled) {
+  transform: translateY(1.5px) scale(0.985);
+  background: color-mix(in srgb, var(--accent) 15%, var(--bg-surface));
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.35);
+}
+
+/* Tier 2 Variant: Illuminated Rubrication / Ember (.study-btn--ember)
+   Medieval manuscript vermilion rubrication · Warm terracotta ember */
+.study-btn--ember {
+  background: rgba(184, 75, 57, 0.12);
+  color: #fca5a5;
+  border: 1px solid rgba(184, 75, 57, 0.3);
+  box-shadow: 
+    0 1px 3px -1px rgba(0, 0, 0, 0.25),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  font-weight: 500;
+}
+
+.study-btn--ember:hover:not(:disabled) {
+  background: rgba(184, 75, 57, 0.2);
+  border-color: rgba(184, 75, 57, 0.55);
+  color: #fecaca;
+  transform: translateY(-0.75px);
+  box-shadow: 
+    0 4px 12px -2px rgba(184, 75, 57, 0.32),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+
+.study-btn--ember:active:not(:disabled) {
+  transform: translateY(1.5px) scale(0.985);
+  background: rgba(184, 75, 57, 0.28);
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.4);
+}
+
+/* ==========================================================================
+   3. Tier 3: Astrolabe Instruments (.study-btn--instrument)
+   Mechanical Precision Tools · Segmented Toggles · Milled Brass Detents
+   ========================================================================== */
+
+.study-btn--instrument {
+  background: var(--bg-surface);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-hairline);
+  box-shadow: 
+    0 1px 2px rgba(0, 0, 0, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.study-btn--instrument:hover:not(:disabled) {
+  color: var(--text-primary);
+  border-color: rgba(255, 255, 255, 0.14);
+  background: color-mix(in srgb, var(--accent) 5%, var(--bg-surface));
+}
+
+/* Recessed Mechanical Latch State */
+.study-btn--instrument.is-active,
+.study-btn--instrument[aria-pressed="true"],
+.study-btn--instrument[aria-selected="true"] {
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 14%, var(--bg-surface));
+  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+  box-shadow: 
+    inset 0 1.5px 3px rgba(0, 0, 0, 0.35),
+    0 0 6px color-mix(in srgb, var(--accent) 20%, transparent);
+}
+
+/* ==========================================================================
+   4. Tier 4: Vellum Ledger & Marginalia (.study-btn--ledger)
+   Dense Data Tables · Row Operations · Quiet Ink Wash & Calligraphic Ease
+   ========================================================================== */
+
+.study-btn--ledger {
+  background: color-mix(in srgb, var(--bg-surface) 70%, transparent);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-hairline);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+}
+
+.study-btn--ledger:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--accent) 8%, var(--bg-surface));
+  color: var(--text-primary);
+  border-color: rgba(255, 255, 255, 0.16);
+  transform: translateY(-0.5px);
+}
+
+.study-btn--ledger:active:not(:disabled) {
+  transform: translateY(1px);
+  background: color-mix(in srgb, var(--accent) 12%, var(--bg-surface));
+}
+
+/* Ghost variant for ultra-quiet marginalia (e.g. secondary row links) */
+.study-btn--ghost {
+  background: transparent;
+  color: var(--text-secondary);
+  border: 1px solid transparent;
+}
+
+.study-btn--ghost:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-primary);
+  border-color: var(--border-hairline);
+}
+
+/* ==========================================================================
+   5. Tier 5: Cinnabar Hazards & Excisors (.study-btn--hazard, .study-btn--purge)
+   Irrevocable Excisions · Server Shutdowns · Heavy Friction & Caution
+   ========================================================================== */
+
+/* Cautionary Hazard (Deletions, process stop, warning actions) */
+.study-btn--hazard {
+  background: rgba(184, 75, 57, 0.1);
+  color: #fca5a5;
+  border: 1px solid rgba(184, 75, 57, 0.25);
+  box-shadow: 
+    0 1px 2px rgba(0, 0, 0, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.study-btn--hazard:hover:not(:disabled) {
+  background: rgba(184, 75, 57, 0.2);
+  color: #fecaca;
+  border-color: rgba(184, 75, 57, 0.5);
+  box-shadow: 
+    0 3px 10px -2px rgba(184, 75, 57, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  transform: translateY(-0.5px);
+}
+
+.study-btn--hazard:active:not(:disabled) {
+  transform: translateY(1.5px) scale(0.985);
+  background: rgba(184, 75, 57, 0.35);
+  color: #ffffff;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+/* Sovereign Purge (Irreversible Database Wipe / Deep Destructive Commits) */
+.study-btn--purge {
+  background: #991b1b;
+  color: #fee2e2;
+  border: 1px solid #b91c1c;
+  box-shadow: 
+    0 2px 8px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.study-btn--purge:hover:not(:disabled) {
+  background: #b91c1c;
+  box-shadow: 
+    0 4px 16px rgba(185, 28, 28, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  transform: translateY(-0.75px);
+}
+
+.study-btn--purge:active:not(:disabled) {
+  transform: translateY(1.5px) scale(0.985);
+  background: #7f1d1d;
+  box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.7);
+}
+
+/* ==========================================================================
+   6. Scale & Geometry Modifiers
+   ========================================================================== */
+
+/* Micro Size: Table Rows & Compact Actions (26px height) */
+.study-btn--sm {
+  min-block-size: 26px;
+  padding: 0.22rem 0.6rem;
+  font-size: 0.76rem;
+  border-radius: 3px;
+  gap: 0.35rem;
+}
+
+/* Large Size: Sovereign Commitment Docks & Major Landing Actions (42px height) */
+.study-btn--lg {
+  min-block-size: 42px;
+  padding: 0.6rem 1.35rem;
+  font-size: 0.92rem;
+  border-radius: 5px;
+  gap: 0.55rem;
+}
+
+/* Square Icon-Only Utility Trigger */
+.study-btn--icon-only {
+  width: 32px;
+  height: 32px;
+  min-block-size: 32px;
+  padding: 0;
+  border-radius: 4px;
+}
+
+.study-btn--icon-only.study-btn--sm {
+  width: 26px;
+  height: 26px;
+  min-block-size: 26px;
+}
+
+/* ==========================================================================
+   7. Accessibility High-Contrast & Reduced Motion Overrides
+   ========================================================================== */
+
+:root[data-admin-a11y-mode="true"] .study-btn {
+  border-width: 2px !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .study-btn {
+    transition: background 0.1s ease, color 0.1s ease, border-color 0.1s ease !important;
+  }
+  .study-btn:hover,
+  .study-btn:active {
+    transform: none !important;
+  }
+}

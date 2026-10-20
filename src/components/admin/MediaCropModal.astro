@@ -1,0 +1,800 @@
+---
+// src/components/admin/MediaCropModal.astro
+// Precision Image Cropper Instrument (4:5 Portrait & 2:3 Monograph Covers)
+// Focused, zero-scroll direct-manipulation canvas with focal zoom, pan & rotation
+---
+
+<dialog
+  id="media-crop-modal"
+  class="media-crop-dialog"
+  closedby="any"
+  aria-labelledby="crop-modal-title"
+>
+  <div class="crop-modal-shell" id="crop-modal-shell">
+    <!-- Header -->
+    <header class="crop-modal-header">
+      <div class="crop-header-lead">
+        <span class="seal-mark" aria-hidden="true">❧</span>
+        <div class="crop-header-titles">
+          <span class="crop-kicker" id="crop-modal-kicker">PRECISION IMAGE INSTRUMENT</span>
+          <h3 id="crop-modal-title" class="crop-title">Adjust Asset Crop</h3>
+        </div>
+      </div>
+
+      <div class="crop-header-controls">
+        <span class="aspect-badge tabular" id="crop-aspect-badge">4:5 PORTRAIT</span>
+        <button
+          type="button"
+          id="btn-close-crop-modal"
+          class="study-btn study-btn--ghost study-btn--icon-only study-btn--sm modal-close-btn"
+          aria-label="Close Cropper (Esc)"
+          title="Close (Esc)"
+        >
+          ✕
+        </button>
+      </div>
+    </header>
+
+    <!-- Canvas Viewport Stage -->
+    <main class="crop-modal-stage">
+      <div class="crop-viewport-container" id="crop-viewport-stage">
+        <div class="canvas-matte" id="crop-canvas-matte">
+          <canvas id="crop-canvas" class="crop-canvas"></canvas>
+
+          <!-- Dynamic Rule of Thirds Alignment Grid -->
+          <div class="thirds-overlay" id="crop-thirds-overlay" aria-hidden="true">
+            <div class="thirds-line thirds-v1"></div>
+            <div class="thirds-line thirds-v2"></div>
+            <div class="thirds-line thirds-h1"></div>
+            <div class="thirds-line thirds-h2"></div>
+          </div>
+
+          <!-- Drag and Drop Overlay Scrim -->
+          <div class="crop-drop-scrim" id="crop-drop-scrim" aria-hidden="true">
+            <div class="drop-scrim-inner">
+              <span class="drop-icon">⇩</span>
+              <span>Drop Image File to Load</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Floating Glassmorphic HUD Toolstrip -->
+        <div class="floating-crop-hud" role="toolbar" aria-label="Canvas Transformations">
+          <label class="study-btn study-btn--instrument study-btn--sm hud-btn hud-upload-btn" title="Browse / Upload Image File">
+            <span class="hud-icon">✚</span>
+            <span class="hud-label">Upload</span>
+            <input type="file" id="crop-file-input" accept="image/*" class="sr-only" />
+          </label>
+
+          <div class="hud-sep" aria-hidden="true"></div>
+
+          <button type="button" id="hud-fit-btn" class="study-btn study-btn--instrument study-btn--sm hud-btn" title="Fit / Fill Frame (⤢)">
+            <span class="hud-icon">⤢</span>
+            <span class="hud-label">Fit</span>
+          </button>
+
+          <button type="button" id="hud-zoom-out-btn" class="study-btn study-btn--instrument study-btn--icon-only study-btn--sm hud-btn" title="Zoom Out (−)">
+            −
+          </button>
+
+          <div class="hud-slider-wrap">
+            <label for="crop-zoom-slider" class="sr-only">Zoom scale</label>
+            <input
+              type="range"
+              id="crop-zoom-slider"
+              min="0.2"
+              max="4.0"
+              step="0.02"
+              value="1.0"
+              class="hud-slider"
+            />
+          </div>
+
+          <button type="button" id="hud-zoom-in-btn" class="study-btn study-btn--instrument study-btn--icon-only study-btn--sm hud-btn" title="Zoom In (+)">
+            +
+          </button>
+
+          <span id="crop-zoom-readout" class="hud-readout tabular">100%</span>
+
+          <div class="hud-sep" aria-hidden="true"></div>
+
+          <button type="button" id="hud-rotate-btn" class="study-btn study-btn--instrument study-btn--sm hud-btn" title="Rotate 90° Clockwise">
+            <span class="hud-icon">↻</span>
+            <span class="hud-label">90°</span>
+          </button>
+
+          <button type="button" id="hud-reset-btn" class="study-btn study-btn--instrument study-btn--sm hud-btn" title="Reset Transforms">
+            <span class="hud-icon">⟲</span>
+            <span class="hud-label">Reset</span>
+          </button>
+        </div>
+      </div>
+    </main>
+
+    <!-- Footer Controls -->
+    <footer class="crop-modal-footer">
+      <div class="footer-telemetry">
+        <span class="telemetry-item">
+          <span class="telemetry-label">ASPECT:</span>
+          <span id="telemetry-aspect-val" class="telemetry-val mono">4:5</span>
+        </span>
+        <span class="telemetry-sep">/</span>
+        <span class="telemetry-item">
+          <span class="telemetry-label">BUFFER:</span>
+          <span id="telemetry-buffer-val" class="telemetry-val mono">640 × 800 (HiDPI 2x)</span>
+        </span>
+      </div>
+
+      <div class="footer-actions">
+        <button type="button" id="btn-cancel-crop-modal" class="study-btn study-btn--ledger">
+          <span>Cancel</span>
+          <span class="btn-keycap">Esc</span>
+        </button>
+        <button type="button" id="btn-apply-crop" class="study-btn study-btn--seal">
+          <span id="apply-crop-label">Save &amp; Apply Asset ✓</span>
+          <span class="btn-keycap">⌘↵</span>
+        </button>
+      </div>
+    </footer>
+  </div>
+</dialog>
+
+<script>
+  interface OpenCropperOptions {
+    aspect?: 'portrait' | 'book-cover' | 'square';
+    title?: string;
+    kicker?: string;
+    initialImageUrl?: string;
+    fileNameSlug?: string;
+    applyLabel?: string;
+    targetEntity?: { type: 'portrait' } | { type: 'book'; id: string; title?: string };
+    onApply?: (result: { ok: boolean; imageUrl?: string; dataUrl: string }) => void | Promise<void>;
+  }
+
+  const PRESETS = {
+    portrait: { w: 320, h: 400, label: '4:5 PORTRAIT', aspectDisplay: '4:5', buffer: '640 × 800 (HiDPI 2x)' },
+    'book-cover': { w: 300, h: 450, label: '2:3 BOOK COVER', aspectDisplay: '2:3', buffer: '600 × 900 (HiDPI 2x)' },
+    square: { w: 340, h: 340, label: '1:1 SQUARE', aspectDisplay: '1:1', buffer: '680 × 680 (HiDPI 2x)' },
+  };
+
+  const DPR = Math.max(2, window.devicePixelRatio || 1);
+
+  const STATE = {
+    zoomLevel: 1.0,
+    panX: 0,
+    panY: 0,
+    rotationDeg: 0,
+    activeAspect: 'portrait' as 'portrait' | 'book-cover' | 'square',
+    currentImage: null as HTMLImageElement | null,
+    currentImageUrl: '',
+    fileNameSlug: 'asset',
+    targetEntity: null as OpenCropperOptions['targetEntity'],
+  };
+
+  const dialog = document.getElementById('media-crop-modal') as HTMLDialogElement | null;
+  const canvas = document.getElementById('crop-canvas') as HTMLCanvasElement | null;
+  const ctx = canvas?.getContext('2d');
+  const stage = document.getElementById('crop-viewport-stage');
+  const thirdsOverlay = document.getElementById('crop-thirds-overlay');
+  const dropScrim = document.getElementById('crop-drop-scrim');
+  const titleEl = document.getElementById('crop-modal-title');
+  const kickerEl = document.getElementById('crop-modal-kicker');
+  const aspectBadge = document.getElementById('crop-aspect-badge');
+  const zoomSlider = document.getElementById('crop-zoom-slider') as HTMLInputElement | null;
+  const zoomReadout = document.getElementById('crop-zoom-readout');
+  const fileInput = document.getElementById('crop-file-input') as HTMLInputElement | null;
+  const applyBtn = document.getElementById('btn-apply-crop') as HTMLButtonElement | null;
+  const applyLabel = document.getElementById('apply-crop-label');
+  const telemetryAspect = document.getElementById('telemetry-aspect-val');
+  const telemetryBuffer = document.getElementById('telemetry-buffer-val');
+
+  let activeCallback: OpenCropperOptions['onApply'] | null = null;
+  let lastFocusedEl: HTMLElement | null = null;
+  let isDragging = false;
+  let dragStartX = 0;
+  let dragStartY = 0;
+  let idleGridTimeout: any = null;
+
+  function updateDimensions() {
+    if (!canvas) return;
+    const preset = PRESETS[STATE.activeAspect] || PRESETS.portrait;
+    canvas.width = preset.w * DPR;
+    canvas.height = preset.h * DPR;
+    canvas.style.width = `${preset.w}px`;
+    canvas.style.height = `${preset.h}px`;
+
+    if (aspectBadge) aspectBadge.textContent = preset.label;
+    if (telemetryAspect) telemetryAspect.textContent = preset.aspectDisplay;
+    if (telemetryBuffer) telemetryBuffer.textContent = preset.buffer;
+  }
+
+  function showThirdsGrid() {
+    thirdsOverlay?.classList.add('is-active');
+    clearTimeout(idleGridTimeout);
+    idleGridTimeout = setTimeout(() => {
+      if (!isDragging) thirdsOverlay?.classList.remove('is-active');
+    }, 1200);
+  }
+
+  function render() {
+    if (!canvas || !ctx) return;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    if (!STATE.currentImage) {
+      ctx.fillStyle = '#0b0f20';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = '#5c6d88';
+      ctx.font = '14px var(--font-mono, monospace)';
+      ctx.textAlign = 'center';
+      ctx.fillText('NO ASSET LOADED', canvas.width / 2, canvas.height / 2);
+      return;
+    }
+
+    ctx.save();
+    ctx.translate(canvas.width / 2, canvas.height / 2);
+    ctx.scale(STATE.zoomLevel, STATE.zoomLevel);
+    ctx.translate(STATE.panX * DPR, STATE.panY * DPR);
+    ctx.rotate((STATE.rotationDeg * Math.PI) / 180);
+
+    const img = STATE.currentImage;
+    ctx.drawImage(img, -img.width / 2, -img.height / 2, img.width, img.height);
+    ctx.restore();
+  }
+
+  function fitImage() {
+    if (!canvas || !STATE.currentImage) return;
+    const img = STATE.currentImage;
+    const rot = STATE.rotationDeg % 180 !== 0;
+    const imgW = rot ? img.height : img.width;
+    const imgH = rot ? img.width : img.height;
+
+    const scaleX = canvas.width / imgW;
+    const scaleY = canvas.height / imgH;
+    STATE.zoomLevel = Math.max(scaleX, scaleY);
+    STATE.panX = 0;
+    STATE.panY = 0;
+
+    if (zoomSlider) zoomSlider.value = String(STATE.zoomLevel.toFixed(2));
+    if (zoomReadout) zoomReadout.textContent = `${Math.round(STATE.zoomLevel * 100)}%`;
+    showThirdsGrid();
+    render();
+  }
+
+  function resetTransform() {
+    STATE.zoomLevel = 1.0;
+    STATE.panX = 0;
+    STATE.panY = 0;
+    STATE.rotationDeg = 0;
+    if (zoomSlider) zoomSlider.value = '1.0';
+    if (zoomReadout) zoomReadout.textContent = '100%';
+    showThirdsGrid();
+    render();
+  }
+
+  function loadAsset(url: string) {
+    STATE.currentImageUrl = url;
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      STATE.currentImage = img;
+      fitImage();
+    };
+    img.onerror = () => {
+      console.warn('Failed to load asset from URL:', url);
+    };
+    img.src = url;
+  }
+
+  function loadFromFile(file: File) {
+    if (!file.type.startsWith('image/')) {
+      (window as any).notify?.('Only image files (.webp, .png, .jpg, .svg) are supported.', 'warn');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const dataUrl = e.target?.result as string;
+      if (dataUrl) loadAsset(dataUrl);
+    };
+    reader.readAsDataURL(file);
+  }
+
+  // Pointer Dragging for Pan
+  canvas?.addEventListener('pointerdown', (e) => {
+    if (!STATE.currentImage) return;
+    isDragging = true;
+    dragStartX = e.clientX - STATE.panX;
+    dragStartY = e.clientY - STATE.panY;
+    canvas.setPointerCapture(e.pointerId);
+    canvas.style.cursor = 'grabbing';
+    showThirdsGrid();
+  });
+
+  canvas?.addEventListener('pointermove', (e) => {
+    if (!isDragging) return;
+    STATE.panX = e.clientX - dragStartX;
+    STATE.panY = e.clientY - dragStartY;
+    render();
+  });
+
+  const stopDrag = () => {
+    if (isDragging) {
+      isDragging = false;
+      if (canvas) canvas.style.cursor = 'grab';
+      clearTimeout(idleGridTimeout);
+      idleGridTimeout = setTimeout(() => thirdsOverlay?.classList.remove('is-active'), 500);
+    }
+  };
+
+  canvas?.addEventListener('pointerup', stopDrag);
+  canvas?.addEventListener('pointercancel', stopDrag);
+
+  // Wheel Zoom
+  canvas?.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    const delta = e.deltaY * -0.002;
+    STATE.zoomLevel = Math.max(0.1, Math.min(5.0, STATE.zoomLevel + delta));
+    if (zoomSlider) zoomSlider.value = String(STATE.zoomLevel);
+    if (zoomReadout) zoomReadout.textContent = `${Math.round(STATE.zoomLevel * 100)}%`;
+    showThirdsGrid();
+    render();
+  }, { passive: false });
+
+  // Floating HUD listeners
+  document.getElementById('hud-fit-btn')?.addEventListener('click', fitImage);
+  document.getElementById('hud-reset-btn')?.addEventListener('click', resetTransform);
+
+  zoomSlider?.addEventListener('input', () => {
+    STATE.zoomLevel = Number(zoomSlider.value);
+    if (zoomReadout) zoomReadout.textContent = `${Math.round(STATE.zoomLevel * 100)}%`;
+    showThirdsGrid();
+    render();
+  });
+
+  document.getElementById('hud-zoom-in-btn')?.addEventListener('click', () => {
+    STATE.zoomLevel = Math.min(5.0, STATE.zoomLevel + 0.15);
+    if (zoomSlider) zoomSlider.value = String(STATE.zoomLevel);
+    if (zoomReadout) zoomReadout.textContent = `${Math.round(STATE.zoomLevel * 100)}%`;
+    showThirdsGrid();
+    render();
+  });
+
+  document.getElementById('hud-zoom-out-btn')?.addEventListener('click', () => {
+    STATE.zoomLevel = Math.max(0.1, STATE.zoomLevel - 0.15);
+    if (zoomSlider) zoomSlider.value = String(STATE.zoomLevel);
+    if (zoomReadout) zoomReadout.textContent = `${Math.round(STATE.zoomLevel * 100)}%`;
+    showThirdsGrid();
+    render();
+  });
+
+  document.getElementById('hud-rotate-btn')?.addEventListener('click', () => {
+    STATE.rotationDeg = (STATE.rotationDeg + 90) % 360;
+    showThirdsGrid();
+    render();
+  });
+
+  fileInput?.addEventListener('change', (e) => {
+    const file = (e.currentTarget as HTMLInputElement).files?.[0];
+    if (file) loadFromFile(file);
+  });
+
+  // Drag and Drop files onto canvas stage
+  stage?.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    dropScrim?.classList.add('is-active');
+  });
+
+  stage?.addEventListener('dragleave', (e) => {
+    if (e.target === stage || e.target === dropScrim) {
+      dropScrim?.classList.remove('is-active');
+    }
+  });
+
+  stage?.addEventListener('drop', (e) => {
+    e.preventDefault();
+    dropScrim?.classList.remove('is-active');
+    const file = e.dataTransfer?.files?.[0];
+    if (file) loadFromFile(file);
+  });
+
+  // Modal Close
+  const closeCropper = () => {
+    if (!dialog || !dialog.open) return;
+    dialog.setAttribute('data-closing', '');
+    setTimeout(() => {
+      dialog.removeAttribute('data-closing');
+      dialog.close();
+      if (lastFocusedEl && typeof lastFocusedEl.focus === 'function') {
+        lastFocusedEl.focus();
+        lastFocusedEl = null;
+      }
+    }, 200);
+  };
+
+  document.getElementById('btn-close-crop-modal')?.addEventListener('click', closeCropper);
+  document.getElementById('btn-cancel-crop-modal')?.addEventListener('click', closeCropper);
+  dialog?.addEventListener('cancel', (e) => {
+    e.preventDefault();
+    closeCropper();
+  });
+
+  // Apply Action
+  applyBtn?.addEventListener('click', async () => {
+    if (!canvas || !STATE.currentImage) {
+      (window as any).notify?.('Please load an image onto the canvas before applying.', 'warn');
+      return;
+    }
+
+    if (applyBtn) applyBtn.disabled = true;
+    (window as any).notify?.('Processing and saving image asset…', 'info');
+
+    const dataUrl = canvas.toDataURL('image/webp', 0.92);
+
+    try {
+      // 1. If targetEntity is a Book: Atomic cover update directly
+      if (STATE.targetEntity?.type === 'book') {
+        const bookId = STATE.targetEntity.id;
+        const res = await (window as any).postAdmin?.('/api/admin/content', {
+          action: 'update-book-cover',
+          bookId,
+          dataUrl,
+          customFileName: STATE.fileNameSlug,
+        });
+
+        if (applyBtn) applyBtn.disabled = false;
+        if (res?.ok) {
+          (window as any).notify?.(res.message || 'Book cover updated successfully!', 'success');
+          if (activeCallback) await activeCallback({ ok: true, imageUrl: res.imageUrl, dataUrl });
+          closeCropper();
+        } else {
+          (window as any).notify?.(res?.error || 'Failed to save book cover.', 'error');
+        }
+        return;
+      }
+
+      // 2. If targetEntity is Portrait: Atomic faculty portrait update
+      if (STATE.targetEntity?.type === 'portrait') {
+        const res = await (window as any).postAdmin?.('/api/admin/media', {
+          target: 'portrait',
+          dataUrl,
+        });
+
+        if (applyBtn) applyBtn.disabled = false;
+        if (res?.ok) {
+          (window as any).notify?.('Faculty portrait updated successfully!', 'success');
+          // Broadcast reactive event
+          window.dispatchEvent(new CustomEvent('drc:media-updated', {
+            detail: {
+              target: 'portrait',
+              imageUrl: res.imageUrl || res.portraitUrl,
+              dataUrl,
+              profile: res.profile,
+            }
+          }));
+
+          if (activeCallback) await activeCallback({ ok: true, imageUrl: res.imageUrl || res.portraitUrl, dataUrl });
+          closeCropper();
+        } else {
+          (window as any).notify?.(res?.error || 'Failed to update portrait.', 'error');
+        }
+        return;
+      }
+
+      // 3. Generic callback mode
+      if (activeCallback) {
+        await activeCallback({ ok: true, dataUrl });
+      }
+      if (applyBtn) applyBtn.disabled = false;
+      closeCropper();
+    } catch (err: any) {
+      if (applyBtn) applyBtn.disabled = false;
+      (window as any).notify?.(`Error saving asset: ${err.message}`, 'error');
+    }
+  });
+
+  // Global Singleton Launcher
+  (window as any).openMediaCropper = (options: OpenCropperOptions = {}) => {
+    lastFocusedEl = document.activeElement as HTMLElement | null;
+
+    STATE.activeAspect = options.aspect || 'portrait';
+    STATE.fileNameSlug = options.fileNameSlug || 'asset';
+    STATE.targetEntity = options.targetEntity || null;
+    activeCallback = options.onApply || null;
+
+    if (titleEl) {
+      titleEl.textContent = options.title || (STATE.activeAspect === 'portrait' ? 'Faculty Portrait Adjuster' : 'Monograph Cover Adjuster');
+    }
+    if (kickerEl) {
+      kickerEl.textContent = options.kicker || (STATE.activeAspect === 'portrait' ? '01 · FACULTY PORTRAIT' : '02 · MONOGRAPH COVER');
+    }
+    if (applyLabel) {
+      applyLabel.textContent = options.applyLabel || 'Save & Apply Asset ✓';
+    }
+
+    updateDimensions();
+
+    if (options.initialImageUrl) {
+      loadAsset(options.initialImageUrl);
+    } else {
+      const defaultImg = STATE.activeAspect === 'portrait'
+        ? '/images/duncan-cordry-portrait.webp'
+        : '/images/books/celestial-mechanics.svg';
+      loadAsset(defaultImg);
+    }
+
+    if (dialog && !dialog.open) {
+      dialog.removeAttribute('data-closing');
+      dialog.showModal();
+    }
+  };
+
+  // Backwards compatibility alias for openMediaEditor
+  (window as any).openMediaEditor = (opts: any) => {
+    const aspect = opts.aspectRatio === 'book-cover' || opts.target === 'book-cover' ? 'book-cover' : 'portrait';
+    (window as any).openMediaCropper({
+      aspect,
+      title: opts.title,
+      initialImageUrl: opts.initialImageUrl,
+      fileNameSlug: opts.slug,
+      applyLabel: opts.applyLabel,
+      onApply: opts.onApply,
+    });
+  };
+</script>
+
+<style>
+  .media-crop-dialog {
+    padding: 0;
+    margin: auto;
+    border: 1px solid color-mix(in oklab, var(--accent) 45%, transparent);
+    border-radius: 12px;
+    background: var(--bg-surface, #0b0f20);
+    color: var(--text-primary, #cbd5e1);
+    box-shadow: 0 24px 72px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(255, 255, 255, 0.08);
+    inline-size: min(580px, calc(100vw - 2rem));
+    max-block-size: calc(100vh - 3rem);
+    overflow: hidden;
+    outline: none;
+    transition: opacity 0.2s ease, transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .media-crop-dialog::backdrop {
+    background: rgba(4, 7, 16, 0.75);
+    backdrop-filter: blur(8px);
+  }
+
+  .media-crop-dialog[data-closing] {
+    opacity: 0;
+    transform: scale(0.96) translateY(6px);
+  }
+
+  .crop-modal-shell {
+    display: flex;
+    flex-direction: column;
+    max-block-size: calc(100vh - 3rem);
+  }
+
+  .crop-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.85rem 1.25rem;
+    border-block-end: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.08));
+    background: color-mix(in oklab, var(--bg-surface) 92%, var(--bg-elevated) 8%);
+  }
+
+  .crop-header-lead {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+  }
+
+  .crop-kicker {
+    font-family: var(--font-mono, monospace);
+    font-size: 0.62rem;
+    letter-spacing: 0.14em;
+    color: var(--accent, #c9a84e);
+    display: block;
+    margin-block-end: 0.15rem;
+  }
+
+  .crop-title {
+    font-family: var(--font-serif, serif);
+    font-size: 1.05rem;
+    font-weight: 500;
+    margin: 0;
+    line-height: 1.2;
+  }
+
+  .crop-header-controls {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .aspect-badge {
+    font-family: var(--font-mono, monospace);
+    font-size: 0.65rem;
+    letter-spacing: 0.08em;
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+    background: color-mix(in oklab, var(--accent) 15%, transparent);
+    border: 1px solid color-mix(in oklab, var(--accent) 35%, transparent);
+    color: var(--accent, #c9a84e);
+    font-weight: 600;
+  }
+
+  .crop-modal-stage {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1.5rem;
+    background: var(--bg-canvas, #070a16);
+    overflow: hidden;
+  }
+
+  .crop-viewport-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.15rem;
+    inline-size: 100%;
+  }
+
+  .canvas-matte {
+    position: relative;
+    display: inline-block;
+    border-radius: 8px;
+    border: 2px solid var(--border-subtle, rgba(255, 255, 255, 0.12));
+    box-shadow: 0 12px 36px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(0, 0, 0, 0.5);
+    background: #000;
+    overflow: hidden;
+  }
+
+  .crop-canvas {
+    display: block;
+    cursor: grab;
+    touch-action: none;
+    user-select: none;
+  }
+
+  /* Rule of Thirds Alignment Overlay */
+  .thirds-overlay {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+  }
+
+  .thirds-overlay.is-active {
+    opacity: 1;
+  }
+
+  .thirds-line {
+    position: absolute;
+    background: rgba(255, 255, 255, 0.28);
+    box-shadow: 0 0 2px rgba(0, 0, 0, 0.6);
+  }
+
+  .thirds-v1 { inset-inline-start: 33.333%; inset-block: 0; inline-size: 1px; }
+  .thirds-v2 { inset-inline-start: 66.666%; inset-block: 0; inline-size: 1px; }
+  .thirds-h1 { inset-block-start: 33.333%; inset-inline: 0; block-size: 1px; }
+  .thirds-h2 { inset-block-start: 66.666%; inset-inline: 0; block-size: 1px; }
+
+  /* Drag & Drop Scrim */
+  .crop-drop-scrim {
+    position: absolute;
+    inset: 0;
+    background: rgba(11, 15, 32, 0.88);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.16s ease;
+    border: 2px dashed var(--accent, #c9a84e);
+    border-radius: 8px;
+  }
+
+  .crop-drop-scrim.is-active {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .drop-scrim-inner {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    font-family: var(--font-serif, serif);
+    font-size: 0.95rem;
+    color: var(--accent, #c9a84e);
+  }
+
+  .drop-icon {
+    font-size: 1.8rem;
+    line-height: 1;
+  }
+
+  /* Floating HUD Controls */
+  .floating-crop-hud {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.35rem 0.65rem;
+    border-radius: 8px;
+    background: color-mix(in oklab, var(--bg-surface) 85%, transparent);
+    backdrop-filter: blur(12px);
+    border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.1));
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  }
+
+  .hud-btn {
+    font-size: 0.78rem;
+    padding: 0.32rem 0.65rem;
+  }
+
+  .hud-upload-btn {
+    cursor: pointer;
+  }
+
+  .hud-sep {
+    inline-size: 1px;
+    block-size: 18px;
+    background: var(--border-subtle, rgba(255, 255, 255, 0.12));
+    margin-inline: 0.2rem;
+  }
+
+  .hud-slider-wrap {
+    display: flex;
+    align-items: center;
+    inline-size: 90px;
+    padding-inline: 0.25rem;
+  }
+
+  .hud-slider {
+    inline-size: 100%;
+    accent-color: var(--accent, #c9a84e);
+    cursor: pointer;
+  }
+
+  .hud-readout {
+    font-family: var(--font-mono, monospace);
+    font-size: 0.72rem;
+    min-inline-size: 38px;
+    text-align: right;
+    color: var(--text-secondary);
+  }
+
+  .crop-modal-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.85rem 1.25rem;
+    border-block-start: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.08));
+    background: color-mix(in oklab, var(--bg-surface) 94%, var(--bg-elevated) 6%);
+  }
+
+  .footer-telemetry {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.72rem;
+    color: var(--text-muted);
+  }
+
+  .telemetry-val {
+    color: var(--text-secondary);
+  }
+
+  .telemetry-sep {
+    opacity: 0.4;
+  }
+
+  .footer-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+  }
+</style>

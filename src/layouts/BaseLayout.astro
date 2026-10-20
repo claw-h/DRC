@@ -9,6 +9,7 @@ interface Props {
   title?: string;
   description?: string;
   isPortfolioRoot?: boolean;
+  isAdmin?: boolean;
   citationMeta?: {
     title: string;
     authors: string[];
@@ -23,12 +24,13 @@ const {
   title = 'Duncan R. Cordry · Continental Philosophy & Philosophy of Technology',
   description = 'Academic archive, monographs, course syllabi, and generative celestial observatory of Dr. Duncan R. Cordry, Visiting Faculty of Philosophy at Ashoka University.',
   isPortfolioRoot = false,
+  isAdmin = false,
   citationMeta,
 } = Astro.props;
 ---
 
 <!DOCTYPE html>
-<html lang="en" class={isPortfolioRoot ? 'portfolio-scroller' : ''}>
+<html lang="en" class={isPortfolioRoot ? 'portfolio-scroller' : ''} data-admin-page={isAdmin ? 'true' : undefined}>
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -39,17 +41,33 @@ const {
     <meta name="color-scheme" content="light dark" />
     <script is:inline>
       try {
-        const stored = localStorage.getItem('color-scheme');
-        if (stored === 'light' || stored === 'dark') {
-          document.querySelector('meta[name="color-scheme"]').content = stored;
-          document.documentElement.setAttribute('data-theme', stored);
-        } else {
-          const sysDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-          document.documentElement.setAttribute('data-theme', sysDark ? 'dark' : 'light');
-        }
+        const isAdmin = document.documentElement.hasAttribute('data-admin-page');
 
-        if (localStorage.getItem('drc-a11y-mode') === 'true') {
-          document.documentElement.setAttribute('data-a11y-mode', 'true');
+        if (isAdmin) {
+          // Admin Sovereign Theme & Accessibility Isolation
+          const adminStoredTheme = localStorage.getItem('drc-admin-theme');
+          const adminTheme = adminStoredTheme === 'light' || adminStoredTheme === 'dark' ? adminStoredTheme : 'dark';
+
+          document.querySelector('meta[name="color-scheme"]').content = adminTheme;
+          document.documentElement.setAttribute('data-theme', adminTheme);
+
+          if (localStorage.getItem('drc-admin-a11y-mode') === 'true') {
+            document.documentElement.setAttribute('data-admin-a11y-mode', 'true');
+          }
+        } else {
+          // Public Portfolio Controls
+          const stored = localStorage.getItem('color-scheme');
+          if (stored === 'light' || stored === 'dark') {
+            document.querySelector('meta[name="color-scheme"]').content = stored;
+            document.documentElement.setAttribute('data-theme', stored);
+          } else {
+            const sysDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            document.documentElement.setAttribute('data-theme', sysDark ? 'dark' : 'light');
+          }
+
+          if (localStorage.getItem('drc-a11y-mode') === 'true') {
+            document.documentElement.setAttribute('data-a11y-mode', 'true');
+          }
         }
 
         // Synchronous pre-hydration: Set intro state to prevent FOUC
@@ -76,7 +94,7 @@ const {
       } catch {}
     </script>
 
-    <!-- Scholar typography: Newsreader & IM Fell English -->
+    <!-- Scholar typography: Newsreader & IM Fell English (Oxford Fell types) -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link

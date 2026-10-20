@@ -44,10 +44,34 @@ const { profile, pubCount, bookCount, classCount } = Astro.props;
 
     <!-- Right-Docked Study Controls -->
     <div class="header-actions">
-      <!-- Classical Bookplate / Folio Seal -->
-      <div class="header-folio-seal" aria-hidden="true">
-        <span class="seal-mark">❧</span>
-        <span class="seal-text scholarly-caps" id="header-epoch-readout">FOLIO · J2000.0</span>
+      <!-- Tiny Metallic Minecraft Block with Inscribed PCB Orthodox Cross Emblem -->
+      <div
+        class="mc-metallic-block-bar mc-emblem-block"
+        id="mc-metallic-bar"
+        role="banner"
+        aria-label="PCB Orthodox Cross Emblem"
+        title="PCB Orthodox Cross Emblem"
+      >
+        <!-- 4 Corner Pixel Rivets (Tiny Minecraft Iron Block) -->
+        <span class="mc-pixel-rivet mc-pixel-rivet--tl" aria-hidden="true"></span>
+        <span class="mc-pixel-rivet mc-pixel-rivet--tr" aria-hidden="true"></span>
+        <span class="mc-pixel-rivet mc-pixel-rivet--bl" aria-hidden="true"></span>
+        <span class="mc-pixel-rivet mc-pixel-rivet--br" aria-hidden="true"></span>
+
+        <!-- Inscribed Circuit Cross Emblem -->
+        <div class="mc-emblem-wrapper" aria-hidden="true">
+          <img
+            src="/images/pcb-orthodox-cross.webp"
+            alt="PCB Orthodox Cross Emblem"
+            class="mc-emblem-img"
+            width="625"
+            height="975"
+            loading="eager"
+            decoding="async"
+          />
+          <!-- Gold Transistor Circuit Sheen Overlay on Idle -->
+          <div class="mc-circuit-sheen" aria-hidden="true"></div>
+        </div>
       </div>
 
       <!-- Scholarly Visiting Card Trigger -> Expands into Faculty Credentials Card -->
@@ -94,6 +118,7 @@ const { profile, pubCount, bookCount, classCount } = Astro.props;
 <script>
   const centerStation = document.getElementById('header-brand-center');
   const leftStation = document.getElementById('header-brand-left');
+  const metallicBlock = document.getElementById('mc-metallic-bar');
 
   const updateStationA11y = (stage?: string) => {
     const isStage1 = !stage || stage === 'stage-1';
@@ -107,14 +132,25 @@ const { profile, pubCount, bookCount, classCount } = Astro.props;
     }
   };
 
+  const updateBlockScrollFlip = () => {
+    const isScrolled = window.scrollY > 20 || (document.body.dataset.stage && document.body.dataset.stage !== 'stage-1');
+    if (metallicBlock) {
+      metallicBlock.classList.toggle('is-scrolled-flipped', Boolean(isScrolled));
+    }
+  };
+
+  window.addEventListener('scroll', updateBlockScrollFlip, { passive: true });
+
   const observer = new MutationObserver((mutations) => {
     for (const m of mutations) {
       if (m.type === 'attributes' && m.attributeName === 'data-stage') {
         updateStationA11y(document.body.dataset.stage);
+        updateBlockScrollFlip();
       }
     }
   });
 
   observer.observe(document.body, { attributes: true, attributeFilter: ['data-stage'] });
   updateStationA11y(document.body.dataset.stage);
+  updateBlockScrollFlip();
 </script>
