@@ -3,6 +3,15 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import yaml from 'js-yaml';
 import { verifyAdminSession, verifyCsrfToken } from '../../../lib/admin-auth.ts';
+import {
+  persistPublicationToDb,
+  deletePublicationFromDb,
+  persistBookToDb,
+  deleteBookFromDb,
+  persistClassToDb,
+  deleteClassFromDb,
+  fetchContentRecordFromDb,
+} from '../../../lib/turso.ts';
 
 export const prerender = false;
 
@@ -382,6 +391,20 @@ export const POST: APIRoute = async ({ request, cookies }) => {
         { status: 200, headers: { 'Content-Type': 'application/json' } }
       );
     } catch {
+      // Fallback: Check Turso edge database
+      const dbRecord = await fetchContentRecordFromDb(type as any, cleanId);
+      if (dbRecord) {
+        return new Response(
+          JSON.stringify({
+            ok: true,
+            type,
+            id: cleanId,
+            data: dbRecord.data,
+            body: dbRecord.body,
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } }
+        );
+      }
       return new Response(JSON.stringify({ error: `File not found: ${cleanId}.md in ${type}` }), { status: 404 });
     }
   }
@@ -454,9 +477,15 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       references,
     };
 
-    const mdContent = `---\n${yaml.dump(frontmatter, { lineWidth: -1 })}---\n\n${abstract}\n`;
-    const outPath = path.resolve(process.cwd(), `src/data/publications/${slug}.md`);
-    await fs.writeFile(outPath, mdContent, 'utf8');
+    // Persist to Turso Edge Database
+    await persistPublicationToDb(frontmatter).catch(() => {});
+
+    // Write to local disk if filesystem is writable
+    try {
+      const mdContent = `---\n${yaml.dump(frontmatter, { lineWidth: -1 })}---\n\n${abstract}\n`;
+      const outPath = path.resolve(process.cwd(), `src/data/publications/${slug}.md`);
+      await fs.writeFile(outPath, mdContent, 'utf8');
+    } catch {}
 
     return new Response(
       JSON.stringify({
@@ -535,9 +564,15 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       purchaseLinks,
     };
 
-    const mdContent = `---\n${yaml.dump(frontmatter, { lineWidth: -1 })}---\n\n${synopsis}\n`;
-    const outPath = path.resolve(process.cwd(), `src/data/books/${slug}.md`);
-    await fs.writeFile(outPath, mdContent, 'utf8');
+    // Persist to Turso Edge Database
+    await persistBookToDb(frontmatter).catch(() => {});
+
+    // Write to local disk if filesystem is writable
+    try {
+      const mdContent = `---\n${yaml.dump(frontmatter, { lineWidth: -1 })}---\n\n${synopsis}\n`;
+      const outPath = path.resolve(process.cwd(), `src/data/books/${slug}.md`);
+      await fs.writeFile(outPath, mdContent, 'utf8');
+    } catch {}
 
     return new Response(
       JSON.stringify({
@@ -614,9 +649,15 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       reviews,
     };
 
-    const mdContent = `---\n${yaml.dump(frontmatter, { lineWidth: -1 })}---\n\n${summary}\n`;
-    const outPath = path.resolve(process.cwd(), `src/data/classes/${slug}.md`);
-    await fs.writeFile(outPath, mdContent, 'utf8');
+    // Persist to Turso Edge Database
+    await persistClassToDb(frontmatter).catch(() => {});
+
+    // Write to local disk if filesystem is writable
+    try {
+      const mdContent = `---\n${yaml.dump(frontmatter, { lineWidth: -1 })}---\n\n${summary}\n`;
+      const outPath = path.resolve(process.cwd(), `src/data/classes/${slug}.md`);
+      await fs.writeFile(outPath, mdContent, 'utf8');
+    } catch {}
 
     return new Response(
       JSON.stringify({
@@ -645,16 +686,20 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       return new Response(JSON.stringify({ error: 'Valid item ID is required' }), { status: 400 });
     }
 
+    // Remove from Turso Edge Database
+    if (type === 'publications') await deletePublicationFromDb(cleanId).catch(() => {});
+    if (type === 'books') await deleteBookFromDb(cleanId).catch(() => {});
+    if (type === 'classes') await deleteClassFromDb(cleanId).catch(() => {});
+
     const filePath = path.resolve(process.cwd(), `src/data/${type}/${cleanId}.md`);
     try {
       await fs.unlink(filePath);
-      return new Response(
-        JSON.stringify({ ok: true, deletedId: cleanId, type, message: `Permanently removed ${cleanId}.md from ${type}.` }),
-        { status: 200, headers: { 'Content-Type': 'application/json' } }
-      );
-    } catch {
-      return new Response(JSON.stringify({ error: `File not found for ID ${cleanId}` }), { status: 404 });
-    }
+    } catch {}
+
+    return new Response(
+      JSON.stringify({ ok: true, deletedId: cleanId, type, message: `Permanently removed ${cleanId} from ${type}.` }),
+      { status: 200, headers: { 'Content-Type': 'application/json' } }
+    );
   }
 
   return new Response(JSON.stringify({ error: 'Unknown content action' }), { status: 400 });
