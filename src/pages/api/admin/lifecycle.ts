@@ -1,14 +1,13 @@
 import type { APIRoute } from 'astro';
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import { spawn } from 'node:child_process';
-import { Readable } from 'node:stream';
 import {
   verifyAdminSession,
   verifyCsrfToken,
   verifyPassword,
 } from '../../../lib/admin-auth.ts';
 import { updateSystemState } from '../../../lib/system-state.ts';
+import { generateObservatoryBackup } from '../../../lib/archive.ts';
 
 export const prerender = false;
 
@@ -24,22 +23,19 @@ export const GET: APIRoute = async ({ request, cookies }) => {
   if (action === 'download-archive') {
     try {
       const today = new Date().toISOString().slice(0, 10);
-      const tar = spawn('tar', ['-czf', '-', 'src/data', 'public'], {
-        cwd: process.cwd(),
-      });
+      const archiveBuffer = await generateObservatoryBackup();
 
-      // Stream the gzipped tarball directly to client
-      const webStream = Readable.toWeb(tar.stdout as any);
-
-      return new Response(webStream as any, {
+      return new Response(archiveBuffer, {
         status: 200,
         headers: {
           'Content-Type': 'application/gzip',
           'Content-Disposition': `attachment; filename="drc-observatory-archive-${today}.tar.gz"`,
+          'Content-Length': String(archiveBuffer.length),
           'Cache-Control': 'no-cache, no-store, must-revalidate',
         },
       });
     } catch (err: any) {
+      console.error('[Archive Generation Error]', err);
       return new Response(`Failed generating archive: ${err?.message}`, { status: 500 });
     }
   }

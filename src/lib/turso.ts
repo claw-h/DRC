@@ -371,3 +371,33 @@ export async function fetchContentRecordFromDb(type: 'publications' | 'books' | 
   }
 }
 
+// -------------------------------------------------------------
+// Complete Database Export for Backups
+// -------------------------------------------------------------
+export async function exportAllDataForBackup() {
+  const db = getTursoClient();
+  if (!db) return null;
+
+  try {
+    const [sysRes, profRes, pubRes, bookRes, classRes] = await Promise.all([
+      db.execute("SELECT * FROM system_state"),
+      db.execute("SELECT * FROM faculty_profile"),
+      db.execute("SELECT * FROM publications"),
+      db.execute("SELECT * FROM books"),
+      db.execute("SELECT * FROM classes"),
+    ]);
+
+    return {
+      system_state: sysRes.rows,
+      faculty_profile: profRes.rows,
+      publications: pubRes.rows,
+      books: bookRes.rows,
+      classes: classRes.rows,
+    };
+  } catch (err) {
+    console.error('[Turso] exportAllDataForBackup error:', err);
+    return null;
+  }
+}
+
+

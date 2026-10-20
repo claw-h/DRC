@@ -441,7 +441,16 @@ const activeItem = navItems.find((item) => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...payload, csrfToken: csrf }),
       });
-      return res.json();
+      const text = await res.text();
+      try {
+        const data = JSON.parse(text);
+        if (!res.ok && !data.error) {
+          data.error = `HTTP ${res.status}: ${res.statusText || 'Server Error'}`;
+        }
+        return data;
+      } catch {
+        return { ok: false, error: text || `HTTP ${res.status}: Server Error` };
+      }
     };
 
     // Header Avatar Click Handler: Navigates to /admin/identity or launches portrait cropper

@@ -11,6 +11,7 @@ import {
   persistClassToDb,
   deleteClassFromDb,
   fetchContentRecordFromDb,
+  getTursoClient,
 } from '../../../lib/turso.ts';
 
 export const prerender = false;
@@ -49,7 +50,8 @@ function parseBibTeXFields(raw: string): Record<string, string> {
 }
 
 export const POST: APIRoute = async ({ request, cookies }) => {
-  if (!verifyAdminSession(cookies)) {
+  try {
+    if (!verifyAdminSession(cookies)) {
     return new Response(JSON.stringify({ error: 'Unauthorized session' }), {
       status: 401,
       headers: { 'Content-Type': 'application/json' },
@@ -247,15 +249,20 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     else if (mime.includes('epub') || originalName.endsWith('.epub')) ext = 'epub';
 
     const subDir = docType === 'classes' ? 'syllabi' : 'papers';
-    const targetDir = path.resolve(process.cwd(), `public/${subDir}`);
-    await fs.mkdir(targetDir, { recursive: true });
-
     const baseName = slugify(originalName.replace(/\.[^/.]+$/, '')) || 'document';
     const fileName = `${baseName}-${Date.now().toString().slice(-4)}.${ext}`;
-    const outPath = path.resolve(targetDir, fileName);
 
-    await fs.writeFile(outPath, buffer);
-    const fileUrl = `/${subDir}/${fileName}`;
+    let fileUrl = dataUrl;
+    try {
+      const targetDir = path.resolve(process.cwd(), `public/${subDir}`);
+      await fs.mkdir(targetDir, { recursive: true });
+      const outPath = path.resolve(targetDir, fileName);
+      await fs.writeFile(outPath, buffer);
+      fileUrl = `/${subDir}/${fileName}`;
+    } catch {
+      // In read-only serverless environment (Vercel), use dataUrl fallback
+      fileUrl = dataUrl;
+    }
 
     return new Response(
       JSON.stringify({
@@ -263,7 +270,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
         fileUrl,
         fileName,
         sizeBytes: buffer.length,
-        message: `Successfully uploaded document to ${fileUrl}`,
+        message: `Successfully uploaded document`,
       }),
       { status: 200, headers: { 'Content-Type': 'application/json' } }
     );
@@ -287,18 +294,23 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     const slugName = slugify(rawName) || 'monograph-cover';
     const fileName = `${slugName}-${Date.now().toString().slice(-4)}.${ext}`;
 
-    const booksDir = path.resolve(process.cwd(), 'public/images/books');
-    await fs.mkdir(booksDir, { recursive: true });
+    let imageUrl = dataUrl;
+    try {
+      const booksDir = path.resolve(process.cwd(), 'public/images/books');
+      await fs.mkdir(booksDir, { recursive: true });
+      const outPath = path.resolve(booksDir, fileName);
+      await fs.writeFile(outPath, buffer);
+      imageUrl = `/images/books/${fileName}`;
+    } catch {
+      // In read-only serverless environment (Vercel), use dataUrl fallback
+      imageUrl = dataUrl;
+    }
 
-    const outPath = path.resolve(booksDir, fileName);
-    await fs.writeFile(outPath, buffer);
-
-    const imageUrl = `/images/books/${fileName}`;
     return new Response(
       JSON.stringify({
         ok: true,
         imageUrl,
-        message: `Saved monograph cover to ${imageUrl}`,
+        message: `Saved monograph cover`,
       }),
       { status: 200, headers: { 'Content-Type': 'application/json' } }
     );
@@ -326,15 +338,28 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     const slugName = slugify(rawName) || bookId;
     const fileName = `${slugName}-${Date.now().toString().slice(-4)}.${ext}`;
 
-    const booksDir = path.resolve(process.cwd(), 'public/images/books');
-    await fs.mkdir(booksDir, { recursive: true });
+    let imageUrl = dataUrl;
+    try {
+      const booksDir = path.resolve(process.cwd(), 'public/images/books');
+      await fs.mkdir(booksDir, { recursive: true });
+      const outPath = path.resolve(booksDir, fileName);
+      await fs.writeFile(outPath, buffer);
+      imageUrl = `/images/books/${fileName}`;
+    } catch {
+      // In read-only serverless environment (Vercel), use dataUrl fallback
+      imageUrl = dataUrl;
+    }
 
-    const outPath = path.resolve(booksDir, fileName);
-    await fs.writeFile(outPath, buffer);
+    // Update cover image in Turso database
+    const db = getTursoClient();
+    if (db) {
+      await db.execute({
+        sql: 'UPDATE books SET cover_image = ?, updated_at = ? WHERE id = ?',
+        args: [imageUrl, new Date().toISOString(), bookId],
+      }).catch(() => {});
+    }
 
-    const imageUrl = `/images/books/${fileName}`;
-
-    // Read and update the markdown file
+    // Read and update the markdown file if filesystem is writable
     const bookFile = path.resolve(process.cwd(), `src/data/books/${bookId}.md`);
     try {
       const raw = await fs.readFile(bookFile, 'utf8');
@@ -346,15 +371,13 @@ export const POST: APIRoute = async ({ request, cookies }) => {
         const updatedMd = `---\n${yaml.dump(frontmatter, { lineWidth: -1 })}---\n${bodyContent}`;
         await fs.writeFile(bookFile, updatedMd, 'utf8');
       }
-    } catch (err: any) {
-      return new Response(JSON.stringify({ error: `Could not update book metadata: ${err.message}` }), { status: 500 });
-    }
+    } catch {}
 
     return new Response(
       JSON.stringify({
         ok: true,
         imageUrl,
-        message: `Updated cover for book "${bookId}" to ${imageUrl}`,
+        message: `Updated cover for book "${bookId}"`,
       }),
       { status: 200, headers: { 'Content-Type': 'application/json' } }
     );
@@ -703,4 +726,11 @@ export const POST: APIRoute = async ({ request, cookies }) => {
   }
 
   return new Response(JSON.stringify({ error: 'Unknown content action' }), { status: 400 });
+  } catch (err: any) {
+    console.error('[Content API Error]', err);
+    return new Response(
+      JSON.stringify({ error: err?.message || 'Internal server error processing content.' }),
+      { status: 500, headers: { 'Content-Type': 'application/json' } }
+    );
+  }
 };

@@ -21,7 +21,8 @@ interface ConstellationCatalogEntry {
 }
 
 export const POST: APIRoute = async ({ request, cookies }) => {
-  if (!verifyAdminSession(cookies)) {
+  try {
+    if (!verifyAdminSession(cookies)) {
     return new Response(JSON.stringify({ error: 'Unauthorized session' }), {
       status: 401,
       headers: { 'Content-Type': 'application/json' },
@@ -190,5 +191,12 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     );
   }
 
-  return new Response(JSON.stringify({ error: 'Unknown constellation action' }), { status: 400 });
+    return new Response(JSON.stringify({ error: 'Unknown constellation action' }), { status: 400 });
+  } catch (err: any) {
+    console.error('[Constellations API Error]', err);
+    return new Response(
+      JSON.stringify({ error: err?.message || 'Server error processing constellation' }),
+      { status: 500, headers: { 'Content-Type': 'application/json' } }
+    );
+  }
 };
