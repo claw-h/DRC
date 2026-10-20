@@ -262,6 +262,46 @@ const totalCount = publications.length + books.length + classes.length;
                         <span class="prompt-icon">👁</span>
                         <span class="prompt-text">Inspect</span>
                       </div>
+                      <button type="button" class="mobile-expand-btn" aria-expanded="false" aria-label="Toggle details">
+                        <span class="expand-icon" aria-hidden="true">▾</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  <!-- Collapsible Mobile Drawer for Publications -->
+                  <div class="card-collapsible-drawer">
+                    {pub.data.abstract && (
+                      <div class="card-drawer-extract">
+                        <span class="drawer-kicker">ABSTRACT</span>
+                        <p class="drawer-text">{pub.data.abstract}</p>
+                      </div>
+                    )}
+                    <div class="card-drawer-actions">
+                      <button
+                        type="button"
+                        class="study-btn study-btn--ignite study-btn--sm btn-card-edit"
+                        data-edit-type="publications"
+                        data-edit-id={pub.id}
+                      >
+                        <span>✎ Edit in Atelier</span>
+                      </button>
+                      <a
+                        href={`/publications/${pub.id}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        class="study-btn study-btn--ghost study-btn--sm btn-card-view"
+                      >
+                        <span>↗ View</span>
+                      </a>
+                      <button
+                        type="button"
+                        class="study-btn study-btn--hazard study-btn--sm btn-card-delete"
+                        data-delete-type="publications"
+                        data-delete-id={pub.id}
+                        data-delete-name={pub.data.title}
+                      >
+                        <span>✕ Delete</span>
+                      </button>
                     </div>
                   </div>
                 </article>
@@ -396,7 +436,57 @@ const totalCount = publications.length + books.length + classes.length;
                           <span class="prompt-icon">👁</span>
                           <span class="prompt-text">Inspect</span>
                         </div>
+                        <button type="button" class="mobile-expand-btn" aria-expanded="false" aria-label="Toggle details">
+                          <span class="expand-icon" aria-hidden="true">▾</span>
+                        </button>
                       </div>
+                    </div>
+                  </div>
+
+                  <!-- Collapsible Mobile Drawer for Books -->
+                  <div class="card-collapsible-drawer">
+                    {b.data.synopsis && (
+                      <div class="card-drawer-extract">
+                        <span class="drawer-kicker">SYNOPSIS</span>
+                        <p class="drawer-text">{b.data.synopsis}</p>
+                      </div>
+                    )}
+                    <div class="card-drawer-actions">
+                      <button
+                        type="button"
+                        class="study-btn study-btn--ignite study-btn--sm btn-card-edit"
+                        data-edit-type="books"
+                        data-edit-id={b.id}
+                      >
+                        <span>✎ Edit in Atelier</span>
+                      </button>
+                      <button
+                        type="button"
+                        class="study-btn study-btn--ledger study-btn--sm btn-cover-quick-edit"
+                        data-action="edit-book-cover"
+                        data-book-id={b.id}
+                        data-book-title={b.data.title}
+                        data-book-cover={b.data.coverImage}
+                      >
+                        <span>🖼 Cover</span>
+                      </button>
+                      <a
+                        href="/#books"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        class="study-btn study-btn--ghost study-btn--sm btn-card-view"
+                      >
+                        <span>↗ View</span>
+                      </a>
+                      <button
+                        type="button"
+                        class="study-btn study-btn--hazard study-btn--sm btn-card-delete"
+                        data-delete-type="books"
+                        data-delete-id={b.id}
+                        data-delete-name={b.data.title}
+                      >
+                        <span>✕ Delete</span>
+                      </button>
                     </div>
                   </div>
                 </article>
@@ -534,6 +624,52 @@ const totalCount = publications.length + books.length + classes.length;
                         <span class="prompt-icon">👁</span>
                         <span class="prompt-text">Inspect</span>
                       </div>
+                      <button type="button" class="mobile-expand-btn" aria-expanded="false" aria-label="Toggle details">
+                        <span class="expand-icon" aria-hidden="true">▾</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  <!-- Collapsible Mobile Drawer for Classes -->
+                  <div class="card-collapsible-drawer">
+                    {c.data.summary && (
+                      <div class="card-drawer-extract">
+                        <span class="drawer-kicker">COURSE OVERVIEW</span>
+                        <p class="drawer-text">{c.data.summary}</p>
+                      </div>
+                    )}
+                    {c.data.schedule && (
+                      <div class="card-drawer-meta-row">
+                        <span class="drawer-kicker">SCHEDULE:</span>
+                        <span class="drawer-val mono">{c.data.schedule}</span>
+                      </div>
+                    )}
+                    <div class="card-drawer-actions">
+                      <button
+                        type="button"
+                        class="study-btn study-btn--ignite study-btn--sm btn-card-edit"
+                        data-edit-type="classes"
+                        data-edit-id={c.id}
+                      >
+                        <span>✎ Edit in Atelier</span>
+                      </button>
+                      <a
+                        href="/#classes"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        class="study-btn study-btn--ghost study-btn--sm btn-card-view"
+                      >
+                        <span>↗ View</span>
+                      </a>
+                      <button
+                        type="button"
+                        class="study-btn study-btn--hazard study-btn--sm btn-card-delete"
+                        data-delete-type="classes"
+                        data-delete-id={c.id}
+                        data-delete-name={c.data.title}
+                      >
+                        <span>✕ Delete</span>
+                      </button>
                     </div>
                   </div>
                 </article>
@@ -881,9 +1017,9 @@ const totalCount = publications.length + books.length + classes.length;
       }
     });
 
-    // 5. Delete Actions from Table Rows
+    // 5. Delete Actions from Table Rows & Mobile Cards
     document.addEventListener('click', (e) => {
-      const btn = (e.target as HTMLElement).closest('.btn-table-delete') as HTMLButtonElement | null;
+      const btn = (e.target as HTMLElement).closest('.btn-table-delete, .btn-card-delete') as HTMLButtonElement | null;
       if (!btn) return;
       const type = btn.dataset.deleteType;
       const id = btn.dataset.deleteId;
@@ -1070,10 +1206,21 @@ const totalCount = publications.length + books.length + classes.length;
         hudCloseTimer = setTimeout(() => hideHud(), 180);
       });
 
-      // Clicking card directly launches atelier edit
+      // Clicking card toggles accordion expansion on mobile, launches atelier edit on desktop
       card.addEventListener('click', (e) => {
         const target = e.target as HTMLElement;
-        if (target.closest('button, a')) return;
+        if (target.closest('button:not(.mobile-expand-btn), a, .btn-cover-quick-edit')) return;
+
+        if (window.innerWidth <= 768 || target.closest('.mobile-expand-btn')) {
+          e.stopPropagation();
+          const isExpanded = card.classList.toggle('is-mobile-expanded');
+          const toggleBtn = card.querySelector('.mobile-expand-btn');
+          if (toggleBtn) {
+            toggleBtn.setAttribute('aria-expanded', String(isExpanded));
+          }
+          return;
+        }
+
         const type = card.dataset.cardType as any;
         const id = card.dataset.cardId;
         if (type && id) {
@@ -2754,5 +2901,372 @@ const totalCount = publications.length + books.length + classes.length;
 
   .admin-table tr:hover .row-actions {
     opacity: 1;
+  }
+
+  /* Default desktop state for mobile-specific card elements */
+  .mobile-expand-btn {
+    display: none;
+  }
+  .card-collapsible-drawer {
+    display: none;
+  }
+
+  /* ==========================================================================
+     MOBILE SYNTHESIZED WORKBENCH & COLLAPSIBLE LISTS (<= 800px)
+     ========================================================================== */
+  @media (max-width: 800px) {
+    .module-container {
+      gap: 1rem;
+    }
+
+    .header-split {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.75rem;
+    }
+
+    .telemetry-stats {
+      width: 100%;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0.5rem;
+    }
+
+    .stat-box {
+      min-width: 0;
+      padding: 0.5rem 0.65rem;
+      align-items: flex-start;
+      text-align: left;
+    }
+
+    .stat-number {
+      font-size: 1.2rem;
+    }
+
+    .stat-label {
+      font-size: 0.65rem;
+    }
+
+    /* Launchpad Bar Stacking */
+    .launchpad-bar {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 0.65rem;
+      padding: 0.85rem;
+    }
+
+    .launchpad-left {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 0.45rem;
+    }
+
+    .btn-launch {
+      width: 100%;
+      justify-content: center;
+      min-height: 44px;
+    }
+
+    .launchpad-subtext {
+      text-align: left;
+      margin: 0;
+    }
+
+    .launchpad-right {
+      width: 100%;
+      display: flex;
+      justify-content: flex-start;
+    }
+
+    .ledger-total-badge {
+      display: inline-block;
+      text-align: left;
+    }
+
+    /* Workbench Stage: Single Column */
+    .ledger-workbench-stage {
+      grid-template-columns: 1fr !important;
+      gap: 0.75rem;
+    }
+
+    /* Fascicle Rail to Sticky Mobile Segmented Tabbar */
+    .fascicle-spine-rail {
+      position: sticky;
+      top: 50px;
+      z-index: 40;
+      flex-direction: row;
+      padding: 0.35rem;
+      background: color-mix(in srgb, var(--bg-surface) 94%, transparent);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-radius: 8px;
+      border: 1px solid var(--border-hairline);
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+      margin-bottom: 0.5rem;
+    }
+
+    .fascicle-golden-axis {
+      display: none !important;
+    }
+
+    .fascicle-nav-list {
+      display: flex;
+      flex-direction: row;
+      width: 100%;
+      gap: 0.35rem;
+    }
+
+    .fascicle-tab-btn {
+      flex: 1;
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      justify-content: center;
+      gap: 0.4rem;
+      padding: 0.45rem 0.35rem;
+      min-height: 46px;
+      border-radius: 6px;
+      border: 1px solid transparent;
+      background: transparent;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .fascicle-tab-btn.is-active {
+      background: color-mix(in srgb, var(--bg-elevated) 80%, transparent);
+      border-color: color-mix(in srgb, var(--accent) 45%, var(--border-hairline));
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    }
+
+    .fascicle-node-badge {
+      width: 24px;
+      height: 24px;
+      min-width: 24px;
+      font-size: 0.72rem;
+    }
+
+    .fascicle-kicker,
+    .fascicle-hotkey {
+      display: none !important;
+    }
+
+    .fascicle-meta-lockup {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.05rem;
+    }
+
+    .fascicle-title {
+      font-size: 0.76rem;
+      font-weight: 600;
+      line-height: 1.1;
+      white-space: nowrap;
+    }
+
+    .fascicle-count {
+      font-size: 0.62rem;
+      color: var(--text-tertiary);
+      line-height: 1;
+    }
+
+    /* Shelf Header on Mobile */
+    .shelf-action-header {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 0.75rem;
+      padding: 0.75rem 0.6rem;
+    }
+
+    .shelf-heading-lockup {
+      width: 100%;
+      justify-content: space-between;
+    }
+
+    .shelf-tools-cluster {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 0.5rem;
+      width: 100%;
+    }
+
+    .shelf-search-box {
+      width: 100%;
+    }
+
+    .shelf-search-box input {
+      min-height: 44px;
+      font-size: 0.95rem;
+    }
+
+    .view-toggle-2way {
+      display: none !important;
+    }
+
+    .btn-shelf-add {
+      width: 100%;
+      justify-content: center;
+      min-height: 44px;
+      font-size: 0.9rem;
+    }
+
+    /* Hide desktop table on mobile; use responsive collapsible list cards */
+    .table-wrap {
+      display: none !important;
+    }
+
+    .specimen-gallery {
+      display: flex !important;
+      flex-direction: column;
+      gap: 0.75rem;
+      width: 100%;
+    }
+
+    /* Mobile Collapsible Specimen Cards */
+    .specimen-card {
+      width: 100% !important;
+      border-radius: 8px;
+      padding: 0.85rem !important;
+      background: var(--bg-surface) !important;
+      border: 1px solid var(--border-hairline) !important;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+    }
+
+    .specimen-card:active {
+      background: color-mix(in srgb, var(--bg-elevated) 50%, var(--bg-surface)) !important;
+    }
+
+    .specimen-card.is-mobile-expanded {
+      border-color: color-mix(in srgb, var(--accent) 55%, var(--border-hairline)) !important;
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
+    }
+
+    .card-hover-prompt {
+      display: none !important;
+    }
+
+    /* Mobile Expand Chevron */
+    .mobile-expand-btn {
+      display: inline-flex !important;
+      align-items: center;
+      justify-content: center;
+      width: 36px;
+      height: 36px;
+      min-height: 36px;
+      padding: 0;
+      border-radius: 50%;
+      border: 1px solid var(--border-hairline);
+      background: var(--bg-canvas);
+      color: var(--accent-gold);
+      font-size: 1.15rem;
+      line-height: 1;
+      margin-left: auto;
+      cursor: pointer;
+      transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), background 0.2s ease, border-color 0.2s ease;
+    }
+
+    .specimen-card.is-mobile-expanded .mobile-expand-btn {
+      transform: rotate(180deg);
+      background: color-mix(in srgb, var(--accent-gold) 18%, var(--bg-canvas));
+      border-color: var(--accent-gold);
+    }
+
+    /* Collapsible Drawer */
+    .card-collapsible-drawer {
+      display: none;
+    }
+
+    .specimen-card.is-mobile-expanded .card-collapsible-drawer {
+      display: flex !important;
+      flex-direction: column;
+      gap: 0.75rem;
+      padding-top: 0.85rem;
+      margin-top: 0.85rem;
+      border-top: 1px dashed color-mix(in srgb, var(--accent) 30%, var(--border-hairline));
+      animation: breadcrumb-ink-soak 0.24s cubic-bezier(0.16, 1, 0.3, 1) both;
+    }
+
+    .card-drawer-extract {
+      background: color-mix(in srgb, var(--bg-canvas) 75%, transparent);
+      border: 1px solid var(--border-hairline);
+      border-radius: 6px;
+      padding: 0.65rem 0.8rem;
+    }
+
+    .card-drawer-extract .drawer-kicker {
+      display: block;
+      font-family: var(--font-display);
+      font-variant-caps: all-small-caps;
+      font-size: 0.65rem;
+      letter-spacing: 0.1em;
+      color: var(--accent-gold);
+      font-weight: 700;
+      margin-bottom: 0.3rem;
+    }
+
+    .card-drawer-extract .drawer-text {
+      font-family: var(--font-serif);
+      font-size: 0.85rem;
+      line-height: 1.5;
+      color: var(--text-primary);
+      margin: 0;
+    }
+
+    .card-drawer-meta-row {
+      display: flex;
+      align-items: center;
+      gap: 0.45rem;
+      font-size: 0.78rem;
+    }
+
+    .card-drawer-meta-row .drawer-kicker {
+      font-family: var(--font-display);
+      font-variant-caps: all-small-caps;
+      font-size: 0.68rem;
+      color: var(--accent-gold);
+      font-weight: 600;
+    }
+
+    .card-drawer-meta-row .drawer-val {
+      color: var(--text-secondary);
+    }
+
+    .card-drawer-actions {
+      display: grid !important;
+      grid-template-columns: repeat(auto-fit, minmax(105px, 1fr)) !important;
+      gap: 0.5rem !important;
+      margin-top: 0.35rem !important;
+      width: 100% !important;
+    }
+
+    .card-drawer-actions .study-btn {
+      width: 100% !important;
+      min-height: 42px !important;
+      justify-content: center !important;
+      font-size: 0.82rem !important;
+      padding: 0.4rem 0.5rem !important;
+    }
+
+    /* Monograph Specific Plate Layout on Mobile: Clean 2-Column Grid */
+    .monograph-plate-layout {
+      display: grid !important;
+      grid-template-columns: 76px 1fr !important;
+      gap: 0.85rem !important;
+      align-items: start !important;
+      height: auto !important;
+    }
+
+    .monograph-cover-slot {
+      width: 76px !important;
+      margin: 0 !important;
+      aspect-ratio: 2 / 3 !important;
+    }
+
+    .monograph-meta-slot {
+      width: 100% !important;
+      min-width: 0 !important;
+    }
   }
 </style>

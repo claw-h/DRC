@@ -2346,6 +2346,11 @@
     display: none !important;
   }
 
+  .persistent-content-studio:not([open]) {
+    display: none !important;
+    pointer-events: none !important;
+  }
+
   .persistent-content-studio {
     position: fixed;
     inset: 0;
@@ -2359,6 +2364,7 @@
     max-block-size: 100dvh;
     overflow: hidden;
     z-index: 1000;
+    pointer-events: none;
 
     opacity: 0;
     transform: scale(0.96) translateY(16px);
@@ -2372,6 +2378,8 @@
   }
 
   .persistent-content-studio[open] {
+    display: block;
+    pointer-events: auto;
     opacity: 1;
     transform: scale(1) translateY(0);
     filter: blur(0);
@@ -2978,6 +2986,17 @@
     font-size: 0.9375rem;
     font-family: inherit;
     transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  }
+
+  select {
+    padding-inline-end: 2.25rem;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23d8b257' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.85rem center;
+    background-size: 12px;
+    appearance: none;
+    -webkit-appearance: none;
+    cursor: pointer;
   }
 
   input::placeholder,
@@ -3864,8 +3883,8 @@
     margin-inline-start: 0.4rem;
   }
 
-  /* Responsive Stacking */
-  @media (max-width: 960px) {
+  /* Responsive Stacking & Mobile Webapp Gating */
+  @media (max-width: 960px) and (min-width: 769px) {
     .studio-main-stage.is-split-mode {
       grid-template-columns: 1fr;
     }
@@ -3876,8 +3895,188 @@
     .dossier-hero-real {
       flex-direction: column;
     }
+  }
+
+  /* ==========================================================================
+     MOBILE SYNTHESIZED ATELIER MODAL (<= 768px)
+     Desktop is 100% untouched as regular modal; Mobile is full-screen sheet
+     ========================================================================== */
+  @media (max-width: 768px) {
+    .persistent-content-studio {
+      inline-size: 100dvw !important;
+      max-inline-size: 100dvw !important;
+      block-size: 100dvh !important;
+      max-block-size: 100dvh !important;
+      inset: 0 !important;
+      margin: 0 !important;
+      border-radius: 0 !important;
+      border: none !important;
+      transform: none !important;
+      filter: none !important;
+    }
+
+    .content-studio-shell {
+      inline-size: 100% !important;
+      block-size: 100% !important;
+      border-radius: 0 !important;
+      border: none !important;
+      transform: none !important;
+    }
+
+    /* Mobile Header Layout */
+    .studio-header {
+      flex-wrap: wrap !important;
+      padding: 0.65rem 0.85rem !important;
+      gap: 0.5rem !important;
+    }
+
+    .header-lead {
+      width: 100% !important;
+      justify-content: space-between !important;
+    }
+
+    .header-controls {
+      display: flex !important;
+      align-items: center !important;
+      gap: 0.5rem !important;
+    }
+
+    .btn-keycap {
+      display: none !important;
+    }
+
+    /* Mobile Segmented Type Switcher (Kept fully accessible on mobile) */
     .type-pill-nav {
-      display: none;
+      display: flex !important;
+      width: 100% !important;
+      order: 3 !important;
+      margin-top: 0.25rem !important;
+      background: color-mix(in srgb, var(--bg-canvas) 90%, transparent) !important;
+      padding: 0.25rem !important;
+      border-radius: 6px !important;
+      border: 1px solid var(--border-hairline) !important;
+    }
+
+    .type-pill {
+      flex: 1 !important;
+      justify-content: center !important;
+      min-height: 38px !important;
+      font-size: 0.78rem !important;
+      padding: 0.35rem 0.5rem !important;
+    }
+
+    /* Mobile View Tabbing: Workbench ⇄ Live Mirror (Zero vertical stacking blowout) */
+    .studio-main-stage.is-split-mode {
+      grid-template-columns: 1fr !important;
+    }
+
+    .studio-main-stage.is-split-mode #stage-workbench-pane {
+      display: none !important;
+    }
+
+    .studio-main-stage.is-split-mode #stage-mirror-pane {
+      display: flex !important;
+      inline-size: 100% !important;
+      block-size: 100% !important;
+    }
+
+    .studio-main-stage.is-focus-mode #stage-workbench-pane {
+      display: flex !important;
+      inline-size: 100% !important;
+    }
+
+    .studio-main-stage.is-focus-mode #stage-mirror-pane {
+      display: none !important;
+    }
+
+    /* Mobile Form Ergonomics */
+    .workbench-scroll-area {
+      padding: 0.75rem 0.85rem 4.5rem !important;
+    }
+
+    .form-row-2,
+    .form-row-3 {
+      grid-template-columns: 1fr !important;
+      gap: 0.85rem !important;
+    }
+
+    .workbench-fieldset input,
+    .workbench-fieldset textarea,
+    .workbench-fieldset select {
+      font-size: 16px !important; /* Prevents iOS auto-zoom */
+      min-height: 44px;
+    }
+
+    .workbench-fieldset textarea {
+      min-height: 85px;
+    }
+
+    .intake-quick-row {
+      flex-direction: column !important;
+      align-items: stretch !important;
+    }
+
+    .intake-quick-row input {
+      font-size: 16px !important;
+      min-height: 44px;
+    }
+
+    .intake-quick-row button {
+      min-height: 44px;
+      justify-content: center;
+    }
+
+    /* Repeaters on Mobile */
+    .repeater-card-header {
+      flex-wrap: wrap !important;
+      gap: 0.45rem !important;
+    }
+
+    .repeater-card-lead {
+      width: 100% !important;
+    }
+
+    .repeater-card-main {
+      flex: 1 !important;
+      min-width: 0 !important;
+    }
+
+    .btn-remove-row {
+      width: 36px !important;
+      height: 36px !important;
+      min-height: 36px !important;
+      align-self: center !important;
+    }
+
+    .dossier-hero-real {
+      flex-direction: column !important;
+    }
+
+    /* Sticky Bottom Action Dock */
+    .studio-dock {
+      padding: 0.65rem 0.85rem calc(0.65rem + env(safe-area-inset-bottom, 12px)) !important;
+      background: color-mix(in srgb, var(--bg-canvas) 96%, transparent) !important;
+      border-top: 1px solid var(--border-subtle) !important;
+      position: sticky !important;
+      bottom: 0 !important;
+      z-index: 50 !important;
+    }
+
+    .dock-actions {
+      width: 100% !important;
+      justify-content: space-between !important;
+      gap: 0.5rem !important;
+    }
+
+    .dock-actions .study-btn {
+      flex: 1 !important;
+      min-height: 44px !important;
+      justify-content: center !important;
+      font-size: 0.85rem !important;
+    }
+
+    .status-bar {
+      display: none !important;
     }
   }
 </style>

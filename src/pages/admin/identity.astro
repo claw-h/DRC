@@ -29,15 +29,46 @@ const profile = await getFacultyProfile();
       </div>
     </div>
 
+    <!-- Mobile Segmented View Tabs (Specifications ⇄ Live Carte de Visite) -->
+    <nav class="identity-mobile-tabs" role="tablist" aria-label="Identity View Mode">
+      <button
+        type="button"
+        class="id-mobile-tab is-active"
+        id="tab-id-specs"
+        role="tab"
+        aria-selected="true"
+        aria-controls="pane-id-form"
+      >
+        <span class="tab-glyph" aria-hidden="true">📝</span>
+        <span>01 · Specifications</span>
+      </button>
+      <button
+        type="button"
+        class="id-mobile-tab"
+        id="tab-id-preview"
+        role="tab"
+        aria-selected="false"
+        aria-controls="pane-id-preview"
+      >
+        <span class="tab-glyph" aria-hidden="true">🪪</span>
+        <span>02 · Live Carte de Visite</span>
+      </button>
+    </nav>
+
     <!-- Dual-Column Master Stage -->
     <div class="identity-workbench-grid">
       <!-- LEFT COLUMN: Master Dossier & Schema Form -->
-      <section class="identity-form-pane" aria-label="Faculty Identity Specifications">
+      <section class="identity-form-pane" id="pane-id-form" aria-label="Faculty Identity Specifications">
         <form id="form-faculty-identity" class="identity-form" autocomplete="off">
           <!-- 01 · Academic Coordinates -->
-          <fieldset class="identity-fieldset">
-            <legend class="fieldset-legend">01 · Academic Coordinates &amp; Institutional Affiliation</legend>
-            <div class="form-row-3">
+          <details class="identity-accordion" open>
+            <summary class="identity-summary">
+              <span class="summary-title"><span class="summary-num">01</span> · Academic Coordinates &amp; Affiliation</span>
+              <span class="summary-chevron" aria-hidden="true">▾</span>
+            </summary>
+            <fieldset class="identity-fieldset">
+              <legend class="fieldset-legend">01 · Academic Coordinates &amp; Institutional Affiliation</legend>
+              <div class="form-row-3">
               <label class="form-field">
                 <span class="field-label">Full Academic Name *</span>
                 <input
@@ -117,12 +148,18 @@ const profile = await getFacultyProfile();
                 />
               </label>
             </div>
-          </fieldset>
+            </fieldset>
+          </details>
 
           <!-- 02 · Consultation & Office Telemetry -->
-          <fieldset class="identity-fieldset">
-            <legend class="fieldset-legend">02 · Consultation &amp; Physical Office Telemetry</legend>
-            <div class="form-row-2">
+          <details class="identity-accordion" open>
+            <summary class="identity-summary">
+              <span class="summary-title"><span class="summary-num">02</span> · Consultation &amp; Office Telemetry</span>
+              <span class="summary-chevron" aria-hidden="true">▾</span>
+            </summary>
+            <fieldset class="identity-fieldset">
+              <legend class="fieldset-legend">02 · Consultation &amp; Physical Office Telemetry</legend>
+              <div class="form-row-2">
               <label class="form-field">
                 <span class="field-label">Office Location</span>
                 <input
@@ -170,24 +207,36 @@ const profile = await getFacultyProfile();
                 />
               </label>
             </div>
-          </fieldset>
+            </fieldset>
+          </details>
 
-          <!-- 03 · Scholarly Biography & Editorial Statement -->
-          <fieldset class="identity-fieldset">
-            <legend class="fieldset-legend">03 · Scholarly Biography &amp; Narrative</legend>
-            <label class="form-field">
-              <span class="field-label">Biographical &amp; Research Statement</span>
-              <textarea
-                name="bio"
-                id="id-bio"
-                rows="4"
-                placeholder="Duncan Cordry specializes in continental philosophy..."
-              >{profile.bio}</textarea>
-            </label>
-          </fieldset>
+          <!-- 03 · Scholarly Biography & Narrative -->
+          <details class="identity-accordion" open>
+            <summary class="identity-summary">
+              <span class="summary-title"><span class="summary-num">03</span> · Scholarly Biography &amp; Narrative</span>
+              <span class="summary-chevron" aria-hidden="true">▾</span>
+            </summary>
+            <fieldset class="identity-fieldset">
+              <legend class="fieldset-legend">03 · Scholarly Biography &amp; Narrative</legend>
+              <label class="form-field">
+                <span class="field-label">Biographical &amp; Research Statement</span>
+                <textarea
+                  name="bio"
+                  id="id-bio"
+                  rows="4"
+                  placeholder="Duncan Cordry specializes in continental philosophy..."
+                >{profile.bio}</textarea>
+              </label>
+            </fieldset>
+          </details>
 
           <!-- 04 · Areas of Inquiry & Honors -->
-          <fieldset class="identity-fieldset">
+          <details class="identity-accordion" open>
+            <summary class="identity-summary">
+              <span class="summary-title"><span class="summary-num">04</span> · Areas of Inquiry &amp; Academic Honors</span>
+              <span class="summary-chevron" aria-hidden="true">▾</span>
+            </summary>
+            <fieldset class="identity-fieldset">
             <legend class="fieldset-legend">04 · Areas of Inquiry &amp; Academic Honors</legend>
             <div class="form-row-2">
               <label class="form-field">
@@ -221,41 +270,56 @@ const profile = await getFacultyProfile();
                 placeholder="Claudia Jones Award for Best Graduate Paper, Caribbean Philosophical Association&#10;Ross-Lynn Research Fellowship, Purdue University"
               >{(profile.awards || []).join('\n')}</textarea>
             </label>
-          </fieldset>
+            </fieldset>
+          </details>
 
           <!-- 05 · External Academic Folios -->
-          <fieldset class="identity-fieldset">
-            <legend class="fieldset-legend">05 · Colophon External Academic Links</legend>
-            <div class="form-row-2">
-              <label class="form-field">
-                <span class="field-label">Ashoka University Faculty Profile URL</span>
-                <input
-                  type="url"
-                  name="ashokaProfileUrl"
-                  id="id-ashokaProfileUrl"
-                  value={profile.ashokaProfileUrl || ''}
-                  placeholder="https://www.ashoka.edu.in/profile/duncan-cordry/"
-                  class="mono"
-                />
-              </label>
-              <label class="form-field">
-                <span class="field-label">PhilPeople Archive URL</span>
-                <input
-                  type="url"
-                  name="philPeopleUrl"
-                  id="id-philPeopleUrl"
-                  value={profile.philPeopleUrl || ''}
-                  placeholder="https://philpeople.org/profiles/duncan-r-cordry"
-                  class="mono"
-                />
-              </label>
-            </div>
-          </fieldset>
+          <details class="identity-accordion" open>
+            <summary class="identity-summary">
+              <span class="summary-title"><span class="summary-num">05</span> · External Academic Links</span>
+              <span class="summary-chevron" aria-hidden="true">▾</span>
+            </summary>
+            <fieldset class="identity-fieldset">
+              <legend class="fieldset-legend">05 · Colophon External Academic Links</legend>
+              <div class="form-row-2">
+                <label class="form-field">
+                  <span class="field-label">Ashoka University Faculty Profile URL</span>
+                  <input
+                    type="url"
+                    name="ashokaProfileUrl"
+                    id="id-ashokaProfileUrl"
+                    value={profile.ashokaProfileUrl || ''}
+                    placeholder="https://www.ashoka.edu.in/profile/duncan-cordry/"
+                    class="mono"
+                  />
+                </label>
+                <label class="form-field">
+                  <span class="field-label">PhilPeople Archive URL</span>
+                  <input
+                    type="url"
+                    name="philPeopleUrl"
+                    id="id-philPeopleUrl"
+                    value={profile.philPeopleUrl || ''}
+                    placeholder="https://philpeople.org/profiles/duncan-r-cordry"
+                    class="mono"
+                  />
+                </label>
+              </div>
+            </fieldset>
+          </details>
         </form>
+
+        <!-- Sticky Mobile Action Dock for Long Form -->
+        <div class="identity-mobile-dock">
+          <button type="button" id="btn-mobile-save-identity" class="study-btn study-btn--seal study-btn--lg btn-mobile-save">
+            <span class="btn-icon">✓</span>
+            <span>Synchronize Identity Folio</span>
+          </button>
+        </div>
       </section>
 
       <!-- RIGHT COLUMN: Co-Present ID Card Studio with Live Mirror -->
-      <aside class="identity-preview-pane" aria-label="Live Faculty Carte de Visite Mirror">
+      <aside class="identity-preview-pane" id="pane-id-preview" aria-label="Live Faculty Carte de Visite Mirror">
         <div class="preview-sticky-deck">
           <!-- Kicker & Telemetry Status -->
           <div class="preview-deck-header">
@@ -482,6 +546,57 @@ const profile = await getFacultyProfile();
     e.preventDefault();
     saveIdentity();
   });
+
+  // Mobile View Tabbing & Save Dock
+  const tabSpecs = document.getElementById('tab-id-specs');
+  const tabPreview = document.getElementById('tab-id-preview');
+  const formPane = document.getElementById('pane-id-form');
+  const previewPane = document.getElementById('pane-id-preview');
+  const mobileSaveBtn = document.getElementById('btn-mobile-save-identity');
+
+  mobileSaveBtn?.addEventListener('click', saveIdentity);
+
+  tabSpecs?.addEventListener('click', () => {
+    tabSpecs.classList.add('is-active');
+    tabSpecs.setAttribute('aria-selected', 'true');
+    tabPreview?.classList.remove('is-active');
+    tabPreview?.setAttribute('aria-selected', 'false');
+    if (formPane) formPane.classList.remove('mobile-hidden');
+    if (previewPane) previewPane.classList.add('mobile-hidden');
+  });
+
+  tabPreview?.addEventListener('click', () => {
+    tabPreview.classList.add('is-active');
+    tabPreview.setAttribute('aria-selected', 'true');
+    tabSpecs?.classList.remove('is-active');
+    tabSpecs?.setAttribute('aria-selected', 'false');
+    if (formPane) formPane.classList.add('mobile-hidden');
+    if (previewPane) previewPane.classList.remove('mobile-hidden');
+  });
+
+  // Default initial state on small screens: preview pane starts hidden until toggled
+  if (window.innerWidth <= 800 && previewPane) {
+    previewPane.classList.add('mobile-hidden');
+  }
+
+  // Mobile accordion state listener & initial screen layout sync
+  const accordions = form?.querySelectorAll('.identity-accordion');
+  const syncAccordionState = () => {
+    const anyOpen = Array.from(accordions || []).some((a) => (a as HTMLDetailsElement).open);
+    form?.classList.toggle('has-open-accordion', anyOpen);
+  };
+
+  accordions?.forEach((acc) => {
+    acc.addEventListener('toggle', syncAccordionState);
+  });
+
+  if (window.innerWidth <= 800) {
+    // Start collapsed on small mobile screens to synthesize balanced, evenly spaced dashboard
+    accordions?.forEach((acc) => {
+      acc.removeAttribute('open');
+    });
+  }
+  syncAccordionState();
 
   // Keyboard shortcut: Cmd+S / Ctrl+S saves identity folio
   window.addEventListener('keydown', (e) => {
@@ -751,5 +866,301 @@ const profile = await getFacultyProfile();
 
   .btn-upload-portrait {
     cursor: pointer;
+  }
+
+  /* Default desktop state: fieldsets are standard, static, and non-collapsible */
+  .identity-mobile-tabs {
+    display: none;
+  }
+  .identity-mobile-dock {
+    display: none;
+  }
+  .identity-summary {
+    display: none;
+  }
+
+  @media (min-width: 801px) {
+    .identity-accordion {
+      display: contents !important;
+    }
+    .identity-summary {
+      display: none !important;
+    }
+    .fieldset-legend {
+      display: block !important;
+    }
+    .identity-form-pane.mobile-hidden,
+    .identity-preview-pane.mobile-hidden {
+      display: block !important;
+    }
+  }
+
+  /* ==========================================================================
+     MOBILE SYNTHESIZED IDENTITY FOLIO (<= 800px)
+     ========================================================================== */
+  @media (max-width: 800px) {
+    /* Hide desktop fieldset legends on mobile in favor of accordion summaries */
+    .fieldset-legend {
+      display: none !important;
+    }
+
+    /* Collapsible Accordion Fieldset Styling on Mobile */
+    .identity-accordion {
+      display: block !important;
+      width: 100% !important;
+      box-sizing: border-box !important;
+      border-radius: 8px;
+      background: var(--bg-surface, #0b0f20);
+      border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.08));
+      overflow: hidden;
+      transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .identity-accordion[open] {
+      border-color: color-mix(in srgb, var(--accent, #c9a84e) 40%, var(--border-subtle, rgba(255, 255, 255, 0.08)));
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+    }
+
+    .identity-summary {
+      display: flex !important;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.85rem 1.25rem;
+      background: color-mix(in srgb, var(--bg-surface) 90%, var(--bg-elevated));
+      border-bottom: 1px solid transparent;
+      cursor: pointer;
+      user-select: none;
+      list-style: none;
+      transition: background 0.18s ease;
+    }
+
+    .identity-summary::-webkit-details-marker {
+      display: none;
+    }
+
+    .identity-summary:hover {
+      background: var(--bg-elevated);
+    }
+
+    .identity-accordion[open] > .identity-summary {
+      border-bottom-color: var(--border-subtle, rgba(255, 255, 255, 0.08));
+    }
+
+    .summary-title {
+      font-family: var(--font-display, serif);
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      display: flex;
+      align-items: center;
+      gap: 0.45rem;
+    }
+
+    .summary-num {
+      font-family: var(--font-mono, monospace);
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: var(--accent-gold, #c9a84e);
+    }
+
+    .summary-chevron {
+      font-size: 1.1rem;
+      color: var(--accent-gold, #c9a84e);
+      transition: transform 0.24s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .identity-accordion[open] > .identity-summary > .summary-chevron {
+      transform: rotate(180deg);
+    }
+
+    .identity-accordion > .identity-fieldset {
+      border: none !important;
+      border-radius: 0 !important;
+      background: transparent !important;
+      padding: 1.15rem 1.25rem;
+    }
+
+    /* Form container layout: Evenly distributes collapsed accordions across viewport */
+    .identity-form {
+      width: 100% !important;
+      display: flex !important;
+      flex-direction: column !important;
+      gap: 0.55rem !important;
+      transition: min-height 0.25s ease;
+    }
+
+    /* When ALL accordions are collapsed/shrunk: take up all available screen space evenly */
+    .identity-form:not(.has-open-accordion):not(:has(.identity-accordion[open])) {
+      min-height: max(360px, calc(100dvh - 350px));
+      justify-content: space-between;
+    }
+
+    .identity-form:not(.has-open-accordion):not(:has(.identity-accordion[open])) > .identity-accordion {
+      flex: 1 1 0%;
+      display: flex !important;
+      flex-direction: column;
+      min-height: 52px;
+    }
+
+    .identity-form:not(.has-open-accordion):not(:has(.identity-accordion[open])) > .identity-accordion > .identity-summary {
+      flex: 1;
+      display: flex !important;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.95rem 1.25rem !important;
+    }
+
+    /* When at least one accordion is open: keep closed ones at compact header height */
+    .identity-form:has(.identity-accordion[open]) > .identity-accordion:not([open]),
+    .identity-form.has-open-accordion > .identity-accordion:not([open]) {
+      flex: 0 0 auto;
+    }
+
+    .identity-form:has(.identity-accordion[open]) > .identity-accordion:not([open]) > .identity-summary,
+    .identity-form.has-open-accordion > .identity-accordion:not([open]) > .identity-summary {
+      padding: 0.85rem 1.25rem !important;
+    }
+
+    .module-container {
+      padding: 0.5rem 0.75rem 2.5rem !important;
+    }
+
+    .module-header {
+      margin-block-end: 0.75rem !important;
+      padding-block-end: 0.65rem !important;
+    }
+
+    .module-header h2 {
+      font-size: 1.25rem !important;
+      margin-block-end: 0.2rem !important;
+    }
+
+    .module-sub {
+      font-size: 0.78rem !important;
+      line-height: 1.35 !important;
+    }
+
+    .header-split {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.75rem;
+    }
+
+    .header-actions-deck {
+      display: none !important; /* Managed by mobile sticky dock */
+    }
+
+    /* Mobile View Mode Tabs (Specifications ⇄ Live Carte de Visite) */
+    .identity-mobile-tabs {
+      display: flex !important;
+      gap: 0.4rem;
+      padding: 0.35rem;
+      background: color-mix(in srgb, var(--bg-surface) 94%, transparent);
+      border: 1px solid var(--border-hairline);
+      border-radius: 8px;
+      margin-bottom: 0.75rem;
+      position: sticky;
+      top: 50px;
+      z-index: 35;
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+    }
+
+    .id-mobile-tab {
+      flex: 1;
+      min-height: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.4rem;
+      border-radius: 6px;
+      font-family: var(--font-display);
+      font-size: 0.8rem;
+      font-weight: 600;
+      border: 1px solid transparent;
+      background: transparent;
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .id-mobile-tab.is-active {
+      background: color-mix(in srgb, var(--bg-elevated) 85%, transparent);
+      border-color: color-mix(in srgb, var(--accent) 55%, var(--border-hairline));
+      color: var(--text-primary);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    }
+
+    .tab-glyph {
+      font-size: 0.95rem;
+    }
+
+    /* Workbench Grid on Mobile */
+    .identity-workbench-grid {
+      display: flex !important;
+      flex-direction: column !important;
+      align-items: stretch !important;
+      width: 100% !important;
+      gap: 0.75rem !important;
+    }
+
+    .identity-form-pane {
+      width: 100% !important;
+      display: flex !important;
+      flex-direction: column !important;
+    }
+
+    .identity-form-pane.mobile-hidden,
+    .identity-preview-pane.mobile-hidden {
+      display: none !important;
+    }
+
+    .preview-sticky-deck {
+      position: static !important;
+    }
+
+    .form-row-2,
+    .form-row-3 {
+      grid-template-columns: 1fr !important;
+      gap: 0.85rem !important;
+    }
+
+    .form-field input,
+    .form-field textarea {
+      font-size: 16px !important; /* Mandatory to prevent iOS auto-zoom */
+      min-height: 44px;
+    }
+
+    .form-field textarea {
+      min-height: 80px;
+    }
+
+    /* Sticky Mobile Action Dock */
+    .identity-mobile-dock {
+      display: flex !important;
+      width: 100% !important;
+      box-sizing: border-box !important;
+      position: sticky;
+      bottom: calc(4.5rem + env(safe-area-inset-bottom, 12px));
+      z-index: 800;
+      padding: 0.65rem 0.85rem;
+      background: color-mix(in srgb, var(--bg-surface) 92%, transparent);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      border-radius: 10px;
+      border: 1px solid var(--border-hairline);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.65);
+      margin-top: 0.75rem;
+    }
+
+    .btn-mobile-save {
+      width: 100% !important;
+      min-height: 48px;
+      justify-content: center;
+      font-size: 0.95rem;
+      font-weight: 600;
+    }
   }
 </style>

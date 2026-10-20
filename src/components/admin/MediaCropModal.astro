@@ -542,35 +542,89 @@
 </script>
 
 <style>
+  .media-crop-dialog:not([open]) {
+    display: none !important;
+    pointer-events: none !important;
+  }
+
   .media-crop-dialog {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    max-width: 100dvw;
+    max-height: 100dvh;
     padding: 0;
-    margin: auto;
-    border: 1px solid color-mix(in oklab, var(--accent) 45%, transparent);
-    border-radius: 12px;
-    background: var(--bg-surface, #0b0f20);
+    margin: 0;
+    border: none;
+    background: transparent;
     color: var(--text-primary, #cbd5e1);
-    box-shadow: 0 24px 72px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(255, 255, 255, 0.08);
-    inline-size: min(580px, calc(100vw - 2rem));
-    max-block-size: calc(100vh - 3rem);
     overflow: hidden;
     outline: none;
-    transition: opacity 0.2s ease, transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    z-index: 1100;
+    pointer-events: none;
+
+    opacity: 0;
+    transition:
+      opacity 0.22s cubic-bezier(0.16, 1, 0.3, 1),
+      display 0.22s allow-discrete,
+      overlay 0.22s allow-discrete;
+  }
+
+  .media-crop-dialog[open] {
+    display: grid;
+    place-items: center;
+    pointer-events: auto;
+    opacity: 1;
+  }
+
+  @starting-style {
+    .media-crop-dialog[open] {
+      opacity: 0;
+    }
   }
 
   .media-crop-dialog::backdrop {
-    background: rgba(4, 7, 16, 0.75);
-    backdrop-filter: blur(8px);
+    background: rgba(4, 7, 16, 0.78);
+    backdrop-filter: blur(12px);
+    transition:
+      opacity 0.22s cubic-bezier(0.16, 1, 0.3, 1),
+      display 0.22s allow-discrete,
+      overlay 0.22s allow-discrete;
   }
 
   .media-crop-dialog[data-closing] {
     opacity: 0;
-    transform: scale(0.96) translateY(6px);
   }
 
   .crop-modal-shell {
+    position: relative;
     display: flex;
     flex-direction: column;
-    max-block-size: calc(100vh - 3rem);
+    width: min(580px, calc(100vw - 2rem));
+    max-height: calc(100vh - 3rem);
+    border: 1px solid color-mix(in oklab, var(--accent) 45%, transparent);
+    border-radius: 12px;
+    background: var(--bg-surface, #0b0f20);
+    box-shadow: 0 24px 72px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(255, 255, 255, 0.08);
+    overflow: hidden;
+
+    transform: scale(0.96) translateY(8px);
+    transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .media-crop-dialog[open] .crop-modal-shell {
+    transform: scale(1) translateY(0);
+  }
+
+  @starting-style {
+    .media-crop-dialog[open] .crop-modal-shell {
+      transform: scale(0.96) translateY(8px);
+    }
+  }
+
+  .media-crop-dialog[data-closing] .crop-modal-shell {
+    transform: scale(0.96) translateY(6px);
   }
 
   .crop-modal-header {
@@ -796,5 +850,85 @@
     display: flex;
     align-items: center;
     gap: 0.65rem;
+  }
+
+  /* ==========================================================================
+     MOBILE IMAGE CROPPER SHEET (<= 640px)
+     Desktop is 100% untouched as regular modal; Mobile is full-screen sheet
+     ========================================================================== */
+  @media (max-width: 640px) {
+    .media-crop-dialog[open] {
+      display: block !important;
+    }
+
+    .media-crop-dialog {
+      inline-size: 100dvw !important;
+      max-inline-size: 100dvw !important;
+      block-size: 100dvh !important;
+      max-block-size: 100dvh !important;
+      border-radius: 0 !important;
+      margin: 0 !important;
+      inset: 0 !important;
+      border: none !important;
+    }
+
+    .crop-modal-shell {
+      transform: none !important;
+      inline-size: 100% !important;
+      block-size: 100% !important;
+      max-block-size: 100dvh !important;
+      border-radius: 0 !important;
+      border: none !important;
+    }
+
+    .crop-modal-stage {
+      padding: 0.85rem 0.5rem !important;
+      flex: 1;
+    }
+
+    .crop-canvas {
+      max-inline-size: calc(100vw - 2rem) !important;
+      height: auto !important;
+    }
+
+    .floating-crop-hud {
+      flex-wrap: wrap !important;
+      justify-content: center !important;
+      max-inline-size: 100% !important;
+      gap: 0.35rem !important;
+      padding: 0.45rem 0.6rem !important;
+    }
+
+    .hud-btn {
+      min-height: 38px;
+      padding: 0.35rem 0.6rem;
+    }
+
+    .crop-modal-footer {
+      flex-direction: column !important;
+      gap: 0.65rem !important;
+      padding: 0.75rem 1rem calc(0.75rem + env(safe-area-inset-bottom, 12px)) !important;
+    }
+
+    .footer-telemetry {
+      width: 100%;
+      justify-content: center;
+    }
+
+    .footer-actions {
+      width: 100% !important;
+      justify-content: space-between !important;
+      gap: 0.65rem !important;
+    }
+
+    .footer-actions .study-btn {
+      flex: 1 !important;
+      min-height: 44px !important;
+      justify-content: center !important;
+    }
+
+    .btn-keycap {
+      display: none !important;
+    }
   }
 </style>

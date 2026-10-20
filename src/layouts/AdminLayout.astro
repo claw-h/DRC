@@ -211,6 +211,63 @@ const activeItem = navItems.find((item) => {
             <span>Sign Out</span>
           </button>
         </form>
+
+        <!-- Mobile Utility Menu (Compact trigger for mobile screens) -->
+        <details class="admin-mobile-menu" id="admin-mobile-menu">
+          <summary class="mobile-menu-trigger study-btn study-btn--ghost study-btn--icon-only study-btn--sm" aria-label="Open Administrative Options Menu" title="Open Administrative Menu">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="12" cy="12" r="1.5"></circle>
+              <circle cx="12" cy="5" r="1.5"></circle>
+              <circle cx="12" cy="19" r="1.5"></circle>
+            </svg>
+          </summary>
+          <div class="mobile-menu-sheet">
+            <div class="mobile-menu-header">
+              <span class="mobile-menu-kicker">OBSERVATORY UTILITIES</span>
+            </div>
+            <div class="mobile-menu-body">
+              <div class="mobile-menu-row">
+                <span class="mobile-menu-label">Status</span>
+                <div class={`status-pill ${systemState.offlineMode ? 'status-pill-offline' : 'status-pill-online'}`}>
+                  <span class="status-dot"></span>
+                  <span class="status-label">{systemState.offlineMode ? 'Offline' : 'Online'}</span>
+                </div>
+              </div>
+              <div class="mobile-menu-row">
+                <span class="mobile-menu-label">Session</span>
+                <span class="session-pill tabular" id="mobile-session-time-display">Active</span>
+              </div>
+              <div class="mobile-menu-actions">
+                <button
+                  type="button"
+                  id="btn-mobile-a11y"
+                  class="study-btn study-btn--ledger study-btn--sm mobile-action-btn"
+                >
+                  <span class="btn-icon">👁</span>
+                  <span>A11y / High Contrast</span>
+                </button>
+                <button
+                  type="button"
+                  id="btn-mobile-theme"
+                  class="study-btn study-btn--ledger study-btn--sm mobile-action-btn"
+                >
+                  <span class="btn-icon">◐</span>
+                  <span>Toggle Dark / Light Theme</span>
+                </button>
+                <a href="/" target="_blank" rel="noopener noreferrer" class="study-btn study-btn--ledger study-btn--sm mobile-action-btn">
+                  <span>Public Folio</span>
+                  <span class="folio-arrow" aria-hidden="true">↗</span>
+                </a>
+                <form method="POST" action="/api/admin/auth" class="logout-form mobile-action-btn-form">
+                  <input type="hidden" name="action" value="logout" />
+                  <button type="submit" class="study-btn study-btn--hazard study-btn--sm mobile-action-btn" title="Sign out of administrative session">
+                    <span>Sign Out</span>
+                  </button>
+                </form>
+              </div>
+            </div>
+          </div>
+        </details>
       </div>
     </header>
 
@@ -303,6 +360,35 @@ const activeItem = navItems.find((item) => {
         <slot />
       </main>
     </div>
+
+    <!-- Synthesized Mobile App Bottom Tabbar (Pinned Navigation) -->
+    <nav class="admin-mobile-tabbar" aria-label="Faculty Administrative Navigation" id="admin-mobile-tabbar">
+      {navItems.map((item) => {
+        const isActive = activeItem.id === item.id;
+        return (
+          <a
+            href={item.href}
+            class={`mobile-tab-item ${isActive ? 'is-active' : ''}`}
+            aria-current={isActive ? 'page' : undefined}
+            data-module-id={item.id}
+            data-astro-prefetch="hover"
+          >
+            <div class="mobile-tab-icon-wrap">
+              <span class="mobile-tab-glyph" aria-hidden="true">
+                {item.id === 'content' && '❧'}
+                {item.id === 'identity' && '🪪'}
+                {item.id === 'constellations' && '✦'}
+                {item.id === 'system' && '⚙'}
+              </span>
+              <span class="mobile-tab-code">{item.code}</span>
+              {isActive && <span class="mobile-tab-halo" aria-hidden="true"></span>}
+            </div>
+            <span class="mobile-tab-label">{item.shortTitle}</span>
+            {isActive && <span class="mobile-tab-pip" aria-hidden="true">✦</span>}
+          </a>
+        );
+      })}
+    </nav>
 
     <!-- Global Persistent Modals -->
     <MediaCropModal />
@@ -514,6 +600,50 @@ const activeItem = navItems.find((item) => {
           moduleDropdown.removeAttribute('open');
         }
       });
+    }
+
+    // Mobile Utilities Menu Dismiss & Bridge
+    const mobileMenu = document.getElementById('admin-mobile-menu') as HTMLDetailsElement | null;
+    const btnMobileA11y = document.getElementById('btn-mobile-a11y');
+    const btnMobileTheme = document.getElementById('btn-mobile-theme');
+    const mobileSessionDisplay = document.getElementById('mobile-session-time-display');
+
+    if (mobileMenu) {
+      document.addEventListener('click', (e) => {
+        if (!mobileMenu.contains(e.target as Node)) {
+          mobileMenu.removeAttribute('open');
+        }
+      });
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && mobileMenu.hasAttribute('open')) {
+          mobileMenu.removeAttribute('open');
+        }
+      });
+    }
+
+    btnMobileA11y?.addEventListener('click', () => {
+      a11yBtn?.click();
+    });
+
+    btnMobileTheme?.addEventListener('click', () => {
+      themeBtn?.click();
+    });
+
+    if (expiryTimestamp && mobileSessionDisplay) {
+      function syncMobileTimer() {
+        const remainingMs = expiryTimestamp - Date.now();
+        if (remainingMs <= 0) {
+          if (mobileSessionDisplay) mobileSessionDisplay.textContent = 'Expired';
+          return;
+        }
+        const hours = Math.floor(remainingMs / (1000 * 60 * 60));
+        const minutes = Math.floor((remainingMs % (1000 * 60 * 60)) / (1000 * 60));
+        if (mobileSessionDisplay) {
+          mobileSessionDisplay.textContent = `${hours}h ${minutes}m`;
+        }
+      }
+      syncMobileTimer();
+      setInterval(syncMobileTimer, 60000);
     }
   </script>
 </BaseLayout>
@@ -1601,6 +1731,14 @@ const activeItem = navItems.find((item) => {
     min-width: 0;
   }
 
+  /* Default state for mobile-specific widgets on desktop */
+  .admin-mobile-tabbar {
+    display: none;
+  }
+  .admin-mobile-menu {
+    display: none;
+  }
+
   /* Responsive Breakpoints */
   @media (max-width: 1024px) {
     .admin-workbench-layout {
@@ -1679,19 +1817,224 @@ const activeItem = navItems.find((item) => {
     }
   }
 
-  @media (max-width: 640px) {
-    .admin-nav-list {
-      display: flex;
-      flex-direction: row;
-      overflow-x: auto;
-      scroll-snap-type: x mandatory;
-      padding-bottom: 0.5rem;
-      -webkit-overflow-scrolling: touch;
+  /* ==========================================================================
+     SYNTHESIZED MOBILE WEBAPP SHELL (<= 768px)
+     ========================================================================== */
+  @media (max-width: 768px) {
+    .admin-shell {
+      padding: 0 0.75rem calc(5.5rem + env(safe-area-inset-bottom, 20px)) !important;
     }
 
-    .admin-nav-item {
-      flex: 0 0 220px;
-      scroll-snap-align: start;
+    .admin-header {
+      padding: 0.6rem 0.35rem !important;
+      gap: 0.5rem !important;
+    }
+
+    /* Hide desktop actions in header on mobile */
+    .admin-header-actions > .status-pill,
+    .admin-header-actions > .session-pill,
+    .admin-header-actions > .controls-group,
+    .admin-header-actions > .btn-folio-link,
+    .admin-header-actions > .logout-form {
+      display: none !important;
+    }
+
+    /* Mobile Quick Utilities Dropdown */
+    .admin-mobile-menu {
+      display: block !important;
+      position: relative;
+    }
+
+    .mobile-menu-trigger {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 36px;
+      height: 36px;
+      padding: 0;
+      border-radius: 6px;
+      border: 1px solid var(--border-hairline);
+      background: var(--bg-surface);
+      color: var(--text-primary);
+      cursor: pointer;
+      list-style: none;
+    }
+
+    .mobile-menu-trigger::-webkit-details-marker {
+      display: none;
+    }
+
+    .mobile-menu-sheet {
+      position: absolute;
+      top: calc(100% + 8px);
+      right: 0;
+      width: 260px;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-hairline);
+      border-radius: 10px;
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(255, 255, 255, 0.08);
+      padding: 0.85rem;
+      z-index: 100;
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      animation: breadcrumb-ink-soak 0.22s ease-out both;
+    }
+
+    .mobile-menu-header {
+      border-bottom: 1px solid var(--border-hairline);
+      padding-bottom: 0.5rem;
+      margin-bottom: 0.65rem;
+    }
+
+    .mobile-menu-kicker {
+      font-family: var(--font-display);
+      font-variant-caps: all-small-caps;
+      font-size: 0.72rem;
+      letter-spacing: 0.12em;
+      color: var(--accent-gold);
+      font-weight: 700;
+    }
+
+    .mobile-menu-body {
+      display: flex;
+      flex-direction: column;
+      gap: 0.6rem;
+    }
+
+    .mobile-menu-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+    }
+
+    .mobile-menu-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 0.45rem;
+      margin-top: 0.4rem;
+      border-top: 1px solid var(--border-hairline);
+      padding-top: 0.65rem;
+    }
+
+    .mobile-action-btn {
+      width: 100% !important;
+      justify-content: flex-start !important;
+      text-align: left !important;
+      padding: 0.5rem 0.75rem !important;
+      font-size: 0.8rem !important;
+      min-height: 38px;
+    }
+
+    .mobile-action-btn-form {
+      width: 100%;
+      margin: 0;
+    }
+
+    /* Completely hide desktop sidebar track on mobile */
+    .admin-sidebar-track {
+      display: none !important;
+    }
+
+    /* Sovereign Mobile Bottom Navigation Tabbar */
+    .admin-mobile-tabbar {
+      display: flex !important;
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      z-index: 900;
+      background: color-mix(in srgb, var(--bg-surface) 94%, transparent);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      border-top: 1px solid var(--border-hairline);
+      box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.5);
+      padding: 0.35rem 0.5rem calc(0.35rem + env(safe-area-inset-bottom, 8px));
+      justify-content: space-around;
+      align-items: center;
+      user-select: none;
+    }
+
+    .mobile-tab-item {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 0.2rem;
+      padding: 0.35rem 0.2rem;
+      min-height: 50px;
+      text-decoration: none;
+      border-radius: 8px;
+      color: var(--text-secondary);
+      position: relative;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .mobile-tab-item:active {
+      transform: scale(0.95);
+    }
+
+    .mobile-tab-item.is-active {
+      color: var(--accent);
+      background: color-mix(in srgb, var(--bg-elevated) 70%, transparent);
+    }
+
+    .mobile-tab-icon-wrap {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.3rem;
+      font-size: 1rem;
+      line-height: 1;
+    }
+
+    .mobile-tab-glyph {
+      font-size: 0.95rem;
+      line-height: 1;
+    }
+
+    .mobile-tab-code {
+      font-family: var(--font-display);
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: var(--accent-gold);
+    }
+
+    .mobile-tab-label {
+      font-family: var(--font-display);
+      font-variant-caps: all-small-caps;
+      font-size: 0.68rem;
+      letter-spacing: 0.06em;
+      font-weight: 600;
+      line-height: 1;
+      white-space: nowrap;
+    }
+
+    .mobile-tab-item.is-active .mobile-tab-label {
+      color: var(--text-primary);
+    }
+
+    .mobile-tab-pip {
+      position: absolute;
+      top: 4px;
+      right: 12px;
+      font-size: 0.45rem;
+      color: var(--accent-gold);
+      animation: pip-shimmer 3s ease-in-out infinite;
+    }
+
+    .mobile-tab-halo {
+      position: absolute;
+      inset: -4px;
+      border-radius: 50%;
+      border: 1px dashed var(--accent);
+      opacity: 0.6;
+      animation: halo-rotate 16s linear infinite;
     }
   }
 

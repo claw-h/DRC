@@ -37,7 +37,7 @@ if (initialEntry) {
 ---
 
 <AdminLayout title="Celestial Atlas & Astrolabe Studio" activeModule="constellations">
-  <div class="module-container" data-initial-id={initialId}>
+  <div class="module-container" id="atlas-module-container" data-initial-id={initialId} data-mobile-view="canvas">
     <script id="initial-constellation-json" type="application/json" set:html={JSON.stringify({
       catalogEntry: initialEntry,
       constellation: initialConstellation,
@@ -66,6 +66,23 @@ if (initialEntry) {
         </div>
       </div>
     </div>
+
+    <!-- Mobile Segmented View Switcher: Strictly Gated for Mobile (<= 800px) -->
+    <nav class="atlas-mobile-tabs" id="atlas-mobile-tabs" aria-label="Atlas Studio View Switcher">
+      <button type="button" class="atlas-tab-btn is-active" data-atlas-tab="canvas" aria-selected="true">
+        <span class="tab-icon">🌌</span>
+        <span class="tab-label">01 · Canvas</span>
+      </button>
+      <button type="button" class="atlas-tab-btn" data-atlas-tab="specs" aria-selected="false">
+        <span class="tab-icon">⚙️</span>
+        <span class="tab-label">02 · Specs</span>
+      </button>
+      <button type="button" class="atlas-tab-btn" data-atlas-tab="catalog" aria-selected="false">
+        <span class="tab-icon">📜</span>
+        <span class="tab-label">03 · Catalog</span>
+        <span class="tab-badge">{catalog.length}</span>
+      </button>
+    </nav>
 
     <!-- Top Section: Interactive Canvas Studio & Telemetry Inspector -->
     <div class="studio-split">
@@ -99,15 +116,17 @@ if (initialEntry) {
         </div>
 
         <div class="canvas-viewport-wrap" id="canvas-container">
-          <canvas id="constellation-canvas" width="600" height="600" class="astrolabe-canvas"></canvas>
-          <div class="canvas-guide-overlay">
-            <span class="guide-tick tick-top">N · 00h</span>
-            <span class="guide-tick tick-bottom">S · 12h</span>
-            <span class="guide-tick tick-left">E · 06h</span>
-            <span class="guide-tick tick-right">W · 18h</span>
+          <div class="astrolabe-stage">
+            <canvas id="constellation-canvas" width="600" height="600" class="astrolabe-canvas"></canvas>
+            <div class="canvas-guide-overlay" aria-hidden="true">
+              <span class="guide-tick tick-top">N · 00h</span>
+              <span class="guide-tick tick-bottom">S · 12h</span>
+              <span class="guide-tick tick-left">E · 06h</span>
+              <span class="guide-tick tick-right">W · 18h</span>
+            </div>
           </div>
           <div class="canvas-instructions" id="canvas-instructions">
-            ✦ Drag Mode: Click and drag star vertices to reposition coordinates.
+            ✦ Drag Mode: Click &amp; drag star vertices to reposition coordinates (0–10,000).
           </div>
         </div>
       </section>
@@ -176,18 +195,18 @@ if (initialEntry) {
           <div class="inspector-body" id="inspector-body">
             <div class="coord-display-row">
               <div class="coord-col">
-                <span class="meta-label">X Coordinate (0–10000)</span>
+                <span class="meta-label">X Coordinate (0–10,000)</span>
                 <input type="number" id="star-x-input" min="0" max="10000" class="mono-num" />
               </div>
               <div class="coord-col">
-                <span class="meta-label">Y Coordinate (0–10000)</span>
+                <span class="meta-label">Y Coordinate (0–10,000)</span>
                 <input type="number" id="star-y-input" min="0" max="10000" class="mono-num" />
               </div>
             </div>
 
             <div class="slider-group">
               <div class="slider-head">
-                <span class="meta-label">Apparent Magnitude ($m_V$):</span>
+                <span class="meta-label">Apparent Magnitude (mᵥ):</span>
                 <span id="star-mag-display" class="mono font-bold">2.10</span>
               </div>
               <input type="range" id="star-mag-slider" min="0.0" max="6.0" step="0.05" value="2.1" class="tool-slider" />
@@ -225,7 +244,7 @@ if (initialEntry) {
       </section>
     </div>
 
-    <!-- Bottom Section: Searchable Catalog Table -->
+    <!-- Bottom Section: Searchable Catalog Table with Adaptive Row Density -->
     <section class="catalog-section" aria-labelledby="catalog-table-heading">
       <div class="catalog-header-bar">
         <div>
@@ -233,14 +252,22 @@ if (initialEntry) {
           <h3 id="catalog-table-heading">Canonical 88-Plate Constellation Catalog</h3>
         </div>
 
-        <div class="search-wrap">
-          <span class="search-icon">⌕</span>
-          <input
-            type="search"
-            id="catalog-filter-input"
-            placeholder="Search by code, Latin name, or coordinates (e.g. ORI, Orion, Cas, Cygnus)…"
-            aria-label="Filter catalog"
-          />
+        <div class="catalog-controls-deck">
+          <div class="search-wrap">
+            <span class="search-icon">⌕</span>
+            <input
+              type="search"
+              id="catalog-filter-input"
+              placeholder="Filter by code, Latin name, or coords…"
+              aria-label="Filter catalog"
+            />
+          </div>
+          <div class="catalog-density-wrap" role="group" aria-label="Plates displayed per page">
+            <span class="density-label">Show:</span>
+            <button type="button" class="density-btn is-active" data-page-size="10" title="Display 10 plates per page">10</button>
+            <button type="button" class="density-btn" data-page-size="25" title="Display 25 plates per page">25</button>
+            <button type="button" class="density-btn" data-page-size="all" title="Display all 88 plates">All</button>
+          </div>
         </div>
       </div>
 
@@ -289,6 +316,21 @@ if (initialEntry) {
           </tbody>
         </table>
       </div>
+
+      <footer class="catalog-pagination-bar" id="catalog-pagination-bar">
+        <div class="pagination-info">
+          <span id="catalog-page-range">Showing 1–10 of {catalog.length} plates</span>
+        </div>
+        <div class="pagination-actions">
+          <button type="button" class="study-btn study-btn--ledger study-btn--sm" id="btn-page-prev" disabled>
+            ‹ Prev
+          </button>
+          <span class="pagination-current-page" id="catalog-page-indicator">Page 1 of {Math.ceil(catalog.length / 10)}</span>
+          <button type="button" class="study-btn study-btn--ledger study-btn--sm" id="btn-page-next">
+            Next ›
+          </button>
+        </div>
+      </footer>
     </section>
   </div>
 
@@ -640,6 +682,90 @@ if (initialEntry) {
       }
     });
 
+    // Touch Support for Mobile / Tablet Canvas Interaction
+    function getTouchPos(e: TouchEvent) {
+      const touch = e.touches[0] || e.changedTouches[0];
+      const rect = canvas.getBoundingClientRect();
+      const scaleX = canvas.width / rect.width;
+      const scaleY = canvas.height / rect.height;
+      return {
+        x: (touch.clientX - rect.left) * scaleX,
+        y: (touch.clientY - rect.top) * scaleY
+      };
+    }
+
+    canvas.addEventListener('touchstart', (e) => {
+      const { x, y } = getTouchPos(e);
+      const clickedStar = getStarAt(x, y);
+
+      if (activeTool === 'drag') {
+        if (clickedStar !== null) {
+          e.preventDefault();
+          selectStar(clickedStar);
+          isDragging = true;
+        } else {
+          selectStar(null);
+        }
+      } else if (activeTool === 'edge') {
+        if (clickedStar !== null) {
+          e.preventDefault();
+          if (edgeStartIndex === null) {
+            edgeStartIndex = clickedStar;
+            selectStar(clickedStar);
+            notify(`Star #${clickedStar} selected as chord origin. Tap second star to link.`, 'info');
+          } else {
+            if (edgeStartIndex !== clickedStar) {
+              const a = Math.min(edgeStartIndex, clickedStar);
+              const b = Math.max(edgeStartIndex, clickedStar);
+              const edges: Array<[number, number]> = currentConstellation.edges || [];
+              const exists = edges.findIndex(([i, j]) => i === a && j === b);
+
+              if (exists !== -1) {
+                edges.splice(exists, 1);
+                notify(`Removed chord between #${a} and #${b}.`, 'warn');
+              } else {
+                edges.push([a, b]);
+                notify(`Linked chord between #${a} and #${b}.`, 'success');
+              }
+              currentConstellation.edges = edges;
+            }
+            edgeStartIndex = null;
+            renderConstellation();
+          }
+        }
+      } else if (activeTool === 'add') {
+        e.preventDefault();
+        const normX = toNorm(x);
+        const normY = toNorm(y);
+        const newStar = [normX, normY, 3.2, 5, 0, '', '', 12];
+        currentConstellation.stars.push(newStar);
+        selectStar(currentConstellation.stars.length - 1);
+        notify(`Added star vertex at coordinates [${normX}, ${normY}].`, 'success');
+      }
+    }, { passive: false });
+
+    window.addEventListener('touchmove', (e) => {
+      if (!isDragging || selectedStarIndex === null || !currentConstellation?.stars?.[selectedStarIndex]) return;
+      e.preventDefault();
+      const { x, y } = getTouchPos(e);
+      const normX = Math.max(0, Math.min(10000, toNorm(x)));
+      const normY = Math.max(0, Math.min(10000, toNorm(y)));
+
+      currentConstellation.stars[selectedStarIndex][0] = normX;
+      currentConstellation.stars[selectedStarIndex][1] = normY;
+
+      (document.getElementById('star-x-input') as HTMLInputElement).value = String(normX);
+      (document.getElementById('star-y-input') as HTMLInputElement).value = String(normY);
+
+      renderConstellation();
+    }, { passive: false });
+
+    window.addEventListener('touchend', () => {
+      if (isDragging) {
+        isDragging = false;
+      }
+    });
+
     // Property Inspector Synchronizers
     document.getElementById('star-x-input')?.addEventListener('input', (e) => {
       if (selectedStarIndex === null) return;
@@ -704,7 +830,7 @@ if (initialEntry) {
         edgeStartIndex = null;
 
         if (instructionsEl) {
-          if (activeTool === 'drag') instructionsEl.textContent = '✦ Drag Mode: Click & drag star vertices to reposition coordinates ($0..10000).';
+          if (activeTool === 'drag') instructionsEl.textContent = '✦ Drag Mode: Click & drag star vertices to reposition coordinates (0–10,000).';
           if (activeTool === 'edge') instructionsEl.textContent = '☍ Chord Mode: Click origin star, then click target star to link or unlink.';
           if (activeTool === 'add') instructionsEl.textContent = '✚ Add Mode: Click anywhere on the sky canvas to drop a new star vertex.';
         }
@@ -815,15 +941,116 @@ if (initialEntry) {
       loadConstellation(selectEl.value);
     });
 
-    // Catalog Search Filter
+    // Adaptive Catalog Pagination & Slicing (Shrinks rows on mobile & desktop)
+    let currentPage = 1;
+    let pageSize: number | 'all' = 10;
     const filterInput = document.getElementById('catalog-filter-input') as HTMLInputElement;
-    const catRows = document.querySelectorAll<HTMLElement>('[data-cat-row]');
+    const catRows = Array.from(document.querySelectorAll<HTMLElement>('[data-cat-row]'));
+    const densityButtons = document.querySelectorAll<HTMLButtonElement>('.density-btn');
+    const prevBtn = document.getElementById('btn-page-prev') as HTMLButtonElement | null;
+    const nextBtn = document.getElementById('btn-page-next') as HTMLButtonElement | null;
+    const pageRangeEl = document.getElementById('catalog-page-range');
+    const pageIndicatorEl = document.getElementById('catalog-page-indicator');
 
-    filterInput?.addEventListener('input', () => {
-      const q = filterInput.value.trim().toLowerCase();
+    function updateCatalogPagination() {
+      const q = (filterInput?.value || '').trim().toLowerCase();
+      const matchingRows: HTMLElement[] = [];
       catRows.forEach((row) => {
         const text = row.dataset.catRow || '';
-        row.hidden = q.length > 0 && !text.includes(q);
+        const matches = q.length === 0 || text.includes(q);
+        if (matches) matchingRows.push(row);
+      });
+
+      const totalMatching = matchingRows.length;
+      const actualSize = pageSize === 'all' ? (totalMatching || 1) : pageSize;
+      const totalPages = Math.max(1, Math.ceil(totalMatching / actualSize));
+
+      if (currentPage > totalPages) currentPage = totalPages;
+      if (currentPage < 1) currentPage = 1;
+
+      const startIndex = (currentPage - 1) * actualSize;
+      const endIndex = pageSize === 'all' ? totalMatching : Math.min(startIndex + actualSize, totalMatching);
+
+      // Hide all rows, then reveal only current slice
+      catRows.forEach((row) => {
+        row.hidden = true;
+      });
+
+      for (let i = startIndex; i < endIndex; i++) {
+        if (matchingRows[i]) {
+          matchingRows[i].hidden = false;
+        }
+      }
+
+      if (pageRangeEl) {
+        if (totalMatching === 0) {
+          pageRangeEl.textContent = 'No matching celestial plates found';
+        } else {
+          pageRangeEl.textContent = `Showing ${startIndex + 1}–${endIndex} of ${totalMatching} plate${totalMatching === 1 ? '' : 's'}`;
+        }
+      }
+
+      if (pageIndicatorEl) {
+        pageIndicatorEl.textContent = `Page ${currentPage} of ${totalPages}`;
+      }
+
+      if (prevBtn) prevBtn.disabled = currentPage <= 1;
+      if (nextBtn) nextBtn.disabled = currentPage >= totalPages;
+    }
+
+    densityButtons.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        densityButtons.forEach((b) => b.classList.remove('is-active'));
+        btn.classList.add('is-active');
+        const val = btn.dataset.pageSize;
+        pageSize = val === 'all' ? 'all' : Number(val) || 10;
+        currentPage = 1;
+        updateCatalogPagination();
+      });
+    });
+
+    prevBtn?.addEventListener('click', () => {
+      if (currentPage > 1) {
+        currentPage--;
+        updateCatalogPagination();
+      }
+    });
+
+    nextBtn?.addEventListener('click', () => {
+      currentPage++;
+      updateCatalogPagination();
+    });
+
+    filterInput?.addEventListener('input', () => {
+      currentPage = 1;
+      updateCatalogPagination();
+    });
+
+    // Initialize pagination
+    updateCatalogPagination();
+
+    // Mobile Tab Switching for Atlas Studio (Gated <= 800px)
+    const atlasContainer = document.getElementById('atlas-module-container');
+    const atlasTabButtons = document.querySelectorAll<HTMLButtonElement>('.atlas-tab-btn');
+
+    function setAtlasMobileView(view: 'canvas' | 'specs' | 'catalog') {
+      if (atlasContainer) {
+        atlasContainer.dataset.mobileView = view;
+      }
+      atlasTabButtons.forEach((btn) => {
+        const matches = btn.dataset.atlasTab === view;
+        btn.classList.toggle('is-active', matches);
+        btn.setAttribute('aria-selected', String(matches));
+      });
+      if (view === 'canvas') {
+        renderConstellation();
+      }
+    }
+
+    atlasTabButtons.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const view = btn.dataset.atlasTab as any;
+        if (view) setAtlasMobileView(view);
       });
     });
 
@@ -833,6 +1060,10 @@ if (initialEntry) {
         const id = btn.dataset.loadConstellation;
         if (id) {
           loadConstellation(id);
+          // Auto-switch to canvas view on mobile so user sees the loaded constellation
+          if (window.innerWidth <= 800) {
+            setAtlasMobileView('canvas');
+          }
           window.scrollTo({ top: 0, behavior: 'smooth' });
         }
       });
@@ -1010,41 +1241,61 @@ if (initialEntry) {
     flex-wrap: wrap;
   }
 
-  /* Viewport */
+  /* Astrolabe Canvas Viewport & Enclosed Precision Reticle Stage */
   .canvas-viewport-wrap {
     position: relative;
     display: flex;
-    justify-content: center;
+    flex-direction: column;
     align-items: center;
-    background: #050811;
+    background: #040711;
     border: 1px solid var(--border-hairline);
-    border-radius: 4px;
-    padding: 1rem;
+    border-radius: 6px;
+    padding: 1.25rem 1rem;
     overflow: hidden;
+  }
+
+  .astrolabe-stage {
+    position: relative;
+    inline-size: min(100%, 500px);
+    aspect-ratio: 1 / 1;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
 
   .astrolabe-canvas {
     width: 100%;
-    max-width: 540px;
-    height: auto;
+    height: 100%;
     aspect-ratio: 1 / 1;
     cursor: crosshair;
-    border-radius: 3px;
-    box-shadow: 0 4px 32px rgba(0, 0, 0, 0.8);
+    border-radius: 50%;
+    box-shadow:
+      0 12px 40px rgba(0, 0, 0, 0.85),
+      0 0 0 1px color-mix(in oklch, var(--accent) 30%, transparent),
+      inset 0 0 40px rgba(0, 0, 0, 0.7);
   }
 
+  /* Guide overlay is anchored directly to the 1:1 astrolabe circular stage */
   .canvas-guide-overlay {
     position: absolute;
-    inset: 1rem;
+    inset: 0;
+    border-radius: 50%;
     pointer-events: none;
   }
 
   .guide-tick {
     position: absolute;
-    font-family: var(--font-serif);
-    font-size: 0.7rem;
-    color: rgba(216, 178, 87, 0.5);
-    letter-spacing: 0.05em;
+    font-family: var(--font-mono, monospace);
+    font-size: 0.68rem;
+    font-weight: 600;
+    color: color-mix(in oklch, var(--accent) 80%, white);
+    letter-spacing: 0.08em;
+    background: rgba(4, 7, 17, 0.75);
+    padding: 0.1rem 0.35rem;
+    border-radius: 3px;
+    border: 1px solid color-mix(in oklch, var(--accent) 30%, transparent);
+    user-select: none;
   }
 
   .tick-top { top: 0.4rem; left: 50%; transform: translateX(-50%); }
@@ -1053,19 +1304,18 @@ if (initialEntry) {
   .tick-right { right: 0.4rem; top: 50%; transform: translateY(-50%); }
 
   .canvas-instructions {
-    position: absolute;
-    bottom: 0.5rem;
-    left: 50%;
-    transform: translateX(-50%);
+    margin-top: 0.85rem;
     font-family: var(--font-serif);
     font-size: 0.78rem;
     color: var(--text-secondary);
-    background: rgba(11, 18, 32, 0.88);
-    padding: 0.2rem 0.65rem;
+    background: rgba(11, 18, 32, 0.92);
+    padding: 0.25rem 0.85rem;
     border-radius: 9999px;
     border: 1px solid var(--border-hairline);
-    white-space: nowrap;
+    text-align: center;
     pointer-events: none;
+    width: fit-content;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
   }
 
   /* Right Telemetry Column */
@@ -1073,6 +1323,28 @@ if (initialEntry) {
     display: flex;
     flex-direction: column;
     gap: 0.35rem;
+  }
+
+  .admin-select {
+    width: 100%;
+    padding: 0.6rem 2.25rem 0.6rem 0.85rem;
+    border-radius: 4px;
+    border: 1px solid var(--border-hairline);
+    background: var(--bg-canvas) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23d8b257' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E") no-repeat right 0.85rem center;
+    background-size: 12px;
+    color: var(--text-primary);
+    font-family: var(--font-serif);
+    font-size: 0.88rem;
+    appearance: none;
+    -webkit-appearance: none;
+    cursor: pointer;
+    transition: border-color 0.16s ease, box-shadow 0.16s ease;
+  }
+
+  .admin-select:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 22%, transparent);
   }
 
   .mini-label {
@@ -1232,7 +1504,33 @@ if (initialEntry) {
   }
 
   .tool-slider {
+    width: 100%;
+    height: 6px;
+    appearance: none;
+    -webkit-appearance: none;
+    background: color-mix(in oklch, var(--border-hairline) 85%, transparent);
+    border-radius: 9999px;
+    outline: none;
     accent-color: var(--accent);
+    cursor: pointer;
+    margin: 0.45rem 0;
+  }
+
+  .tool-slider::-webkit-slider-thumb {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: var(--accent);
+    border: 2px solid var(--bg-surface);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.6), 0 0 0 1px var(--accent);
+    cursor: pointer;
+    transition: transform 0.12s ease;
+  }
+
+  .tool-slider::-webkit-slider-thumb:hover {
+    transform: scale(1.18);
   }
 
   .form-row-2 {
@@ -1261,6 +1559,11 @@ if (initialEntry) {
     justify-content: flex-end;
   }
 
+  .btn-danger-sm {
+    padding: 0.35rem 0.75rem;
+    font-size: 0.76rem;
+  }
+
   /* Commit Row */
   .commit-row {
     display: flex;
@@ -1269,6 +1572,18 @@ if (initialEntry) {
     gap: 0.75rem;
     padding-top: 0.5rem;
     border-top: 1px solid var(--border-hairline);
+  }
+
+  .btn-danger-outline {
+    border-color: color-mix(in oklch, #b83a28 45%, var(--border-hairline));
+    color: #e06c58;
+    background: transparent;
+  }
+
+  .btn-danger-outline:hover {
+    background: color-mix(in oklch, #b83a28 15%, transparent);
+    border-color: #e06c58;
+    color: #f5f2ea;
   }
 
   /* Bottom Catalog Section */
@@ -1295,6 +1610,88 @@ if (initialEntry) {
     font-family: var(--font-display);
     font-size: 1.15rem;
     font-weight: 500;
+  }
+
+  .catalog-controls-deck {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+  }
+
+  .catalog-density-wrap {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.2rem 0.35rem;
+    background: var(--bg-canvas);
+    border: 1px solid var(--border-hairline);
+    border-radius: 4px;
+  }
+
+  .density-label {
+    font-family: var(--font-serif);
+    font-size: 0.72rem;
+    color: var(--text-tertiary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 0 0.35rem;
+  }
+
+  .density-btn {
+    padding: 0.25rem 0.6rem;
+    border-radius: 3px;
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--text-secondary);
+    font-family: var(--font-mono, monospace);
+    font-size: 0.74rem;
+    cursor: pointer;
+    transition: all 0.14s ease;
+  }
+
+  .density-btn:hover {
+    color: var(--text-primary);
+  }
+
+  .density-btn.is-active {
+    background: var(--bg-surface);
+    border-color: var(--accent);
+    color: var(--accent);
+    font-weight: 700;
+  }
+
+  .catalog-pagination-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.85rem 1.25rem;
+    background: var(--bg-surface);
+    border-top: 1px solid var(--border-hairline);
+    font-family: var(--font-serif);
+    font-size: 0.82rem;
+    color: var(--text-secondary);
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+
+  .pagination-info {
+    font-family: var(--font-serif);
+    font-size: 0.84rem;
+    color: var(--text-secondary);
+  }
+
+  .pagination-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.65rem;
+  }
+
+  .pagination-current-page {
+    font-family: var(--font-mono, monospace);
+    font-size: 0.78rem;
+    color: var(--text-primary);
+    padding: 0 0.35rem;
   }
 
   .search-wrap {
@@ -1395,5 +1792,241 @@ if (initialEntry) {
   .row-actions {
     display: inline-flex;
     gap: 0.4rem;
+  }
+
+  /* =========================================================================
+     Atlas Studio Mobile Synthesis & View Tabbing (Strictly Gated <= 800px)
+     Desktop (> 800px) remains 100% untouched side-by-side split & catalog
+     ========================================================================= */
+  .atlas-mobile-tabs {
+    display: none;
+  }
+
+  @media (max-width: 800px) {
+    .module-container {
+      gap: 1.25rem;
+    }
+
+    .header-split {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.85rem;
+    }
+
+    .telemetry-stats {
+      width: 100%;
+    }
+
+    .stat-box {
+      flex: 1;
+    }
+
+    /* Sticky Segmented Tab Bar */
+    .atlas-mobile-tabs {
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.35rem;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-hairline);
+      border-radius: 6px;
+      position: sticky;
+      top: 3.25rem;
+      z-index: 40;
+      backdrop-filter: blur(12px);
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
+    }
+
+    .atlas-tab-btn {
+      flex: 1;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.4rem;
+      padding: 0.6rem 0.5rem;
+      min-height: 44px;
+      border-radius: 4px;
+      border: 1px solid transparent;
+      background: transparent;
+      color: var(--text-secondary);
+      font-family: var(--font-serif);
+      font-size: 0.82rem;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      white-space: nowrap;
+    }
+
+    .atlas-tab-btn.is-active {
+      background: color-mix(in oklch, var(--accent) 18%, var(--bg-canvas));
+      border-color: var(--accent);
+      color: var(--accent);
+      font-weight: 600;
+      box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--accent) 30%, transparent);
+    }
+
+    .tab-badge {
+      font-family: var(--font-mono);
+      font-size: 0.65rem;
+      padding: 0.1rem 0.35rem;
+      border-radius: 9999px;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-hairline);
+      color: var(--text-tertiary);
+    }
+
+    /* View Gating according to active mobile tab */
+    .module-container[data-mobile-view='canvas'] .telemetry-panel,
+    .module-container[data-mobile-view='canvas'] .catalog-section {
+      display: none !important;
+    }
+
+    .module-container[data-mobile-view='specs'] .canvas-panel,
+    .module-container[data-mobile-view='specs'] .catalog-section {
+      display: none !important;
+    }
+
+    .module-container[data-mobile-view='catalog'] .studio-split {
+      display: none !important;
+    }
+
+    /* Canvas Panel on Mobile */
+    .canvas-panel,
+    .telemetry-panel {
+      padding: 1rem;
+      gap: 1rem;
+    }
+
+    .canvas-tools {
+      width: 100%;
+      justify-content: flex-start;
+      gap: 0.4rem;
+    }
+
+    .canvas-tools .tool-btn,
+    .canvas-tools .tool-btn-outline {
+      min-height: 44px;
+      padding: 0.45rem 0.75rem;
+      font-size: 0.82rem;
+      flex: 1 1 auto;
+      justify-content: center;
+    }
+
+    .canvas-tools .btn-keycap,
+    .commit-row .btn-keycap {
+      display: none;
+    }
+
+    .canvas-instructions {
+      position: static;
+      transform: none;
+      margin-top: 0.5rem;
+      text-align: center;
+      white-space: normal;
+      width: 100%;
+    }
+
+    /* Specs / Telemetry Form Ergonomics */
+    .mono-num,
+    .form-row-2 input,
+    .admin-select,
+    #catalog-filter-input {
+      font-size: 16px !important;
+      min-height: 44px;
+    }
+
+    .meta-strip {
+      grid-template-columns: 1fr;
+      gap: 0.5rem;
+    }
+
+    .pin-box {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 0.75rem;
+    }
+
+    .btn-pin {
+      min-height: 44px;
+      text-align: center;
+    }
+
+    .form-row-2 {
+      grid-template-columns: 1fr;
+    }
+
+    .commit-row {
+      flex-direction: column;
+      gap: 0.65rem;
+    }
+
+    .commit-row button {
+      width: 100%;
+      min-height: 48px;
+      justify-content: center;
+    }
+
+    /* Catalog Table on Mobile */
+    .catalog-header-bar {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 0.75rem;
+      padding: 1rem;
+    }
+
+    .catalog-controls-deck {
+      width: 100%;
+      flex-direction: column;
+      align-items: stretch;
+      gap: 0.65rem;
+    }
+
+    .search-wrap {
+      min-width: unset;
+      width: 100%;
+    }
+
+    .catalog-density-wrap {
+      justify-content: space-between;
+      width: 100%;
+      padding: 0.25rem;
+    }
+
+    .density-btn {
+      flex: 1;
+      text-align: center;
+      min-height: 38px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .catalog-table th,
+    .catalog-table td {
+      padding: 0.65rem 0.75rem;
+    }
+
+    .mono-shard,
+    .catalog-table th:nth-child(6),
+    .catalog-table td:nth-child(6) {
+      display: none;
+    }
+
+    .catalog-pagination-bar {
+      flex-direction: column;
+      align-items: center;
+      gap: 0.65rem;
+      padding: 0.85rem 1rem;
+      text-align: center;
+    }
+
+    .pagination-actions {
+      width: 100%;
+      justify-content: space-between;
+    }
+
+    .pagination-actions .study-btn {
+      min-height: 40px;
+      padding: 0.4rem 1rem;
+    }
   }
 </style>

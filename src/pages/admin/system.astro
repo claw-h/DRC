@@ -891,45 +891,51 @@ const hostPid = process.pid;
      Centered Top-Layer Viewport Stacking with Calligraphic Gravity
      ========================================================================= */
 
+  .sovereign-modal:not([open]) {
+    display: none !important;
+    pointer-events: none !important;
+  }
+
   .sovereign-modal {
     position: fixed;
     inset: 0;
-    margin: auto;
+    width: 100%;
+    height: 100%;
+    max-width: 100dvw;
+    max-height: 100dvh;
     padding: 0;
+    margin: 0;
     border: none;
     background: transparent;
     color: var(--text-primary);
-    inline-size: min(600px, calc(100dvw - 2rem));
-    max-block-size: calc(100dvh - 2.5rem);
     overflow-y: auto;
     overflow-x: hidden;
     z-index: 1200;
     box-sizing: border-box;
+    pointer-events: none;
 
     opacity: 0;
-    transform: scale(0.96) translateY(-10px);
     transition:
       opacity 0.22s cubic-bezier(0.16, 1, 0.3, 1),
-      transform 0.22s cubic-bezier(0.16, 1, 0.3, 1),
       display 0.22s allow-discrete,
       overlay 0.22s allow-discrete;
   }
 
   .sovereign-modal[open] {
+    display: grid;
+    place-items: center;
+    pointer-events: auto;
     opacity: 1;
-    transform: scale(1) translateY(0);
   }
 
   @starting-style {
     .sovereign-modal[open] {
       opacity: 0;
-      transform: scale(0.96) translateY(-10px);
     }
   }
 
   .sovereign-modal[data-closing='true'] {
     opacity: 0;
-    transform: scale(0.96) translateY(8px);
   }
 
   .sovereign-modal::backdrop {
@@ -961,12 +967,32 @@ const hostPid = process.pid;
     position: relative;
     display: flex;
     flex-direction: column;
+    width: min(600px, calc(100dvw - 2rem));
+    max-height: calc(100dvh - 2.5rem);
     background: var(--bg-surface, #0b1020);
     border-radius: 6px;
     padding: 1.75rem 2rem;
     gap: 1.25rem;
     box-sizing: border-box;
-    overflow: hidden;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+
+    transform: scale(0.96) translateY(-10px);
+    transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .sovereign-modal[open] .modal-chassis {
+    transform: scale(1) translateY(0);
+  }
+
+  @starting-style {
+    .sovereign-modal[open] .modal-chassis {
+      transform: scale(0.96) translateY(-10px);
+    }
+  }
+
+  .sovereign-modal[data-closing='true'] .modal-chassis {
+    transform: scale(0.96) translateY(8px);
   }
 
   .purge-shell {
@@ -1333,5 +1359,113 @@ const hostPid = process.pid;
     cursor: not-allowed;
     filter: grayscale(0.6);
     box-shadow: none !important;
+  }
+
+  /* =========================================================================
+     Mobile Ergonomics & Sovereign Modal Bottom Sheet (Strictly Gated <= 640px)
+     Desktop (> 640px) remains 100% untouched centered modals and layouts
+     ========================================================================= */
+  @media (max-width: 640px) {
+    .module-container {
+      gap: 1.25rem;
+    }
+
+    .telemetry-deck {
+      grid-template-columns: 1fr 1fr;
+      gap: 0.5rem;
+    }
+
+    .lifecycle-card {
+      padding: 1rem;
+      gap: 1rem;
+    }
+
+    .tier-action-box {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    .btn-tier {
+      width: 100%;
+      min-height: 48px;
+      justify-content: center;
+    }
+
+    .sovereign-modal[open] {
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      align-items: stretch;
+      overflow: hidden;
+    }
+
+    .modal-chassis {
+      width: 100%;
+      max-width: 100dvw;
+      max-height: 92dvh;
+      border-radius: 14px 14px 0 0;
+      border-inline: none;
+      border-bottom: none;
+      padding: 1.25rem 1rem max(1rem, env(safe-area-inset-bottom));
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      gap: 1rem;
+      transform: translateY(100%);
+      transition: transform 0.24s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .sovereign-modal[open] .modal-chassis {
+      transform: translateY(0);
+    }
+
+    @starting-style {
+      .sovereign-modal[open] .modal-chassis {
+        transform: translateY(100%);
+      }
+    }
+
+    .sovereign-modal[data-closing='true'] .modal-chassis {
+      transform: translateY(100%);
+    }
+
+    .manifest-grid {
+      grid-template-columns: 1fr;
+      gap: 0.5rem;
+    }
+
+    .gate-input {
+      font-size: 16px !important;
+      min-height: 44px;
+    }
+
+    #purge-phrase {
+      font-size: 14px !important;
+      padding-inline-end: 95px;
+    }
+
+    .verification-badge {
+      font-size: 0.6rem;
+      padding: 0.15rem 0.35rem;
+    }
+
+    .modal-actions-footer,
+    .purge-actions-footer {
+      flex-direction: column-reverse;
+      gap: 0.6rem;
+      width: 100%;
+    }
+
+    .modal-actions-footer button,
+    .purge-actions-footer button {
+      width: 100%;
+      min-height: 48px;
+      justify-content: center;
+      font-size: 0.9rem;
+    }
+
+    .modal-actions-footer .btn-keycap,
+    .purge-actions-footer .btn-keycap {
+      display: none;
+    }
   }
 </style>

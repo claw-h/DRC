@@ -2781,20 +2781,36 @@ const { featuredConstellationId = null } = Astro.props;
       this.ctx.arc(mx, my, R, 0, Math.PI * 2);
       this.ctx.clip();
 
-      // 1. Magical Deep Glass Cosmos (The Optical Realm Foundation)
+      // 1. High-Index Optical Crown Glass Transmission (Deep Realistic Clarity)
       const lensGrad = this.ctx.createRadialGradient(mx, my, 0, mx, my, R);
       if (isDark) {
-        lensGrad.addColorStop(0, 'rgba(14, 22, 42, 0.98)');
-        lensGrad.addColorStop(0.50, 'rgba(22, 14, 36, 0.98)');
-        lensGrad.addColorStop(0.82, 'rgba(10, 14, 26, 0.99)');
-        lensGrad.addColorStop(1, 'rgba(4, 6, 12, 1.0)');
+        // High-clarity optical glass with subtle contrast-enhancing antireflective tint
+        lensGrad.addColorStop(0, 'rgba(8, 13, 24, 0.65)');
+        lensGrad.addColorStop(0.55, 'rgba(6, 10, 20, 0.78)');
+        lensGrad.addColorStop(0.85, 'rgba(3, 6, 14, 0.90)');
+        lensGrad.addColorStop(1.0, 'rgba(2, 4, 8, 0.98)');
       } else {
-        lensGrad.addColorStop(0, 'rgba(252, 250, 244, 0.97)');
-        lensGrad.addColorStop(0.65, 'rgba(246, 241, 230, 0.98)');
-        lensGrad.addColorStop(1, 'rgba(232, 222, 204, 0.99)');
+        lensGrad.addColorStop(0, 'rgba(252, 250, 245, 0.60)');
+        lensGrad.addColorStop(0.65, 'rgba(246, 241, 232, 0.78)');
+        lensGrad.addColorStop(1.0, 'rgba(230, 222, 206, 0.95)');
       }
       this.ctx.fillStyle = lensGrad;
       this.ctx.fillRect(mx - R, my - R, R * 2, R * 2);
+
+      // Biconvex Meniscus Ambient Highlight (Simulating 3D spherical lens dome)
+      const meniscusX = mx - R * 0.32;
+      const meniscusY = my - R * 0.35;
+      const meniscusGrad = this.ctx.createRadialGradient(
+        meniscusX, meniscusY, 0,
+        meniscusX, meniscusY, R * 0.75
+      );
+      meniscusGrad.addColorStop(0, isDark ? 'rgba(255, 255, 255, 0.11)' : 'rgba(255, 255, 255, 0.26)');
+      meniscusGrad.addColorStop(0.35, isDark ? 'rgba(215, 235, 255, 0.04)' : 'rgba(255, 248, 235, 0.09)');
+      meniscusGrad.addColorStop(0.70, 'rgba(255, 255, 255, 0)');
+      this.ctx.fillStyle = meniscusGrad;
+      this.ctx.beginPath();
+      this.ctx.arc(mx, my, R, 0, Math.PI * 2);
+      this.ctx.fill();
 
       // Iridescent Achromatic Coating Sheen (Prismatic Violet & Amber Glint Arc)
       if (isDark) {
@@ -3554,16 +3570,48 @@ const { featuredConstellationId = null } = Astro.props;
         }
       }
 
-      // 8. Archival Etched Astrometric Micrometer Rings in Glass (1', 2' Arcminutes)
+      // 8. Museum-Grade Filar Transit Micrometer (Spider-Silk Reticle & Arcminute Ticks)
       this.ctx.save();
-      this.ctx.strokeStyle = isDark ? 'rgba(235, 215, 175, 0.14)' : 'rgba(75, 60, 42, 0.14)';
+      const reticleColor = isDark ? 'rgba(235, 218, 185, 0.28)' : 'rgba(55, 42, 28, 0.32)';
+      const reticleFaint = isDark ? 'rgba(235, 218, 185, 0.12)' : 'rgba(55, 42, 28, 0.14)';
+      this.ctx.strokeStyle = reticleColor;
       this.ctx.lineWidth = 0.5;
-      this.ctx.setLineDash([2, 4]);
+
+      // Faint reference rings at 1' and 2' field marks (filar circles)
+      this.ctx.setLineDash([2, 5]);
       this.ctx.beginPath();
-      this.ctx.arc(mx, my, R * 0.28, 0, Math.PI * 2); // 1' field
-      this.ctx.arc(mx, my, R * 0.56, 0, Math.PI * 2); // 2' field
+      this.ctx.arc(mx, my, R * 0.33, 0, Math.PI * 2);
+      this.ctx.arc(mx, my, R * 0.66, 0, Math.PI * 2);
       this.ctx.stroke();
       this.ctx.setLineDash([]);
+
+      // Spider-silk crosshairs with 14px center clearance (never obstructs central star)
+      const clearR = 7;
+      this.ctx.beginPath();
+      // Horizontal crosshair
+      this.ctx.moveTo(mx - R * 0.88, my);
+      this.ctx.lineTo(mx - clearR, my);
+      this.ctx.moveTo(mx + clearR, my);
+      this.ctx.lineTo(mx + R * 0.88, my);
+      // Vertical crosshair
+      this.ctx.moveTo(mx, my - R * 0.88);
+      this.ctx.lineTo(mx, my - clearR);
+      this.ctx.moveTo(mx, my + clearR);
+      this.ctx.lineTo(mx, my + R * 0.88);
+      this.ctx.stroke();
+
+      // Precision micrometer tick marks along crosshairs (spaced every 12px)
+      this.ctx.beginPath();
+      for (let d = 16; d < R * 0.85; d += 12) {
+        const tickH = (d % 36 === 0) ? 3.5 : 1.8;
+        // On horizontal axis
+        this.ctx.moveTo(mx + d, my - tickH); this.ctx.lineTo(mx + d, my + tickH);
+        this.ctx.moveTo(mx - d, my - tickH); this.ctx.lineTo(mx - d, my + tickH);
+        // On vertical axis
+        this.ctx.moveTo(mx - tickH, my + d); this.ctx.lineTo(mx + tickH, my + d);
+        this.ctx.moveTo(mx - tickH, my - d); this.ctx.lineTo(mx + tickH, my - d);
+      }
+      this.ctx.stroke();
       this.ctx.restore();
 
       // 9. Diagonal Caustic Sheen Sweep across Glass during Materialization
@@ -3578,36 +3626,39 @@ const { featuredConstellationId = null } = Astro.props;
 
         const sheenGrad = this.ctx.createLinearGradient(g1x, g1y, g2x, g2y);
         sheenGrad.addColorStop(0, 'rgba(255, 245, 210, 0)');
-        sheenGrad.addColorStop(0.5, 'rgba(255, 255, 240, 0.28)');
+        sheenGrad.addColorStop(0.5, 'rgba(255, 255, 240, 0.22)');
         sheenGrad.addColorStop(1, 'rgba(255, 245, 210, 0)');
         this.ctx.fillStyle = sheenGrad;
         this.ctx.fillRect(mx - R, my - R, R * 2, R * 2);
       }
 
-      // 10. Concentric Vintage Glass Meniscus & Deep Rim Vignette
-      this.ctx.strokeStyle = isDark ? 'rgba(255, 240, 200, 0.14)' : 'rgba(100, 80, 50, 0.09)';
-      this.ctx.lineWidth = 0.65;
+      // 10. Lens Internal Chamfer & Ground Edge Total Internal Reflection Glint
+      const bevelGrad = this.ctx.createRadialGradient(mx, my, R * 0.955, mx, my, R);
+      bevelGrad.addColorStop(0, 'rgba(255, 255, 255, 0)');
+      bevelGrad.addColorStop(0.40, isDark ? 'rgba(180, 220, 255, 0.22)' : 'rgba(255, 255, 255, 0.35)');
+      bevelGrad.addColorStop(0.75, isDark ? 'rgba(255, 245, 215, 0.16)' : 'rgba(190, 170, 140, 0.20)');
+      bevelGrad.addColorStop(1.0, 'rgba(0, 0, 0, 0.65)');
+      this.ctx.fillStyle = bevelGrad;
       this.ctx.beginPath();
-      this.ctx.arc(mx, my, R * 0.86, 0, Math.PI * 2);
-      this.ctx.arc(mx, my, R * 0.93, 0, Math.PI * 2);
-      this.ctx.stroke();
+      this.ctx.arc(mx, my, R, 0, Math.PI * 2);
+      this.ctx.fill();
 
-      // Deep Rim Vignetting / Barrel Occlusion Shadow
-      const innerVignette = this.ctx.createRadialGradient(mx, my, R * 0.65, mx, my, R);
+      // Deep Optical Black Barrel Wall Occlusion Shadow
+      const innerVignette = this.ctx.createRadialGradient(mx, my, R * 0.78, mx, my, R);
       innerVignette.addColorStop(0, 'rgba(0, 0, 0, 0)');
-      innerVignette.addColorStop(0.85, isDark ? 'rgba(0, 4, 12, 0.35)' : 'rgba(70, 60, 45, 0.18)');
-      innerVignette.addColorStop(1, isDark ? 'rgba(0, 6, 18, 0.68)' : 'rgba(70, 55, 38, 0.35)');
+      innerVignette.addColorStop(0.80, isDark ? 'rgba(2, 4, 10, 0.28)' : 'rgba(50, 40, 25, 0.14)');
+      innerVignette.addColorStop(1, isDark ? 'rgba(1, 2, 6, 0.72)' : 'rgba(40, 30, 18, 0.38)');
       this.ctx.fillStyle = innerVignette;
       this.ctx.beginPath();
       this.ctx.arc(mx, my, R, 0, Math.PI * 2);
       this.ctx.fill();
 
-      // Multi-layer Iridescent Anti-Reflective Rim Interference (Magenta-Cyan)
+      // Subtle Multi-layer Anti-Reflective Rim Interference Fringe (Purkinje Violet-Cyan)
       if (isDark) {
-        const arGrad = this.ctx.createRadialGradient(mx, my, R * 0.94, mx, my, R);
+        const arGrad = this.ctx.createRadialGradient(mx, my, R * 0.92, mx, my, R);
         arGrad.addColorStop(0, 'rgba(0, 0, 0, 0)');
-        arGrad.addColorStop(0.5, 'rgba(180, 80, 240, 0.12)');
-        arGrad.addColorStop(1, 'rgba(60, 220, 240, 0.18)');
+        arGrad.addColorStop(0.55, 'rgba(170, 80, 235, 0.08)');
+        arGrad.addColorStop(1.0, 'rgba(50, 210, 235, 0.14)');
         this.ctx.fillStyle = arGrad;
         this.ctx.beginPath();
         this.ctx.arc(mx, my, R, 0, Math.PI * 2);
@@ -3617,7 +3668,7 @@ const { featuredConstellationId = null } = Astro.props;
       this.ctx.restore(); // remove lens aperture clip
 
       // =========================================================================
-      // --- PRECISION MACHINED METALLIC BRASS & GUNMETAL OPTICAL EYEPIECE BARREL ---
+      // --- PRECISION MACHINED TURNED-BRASS ASTRONOMICAL EYEPIECE BARREL ---
       // =========================================================================
       this.ctx.save();
       this.ctx.globalAlpha = animAlpha;
@@ -3625,189 +3676,300 @@ const { featuredConstellationId = null } = Astro.props;
       this.ctx.rotate(spinAngle); // Screws into position with lathe spin
       this.ctx.scale(animScale, animScale);
 
-      // (A) Diamond Knurled Outer Gripping Ring (R_BASE + 8 to R_BASE + 17)
-      // Dark gunmetal under-collar
-      this.ctx.strokeStyle = isDark ? '#1a1204' : '#3d2e14';
-      this.ctx.lineWidth = 9;
+      // (A) Stepped Eyepiece Drop Shadow (Simulating depth above atlas paper)
+      this.ctx.save();
       this.ctx.beginPath();
-      this.ctx.arc(0, 0, R_BASE + 12.5, 0, Math.PI * 2);
+      this.ctx.arc(0, 0, R_BASE + 21, 0, Math.PI * 2);
+      this.ctx.shadowColor = 'rgba(0, 0, 0, 0.50)';
+      this.ctx.shadowBlur = 22;
+      this.ctx.shadowOffsetX = 0;
+      this.ctx.shadowOffsetY = 10;
+      this.ctx.fillStyle = 'rgba(0, 0, 0, 0.01)';
+      this.ctx.fill();
+      this.ctx.restore();
+
+      // (B) Tier 1: Heavy Diamond-Knurled Outer Gripping Ring (R_BASE + 10 to R_BASE + 20)
+      // Cylindrical turned metal base with 135° directional lighting
+      const knurlBaseGrad = this.ctx.createLinearGradient(
+        Math.cos(Math.PI * 0.75) * (R_BASE + 15), Math.sin(Math.PI * 0.75) * (R_BASE + 15),
+        Math.cos(Math.PI * -0.25) * (R_BASE + 15), Math.sin(Math.PI * -0.25) * (R_BASE + 15)
+      );
+      knurlBaseGrad.addColorStop(0, '#5a4218');    // Highlight side base
+      knurlBaseGrad.addColorStop(0.40, '#2e200a'); // Body bronze
+      knurlBaseGrad.addColorStop(0.80, '#150e04'); // Shadow side base
+      knurlBaseGrad.addColorStop(1.0, '#36240c');  // Ambient bounce
+      this.ctx.strokeStyle = knurlBaseGrad;
+      this.ctx.lineWidth = 10;
+      this.ctx.beginPath();
+      this.ctx.arc(0, 0, R_BASE + 15, 0, Math.PI * 2);
       this.ctx.stroke();
 
-      // 72 Precision Diamond-Knurled Gripping Teeth with Directional Lighting (135° key light)
-      const knurlCount = 72;
-      for (let k = 0; k < knurlCount; k++) {
-        const kAngle = (k * 360 / knurlCount) * (Math.PI / 180);
-        const kCos = Math.cos(kAngle);
-        const kSin = Math.sin(kAngle);
-        const lightDot = Math.cos(kAngle - Math.PI * 0.75); // 135° key light
-        const isHighlight = lightDot > 0;
-        const knurlAlpha = Math.abs(lightDot);
+      // True 3D Interlocking Diamond Knurl Facets (Dual helical crosshatch cuts)
+      const knurlSegments = 96;
+      for (let k = 0; k < knurlSegments; k++) {
+        const kAngle = (k * 360 / knurlSegments) * (Math.PI / 180);
+        const cos = Math.cos(kAngle);
+        const sin = Math.sin(kAngle);
+        const dot135 = Math.cos(kAngle - Math.PI * 0.75); // Key light at 135°
+        const isLit = dot135 > 0;
+        const litWeight = Math.abs(dot135);
 
-        this.ctx.strokeStyle = isHighlight
-          ? `rgba(255, 242, 185, ${0.40 + 0.55 * knurlAlpha})`
-          : `rgba(18, 10, 2, ${0.45 + 0.45 * knurlAlpha})`;
-        this.ctx.lineWidth = 1.0;
+        // Helical Groove A (+38° slant)
+        const dAngle = 0.042;
+        const cosA = Math.cos(kAngle + dAngle);
+        const sinA = Math.sin(kAngle + dAngle);
+        this.ctx.strokeStyle = isLit
+          ? `rgba(255, 238, 175, ${0.35 + 0.50 * litWeight})`
+          : `rgba(12, 8, 3, ${0.45 + 0.40 * litWeight})`;
+        this.ctx.lineWidth = 0.85;
         this.ctx.beginPath();
-        this.ctx.moveTo(kCos * (R_BASE + 8.2), kSin * (R_BASE + 8.2));
-        this.ctx.lineTo(kCos * (R_BASE + 16.8), kSin * (R_BASE + 16.8));
+        this.ctx.moveTo(cos * (R_BASE + 10.5), sin * (R_BASE + 10.5));
+        this.ctx.lineTo(cosA * (R_BASE + 19.5), sinA * (R_BASE + 19.5));
         this.ctx.stroke();
+
+        // Helical Groove B (-38° slant)
+        const cosB = Math.cos(kAngle - dAngle);
+        const sinB = Math.sin(kAngle - dAngle);
+        this.ctx.strokeStyle = isLit
+          ? `rgba(255, 245, 195, ${0.25 + 0.45 * litWeight})`
+          : `rgba(10, 6, 2, ${0.50 + 0.40 * litWeight})`;
+        this.ctx.lineWidth = 0.85;
+        this.ctx.beginPath();
+        this.ctx.moveTo(cosA * (R_BASE + 10.5), sinA * (R_BASE + 10.5));
+        this.ctx.lineTo(cosB * (R_BASE + 19.5), sinB * (R_BASE + 19.5));
+        this.ctx.stroke();
+
+        // Specular glint on raised diamond apexes on highlight flank
+        if (isLit && k % 2 === 0) {
+          const midR = R_BASE + 15;
+          this.ctx.fillStyle = `rgba(255, 252, 235, ${0.30 + 0.55 * litWeight})`;
+          this.ctx.beginPath();
+          this.ctx.arc(cos * midR, sin * midR, 0.75, 0, Math.PI * 2);
+          this.ctx.fill();
+        }
       }
 
-      // Defining Lathe Grooves along Knurling Boundaries
-      this.ctx.strokeStyle = '#dfba52';
-      this.ctx.lineWidth = 1.1;
+      // Lathe tool demarcation grooves bordering the knurling
+      this.ctx.strokeStyle = '#deb44a';
+      this.ctx.lineWidth = 0.9;
       this.ctx.beginPath();
-      this.ctx.arc(0, 0, R_BASE + 17, 0, Math.PI * 2);
+      this.ctx.arc(0, 0, R_BASE + 20, 0, Math.PI * 2);
+      this.ctx.arc(0, 0, R_BASE + 10, 0, Math.PI * 2);
+      this.ctx.stroke();
+
+      this.ctx.strokeStyle = '#181004';
+      this.ctx.lineWidth = 1.0;
+      this.ctx.beginPath();
+      this.ctx.arc(0, 0, R_BASE + 20.7, 0, Math.PI * 2);
+      this.ctx.arc(0, 0, R_BASE + 9.3, 0, Math.PI * 2);
+      this.ctx.stroke();
+
+      // Outer Turned Brass Shoulder Rim (R_BASE + 20.7 to R_BASE + 22)
+      const outerShoulderGrad = this.ctx.createLinearGradient(
+        Math.cos(Math.PI * 0.75) * (R_BASE + 21.5), Math.sin(Math.PI * 0.75) * (R_BASE + 21.5),
+        Math.cos(Math.PI * -0.25) * (R_BASE + 21.5), Math.sin(Math.PI * -0.25) * (R_BASE + 21.5)
+      );
+      outerShoulderGrad.addColorStop(0, '#fcedaa');
+      outerShoulderGrad.addColorStop(0.35, '#a47822');
+      outerShoulderGrad.addColorStop(0.70, '#422808');
+      outerShoulderGrad.addColorStop(1.0, '#785218');
+      this.ctx.strokeStyle = outerShoulderGrad;
+      this.ctx.lineWidth = 1.6;
+      this.ctx.beginPath();
+      this.ctx.arc(0, 0, R_BASE + 21.3, 0, Math.PI * 2);
+      this.ctx.stroke();
+
+      // (C) Tier 2: Stepped Thread Relief & Spanner Wrench Retaining Ring (R_BASE + 6 to R_BASE + 10)
+      const threadGrad = this.ctx.createLinearGradient(
+        Math.cos(Math.PI * 0.75) * (R_BASE + 8), Math.sin(Math.PI * 0.75) * (R_BASE + 8),
+        Math.cos(Math.PI * -0.25) * (R_BASE + 8), Math.sin(Math.PI * -0.25) * (R_BASE + 8)
+      );
+      threadGrad.addColorStop(0, '#3a280c');
+      threadGrad.addColorStop(0.5, '#1e1404');
+      threadGrad.addColorStop(1, '#2c1e08');
+      this.ctx.strokeStyle = threadGrad;
+      this.ctx.lineWidth = 4;
+      this.ctx.beginPath();
       this.ctx.arc(0, 0, R_BASE + 8, 0, Math.PI * 2);
       this.ctx.stroke();
 
-      this.ctx.strokeStyle = '#281a04';
-      this.ctx.lineWidth = 0.9;
+      // Hairline concentric lathe micro-chatter rings (machining texture)
+      this.ctx.strokeStyle = 'rgba(215, 175, 80, 0.18)';
+      this.ctx.lineWidth = 0.45;
       this.ctx.beginPath();
-      this.ctx.arc(0, 0, R_BASE + 17.6, 0, Math.PI * 2);
-      this.ctx.arc(0, 0, R_BASE + 7.4, 0, Math.PI * 2);
+      this.ctx.arc(0, 0, R_BASE + 7.2, 0, Math.PI * 2);
+      this.ctx.arc(0, 0, R_BASE + 8.8, 0, Math.PI * 2);
       this.ctx.stroke();
 
-      // (B) Main Cylindrical Turned Brass Bezel with Anisotropic Metallic Sheen (R_BASE to R_BASE + 8)
+      // Optical Spanner Wrench Notches (The hallmark of real lens engineering)
+      // Cutouts at 0° and 180° where the lens assembly tool engages
+      const notchAngles = [0, Math.PI];
+      for (const nAngle of notchAngles) {
+        this.ctx.save();
+        this.ctx.rotate(nAngle);
+        // Shadow recess
+        this.ctx.fillStyle = '#0a0602';
+        this.ctx.fillRect(R_BASE + 6.2, -1.8, 3.6, 3.6);
+        // Specular chamfer edge
+        this.ctx.strokeStyle = '#e2be58';
+        this.ctx.lineWidth = 0.6;
+        this.ctx.strokeRect(R_BASE + 6.2, -1.8, 3.6, 3.6);
+        this.ctx.restore();
+      }
+
+      // (D) Tier 3: Main Turned Brass Bezel with Anisotropic Metallic Sheen (R_BASE to R_BASE + 6)
+      // True anisotropic cylindrical metal reflections with opposing specular highlights
       const brassBezel = this.ctx.createLinearGradient(
-        Math.cos(Math.PI * 0.75) * (R_BASE + 10), Math.sin(Math.PI * 0.75) * (R_BASE + 10),
-        Math.cos(Math.PI * -0.25) * (R_BASE + 10), Math.sin(Math.PI * -0.25) * (R_BASE + 10)
+        Math.cos(Math.PI * 0.75) * (R_BASE + 3), Math.sin(Math.PI * 0.75) * (R_BASE + 3),
+        Math.cos(Math.PI * -0.25) * (R_BASE + 3), Math.sin(Math.PI * -0.25) * (R_BASE + 3)
       );
-      brassBezel.addColorStop(0, '#fffbe6');    // 135° Specular Glint
-      brassBezel.addColorStop(0.18, '#ecd068'); // Polished Golden Brass
-      brassBezel.addColorStop(0.38, '#9e731e'); // Rich Antique Bronze
-      brassBezel.addColorStop(0.62, '#483008'); // Cast Shadow Flank
-      brassBezel.addColorStop(0.85, '#e2b848'); // Warm Ambient Metal Bounce
-      brassBezel.addColorStop(1, '#6a4712');
+      brassBezel.addColorStop(0, '#fffbe8');    // 135° Specular Glint (Champagne gold)
+      brassBezel.addColorStop(0.16, '#dfba52'); // Polished Turned Brass
+      brassBezel.addColorStop(0.38, '#8c631a'); // Warm Antique Bronze
+      brassBezel.addColorStop(0.65, '#3b2508'); // Core Cast Shadow
+      brassBezel.addColorStop(0.85, '#d6a840'); // 315° Ambient Ground Bounce
+      brassBezel.addColorStop(1.0, '#5a3d12');
 
       this.ctx.strokeStyle = brassBezel;
-      this.ctx.lineWidth = 8;
+      this.ctx.lineWidth = 6;
       this.ctx.beginPath();
-      this.ctx.arc(0, 0, R_BASE + 4, 0, Math.PI * 2);
+      this.ctx.arc(0, 0, R_BASE + 3, 0, Math.PI * 2);
       this.ctx.stroke();
 
-      // Specular Bevel Highlights
-      this.ctx.strokeStyle = 'rgba(255, 252, 235, 0.90)';
-      this.ctx.lineWidth = 0.85;
+      // Sharp Lathe Bevel Highlights
+      this.ctx.strokeStyle = 'rgba(255, 252, 238, 0.92)';
+      this.ctx.lineWidth = 0.75;
       this.ctx.beginPath();
-      this.ctx.arc(0, 0, R_BASE + 7.6, 0, Math.PI * 2);
+      this.ctx.arc(0, 0, R_BASE + 5.8, 0, Math.PI * 2);
       this.ctx.stroke();
 
-      // (C) Deep Retaining Undercut (physical shadow cast into glass aperture)
-      this.ctx.strokeStyle = '#140c02';
-      this.ctx.lineWidth = 1.8;
+      // (E) Tier 4: Inner Lens Retaining Lip & Deep Undercut Shadow
+      // Dark retaining collar (optical black seat)
+      this.ctx.strokeStyle = '#100a03';
+      this.ctx.lineWidth = 1.6;
       this.ctx.beginPath();
-      this.ctx.arc(0, 0, R_BASE - 0.4, 0, Math.PI * 2);
+      this.ctx.arc(0, 0, R_BASE - 0.2, 0, Math.PI * 2);
       this.ctx.stroke();
 
+      // Brass chamfer glint line right at the glass interface
       this.ctx.strokeStyle = '#e6c864';
       this.ctx.lineWidth = 0.65;
       this.ctx.beginPath();
       this.ctx.arc(0, 0, R_BASE + 0.6, 0, Math.PI * 2);
       this.ctx.stroke();
 
-      // (D) 360° Astrometric Vernier Graduations
-      this.ctx.strokeStyle = '#f8eab4';
-      this.ctx.fillStyle = '#f8eab4';
-      this.ctx.font = '600 5.5px Newsreader, serif';
+      // (F) Archival Debossed Lathe Engraving (Stamped into Polished Brass Rim)
+      this.ctx.save();
+      this.ctx.font = '700 6.2px Newsreader, serif';
       this.ctx.textAlign = 'center';
       this.ctx.textBaseline = 'middle';
-
-      for (let deg = 0; deg < 360; deg += 10) {
-        const rad = deg * (Math.PI / 180);
-        const cos = Math.cos(rad);
-        const sin = Math.sin(rad);
-        const isMajor = deg % 30 === 0;
-        const tickLen = isMajor ? 5.5 : 3.0;
-
-        this.ctx.lineWidth = isMajor ? 0.9 : 0.5;
-        this.ctx.beginPath();
-        this.ctx.moveTo(cos * (R_BASE + 0.5), sin * (R_BASE + 0.5));
-        this.ctx.lineTo(cos * (R_BASE - tickLen), sin * (R_BASE - tickLen));
-        this.ctx.stroke();
-
-        if (deg % 90 === 0) {
-          const labelR = R_BASE - 11;
-          this.ctx.fillText(`${deg}°`, cos * labelR, sin * labelR);
-        }
+      if (isDark) {
+        // Debossed dark inner stamp shadow
+        this.ctx.fillStyle = 'rgba(18, 10, 3, 0.90)';
+        this.ctx.fillText('OCULUS MAJOR · 3.6× · F/4.5', 0.4, -R_BASE - 2.6);
+        // Embossed gold leaf face
+        this.ctx.fillStyle = '#ffefa6';
+        this.ctx.fillText('OCULUS MAJOR · 3.6× · F/4.5', 0, -R_BASE - 3.0);
+      } else {
+        // Antique blackened engraving enamel fill
+        this.ctx.fillStyle = 'rgba(255, 250, 230, 0.75)';
+        this.ctx.fillText('OCULUS MAJOR · 3.6× · F/4.5', 0.4, -R_BASE - 2.5);
+        this.ctx.fillStyle = '#261806';
+        this.ctx.fillText('OCULUS MAJOR · 3.6× · F/4.5', 0, -R_BASE - 3.0);
       }
-
-      // (E) Hairline Sighting Reticle (Etched Glass Micrometer)
-      this.ctx.strokeStyle = isDark ? 'rgba(235, 215, 175, 0.48)' : 'rgba(75, 60, 42, 0.52)';
-      this.ctx.lineWidth = 0.55;
-
-      // Crosshairs with central 8px sight clearance
-      this.ctx.beginPath();
-      this.ctx.moveTo(-R_BASE + 14, 0);
-      this.ctx.lineTo(-8, 0);
-      this.ctx.moveTo(8, 0);
-      this.ctx.lineTo(R_BASE - 14, 0);
-      this.ctx.moveTo(0, -R_BASE + 14);
-      this.ctx.lineTo(0, -8);
-      this.ctx.moveTo(0, 8);
-      this.ctx.lineTo(0, R_BASE - 14);
-      this.ctx.stroke();
-
-      // Central sighting ring (radius 8px)
-      this.ctx.beginPath();
-      this.ctx.arc(0, 0, 8, 0, Math.PI * 2);
-      this.ctx.stroke();
-
-      // Concentric micrometer scale ring (radius 44px)
-      this.ctx.beginPath();
-      this.ctx.arc(0, 0, 44, 0, Math.PI * 2);
-      this.ctx.stroke();
-
-      // 4 Cardinal micrometer ticks on the 44px ring
-      this.ctx.beginPath();
-      this.ctx.moveTo(-46, 0); this.ctx.lineTo(-42, 0);
-      this.ctx.moveTo(42, 0); this.ctx.lineTo(46, 0);
-      this.ctx.moveTo(0, -46); this.ctx.lineTo(0, -42);
-      this.ctx.moveTo(0, 42); this.ctx.lineTo(0, 46);
-      this.ctx.stroke();
-
-      // (F) Debossed Engraved Inscription on Metallic Brass Bezel Rim
-      this.ctx.save();
-      this.ctx.font = '700 6.5px Newsreader, serif';
-      // Debossed dark inner shadow
-      this.ctx.fillStyle = 'rgba(20, 12, 3, 0.85)';
-      this.ctx.fillText('OCULUS MAJOR · 3.6×', 0.5, -R_BASE - 3.5);
-      // Embossed gold face
-      this.ctx.fillStyle = '#ffefa8';
-      this.ctx.fillText('OCULUS MAJOR · 3.6×', 0, -R_BASE - 4);
       this.ctx.restore();
 
       this.ctx.restore(); // restore bezel transform
 
-      // --- Live Astrometry Telemetry Banner beneath Loupe ---
+      // =========================================================================
+      // --- ARCHIVAL RIVETED BRASS TELEMETRY CARTOUCHE (Museum Star Plaque) ---
+      // =========================================================================
       if (closestStarInfo && animScale > 0.5) {
-        const badgeText = closestStarInfo.doubleDesc
-          ? `${closestStarInfo.name} · ${closestStarInfo.mag.toFixed(2)}ᵐ // ${closestStarInfo.doubleDesc}`
-          : `${closestStarInfo.name} · ${closestStarInfo.mag.toFixed(2)}ᵐ · ${closestStarInfo.spec}`;
+        const titleText = closestStarInfo.name.toUpperCase();
+        const telemetryText = closestStarInfo.doubleDesc
+          ? `${closestStarInfo.mag.toFixed(2)}ᵐ // ${closestStarInfo.doubleDesc}`
+          : `${closestStarInfo.mag.toFixed(2)}ᵐ · ${closestStarInfo.spec}`;
 
-        this.ctx.font = '500 7px Newsreader, serif';
-        const txtWidth = this.ctx.measureText(badgeText).width;
-        const bW = txtWidth + 16;
-        const bH = 16;
-        const bX = mx - bW * 0.5;
-        const bY = my + (R_BASE + 22) * animScale;
+        this.ctx.font = '700 7px Newsreader, serif';
+        const wTitle = this.ctx.measureText(titleText).width;
+        this.ctx.font = '500 6.5px Newsreader, serif';
+        const wTelem = this.ctx.measureText(telemetryText).width;
+
+        const maxTxtW = Math.max(wTitle, wTelem);
+        const pW = maxTxtW + 32;
+        const pH = 24;
+        const pX = mx - pW * 0.5;
+        const pY = my + (R_BASE + 25) * animScale;
 
         this.ctx.save();
         this.ctx.globalAlpha = animAlpha;
-        this.ctx.fillStyle = isDark ? 'rgba(7, 10, 16, 0.88)' : 'rgba(245, 240, 230, 0.92)';
-        this.ctx.fillRect(bX, bY, bW, bH);
-        this.ctx.strokeStyle = '#c5a038';
-        this.ctx.lineWidth = 0.65;
-        this.ctx.strokeRect(bX, bY, bW, bH);
 
-        this.ctx.fillStyle = isDark ? '#f0e4c5' : '#382e22';
-        this.ctx.textBaseline = 'middle';
+        // Plaque Drop Shadow
+        this.ctx.shadowColor = 'rgba(0, 0, 0, 0.45)';
+        this.ctx.shadowBlur = 10;
+        this.ctx.shadowOffsetX = 0;
+        this.ctx.shadowOffsetY = 4;
+
+        // Aged Brass Plaque Rim Frame
+        const plaqueFrameGrad = this.ctx.createLinearGradient(pX, pY, pX, pY + pH);
+        plaqueFrameGrad.addColorStop(0, '#e2bd54');
+        plaqueFrameGrad.addColorStop(0.5, '#9a6e1e');
+        plaqueFrameGrad.addColorStop(1, '#48300a');
+        this.ctx.fillStyle = plaqueFrameGrad;
+        this.ctx.fillRect(pX, pY, pW, pH);
+
+        // Reset shadow for crisp interior
+        this.ctx.shadowColor = 'transparent';
+
+        // Dark Patina / Vellum Inset Face
+        const insetPad = 1.5;
+        this.ctx.fillStyle = isDark ? '#0b0e16' : '#f7f2e4';
+        this.ctx.fillRect(pX + insetPad, pY + insetPad, pW - insetPad * 2, pH - insetPad * 2);
+
+        // Thin inner gold border
+        this.ctx.strokeStyle = isDark ? 'rgba(215, 175, 80, 0.45)' : 'rgba(130, 95, 35, 0.40)';
+        this.ctx.lineWidth = 0.5;
+        this.ctx.strokeRect(pX + 2.5, pY + 2.5, pW - 5, pH - 5);
+
+        // Miniature Brass Screws / Rivets in the 4 corners
+        const rivetOffsets = [
+          [5, 5],
+          [pW - 5, 5],
+          [5, pH - 5],
+          [pW - 5, pH - 5]
+        ];
+        for (const [rx, ry] of rivetOffsets) {
+          const rivetX = pX + rx;
+          const rivetY = pY + ry;
+          // Rivet head
+          this.ctx.fillStyle = '#deb44a';
+          this.ctx.beginPath();
+          this.ctx.arc(rivetX, rivetY, 1.4, 0, Math.PI * 2);
+          this.ctx.fill();
+          // Screw slot
+          this.ctx.strokeStyle = '#2a1a06';
+          this.ctx.lineWidth = 0.5;
+          this.ctx.beginPath();
+          this.ctx.moveTo(rivetX - 0.9, rivetY);
+          this.ctx.lineTo(rivetX + 0.9, rivetY);
+          this.ctx.stroke();
+        }
+
+        // Title Line: Star Name in bold serif small-caps
         this.ctx.textAlign = 'center';
-        this.ctx.fillText(badgeText, mx, bY + bH * 0.5);
+        this.ctx.textBaseline = 'top';
+        this.ctx.font = '700 7.5px Newsreader, serif';
+        this.ctx.fillStyle = isDark ? '#fff4d0' : '#2e2212';
+        this.ctx.fillText(titleText, mx, pY + 4);
+
+        // Telemetry Line: Magnitude, Spectral Class, Distance
+        this.ctx.font = '500 6.5px Newsreader, serif';
+        this.ctx.fillStyle = isDark ? '#d5c49e' : '#5a462e';
+        this.ctx.fillText(telemetryText, mx, pY + 13.5);
+
         this.ctx.restore();
       }
     }
-
     private drawBackgroundStars(
       w: number,
       h: number,
