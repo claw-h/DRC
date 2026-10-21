@@ -7,8 +7,8 @@ venue: "Journal of French and Francophone Philosophy"
 volumeIssue: "Vol. 29, No. 1–2, pp. 226–231"
 coAuthors: []
 abstract: "A critical review essay examining 'A Philosophy of Struggle: The Leonard Harris Reader' (edited by Lee A. McBride III, Bloomsbury Academic, 2020). This essay situates Leonard Harris's lifelong development of 'philosophy born of struggle', Alain Locke's critical pragmatism, and insurrectionist ethics in conversation with continental critiques of structural violence and necro-being."
-doi: "10.5195/jffp.2021.995"
-pdfUrl: "https://jffp.pitt.edu"
+doi: "10.9999/drc.2021.001"
+pdfUrl: "/papers/drc-2021-philosophy-of-struggle-prototype.pdf"
 citationBibtex: |
   @article{cordry2021harris,
     author  = {Cordry, Duncan R.},
@@ -18,7 +18,7 @@ citationBibtex: |
     volume  = {29},
     number  = {1-2},
     pages   = {226--231},
-    doi     = {10.5195/jffp.2021.995}
+    doi     = {10.9999/drc.2021.001}
   }
 sections:
   - id: "sec-struggle"

@@ -6,7 +6,7 @@ academicYear: "2025 – 2026"
 term: "Monsoon / Spring"
 level: "Seminar"
 schedule: "Ashoka University · Department of Philosophy"
-syllabusPdf: "/cv"
+syllabusPdf: "/syllabi/phil-3042-prototype.pdf"
 summary: "An upper-level seminar examining continental philosophies of technology and how technical objects and systems support specific spiritual practices, traditions, and forms of social cohesion. Tracing the relation between the organic and the inorganic from Georges Canguilhem and Gilbert Simondon to Bernard Stiegler, Sylvia Wynter, and Yuk Hui, students investigate technical exteriorization, tertiary retention, and pharmacology."
 weeks:
   - weekNumber: "WK 01"

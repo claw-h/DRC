@@ -4,7 +4,7 @@ title: "Myth, Memory & Practices of Liberation"
 subtitle: "Encounters Between Continental Philosophy, Pragmatism, and Insurrectionist Ethics"
 year: 2024
 publisher: "Caribbean Philosophical Association & Critical Essays Compendium"
-isbn: "CPA-CLAUDIA-JONES-DRC"
+isbn: "978-1-55555-001-1"
 pages: 186
 coverImage: "/images/books/parallax-horizons.svg"
 synopsis: "Anchored by the Claudia Jones Award-winning essay 'Sylvia Wynter and Bernard Stiegler: Critical Encounters of Myth and Memory' alongside critical interventions in the Journal of French and Francophone Philosophy and Transactions of the Charles S. Peirce Society, this compendium examines how philosophies of time, sociogenic myth, and insurrectionist ethics converge in concrete practices of liberation."

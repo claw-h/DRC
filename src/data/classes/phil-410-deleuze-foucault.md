@@ -6,7 +6,7 @@ academicYear: "2025 – 2026"
 term: "Spring"
 level: "Graduate"
 schedule: "Ashoka University · Advanced Philosophy Seminar"
-syllabusPdf: "/cv"
+syllabusPdf: "/syllabi/phil-4018-prototype.pdf"
 summary: "An advanced seminar investigating poststructuralist social and political philosophy through Gilles Deleuze and Michel Foucault. Focusing on the micropolitics of desire, disciplinary and biopolitical apparatuses, technologies of the self, and Foucault's late concept of 'political spirituality', the seminar explores how subjective transformation and collective experimentation sustain practices of liberation."
 weeks:
   - weekNumber: "WK 01"

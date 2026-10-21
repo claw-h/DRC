@@ -4,10 +4,10 @@ title: "Technical Objects & Spiritual Practices"
 subtitle: "Organology, the Organic & Inorganic, and Social Cohesion"
 year: 2025
 publisher: "Ashoka University · Philosophy Working Monograph"
-isbn: "ASHOKA-PHIL-2025-DRC"
+isbn: "978-1-55555-002-8"
 pages: 214
 coverImage: "/images/books/celestial-mechanics.svg"
-synopsis: "An ongoing research project investigating how technical objects and systems support specific spiritual practices, traditions, and forms of social cohesion. Examining the ontological boundary between the organic and the inorganic across continental philosophy of technology—from Georges Canguilhem and Gilbert Simondon to Bernard Stiegler and Yuk Hui—this work explores how technical milieus sustain liturgical, contemplative, and liberatory forms of life."
+synopsis: "This prototype monograph investigates how technical objects and systems support spiritual practices, traditions, and forms of social cohesion. Examining the boundary between the organic and inorganic across continental philosophy of technology—from Georges Canguilhem and Gilbert Simondon to Bernard Stiegler and Yuk Hui—it considers how technical milieus sustain contemplative and liberatory forms of life."
 endorsements:
   - quote: "Duncan Cordry's primary area of research lies in understanding how technical objects and systems support specific spiritual practices, traditions, and types of social cohesion."
     sourceTitle: "Department of Philosophy · Ashoka University"

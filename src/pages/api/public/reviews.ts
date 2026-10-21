@@ -15,7 +15,9 @@ export const GET: APIRoute = async ({ url }) => {
   if (!course) return response({ error: 'Class not found.' }, 404);
   const records = await listClassReviews(classId, 'approved');
   const legacy = Array.isArray(course.data.reviews) ? course.data.reviews.map((review: any, index: number) => ({ ...review, id: `legacy-${classId}-${index}`, status: 'approved' })) : [];
-  return response({ ok: true, reviews: [...records, ...legacy].sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || ''))) });
+  const seen = new Set(records.map((review: any) => `${review.author}\n${review.quote}`));
+  const merged = [...records, ...legacy.filter((review: any) => !seen.has(`${review.author}\n${review.quote}`))];
+  return response({ ok: true, reviews: merged.sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || ''))) });
 };
 
 export const POST: APIRoute = async ({ request, clientAddress }) => {

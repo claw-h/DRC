@@ -7,15 +7,16 @@ venue: "Caribbean Philosophical Association (Shifting the Geography of Reason)"
 volumeIssue: "Claudia Jones Award for Best Graduate Student Paper"
 coAuthors: []
 abstract: "Recipient of the Caribbean Philosophical Association's Claudia Jones Award, this paper stages a critical encounter between Sylvia Wynter's anticolonial poetics of the human ('homo narrans' and the sociogenic principle) and Bernard Stiegler's philosophy of technics ('epiphylogenesis' and tertiary retention). Whereas Stiegler demonstrates how technical artifacts exteriorize and condition human memory, Wynter reveals how mythic origin narratives and colonial genres of 'Man' biosymbolically program collective consciousness. Reading Wynter and Stiegler together exposes both the colonial blind spots of Eurocentric media theory and the technical materiality underlying sociogenic codes."
-doi: "https://philpeople.org/profiles/duncan-r-cordry"
-pdfUrl: "https://philpeople.org/profiles/duncan-r-cordry"
+doi: "10.9999/drc.2022.003"
+pdfUrl: "/papers/drc-2022-wynter-stiegler-prototype.pdf"
 citationBibtex: |
   @inproceedings{cordry2022wynter,
     author    = {Cordry, Duncan R.},
     title     = {Sylvia Wynter and Bernard Stiegler: Critical Encounters of Myth and Memory},
     booktitle = {Proceedings of the Caribbean Philosophical Association},
     year      = {2022},
-    note      = {Recipient of the Claudia Jones Award for Best Graduate Paper}
+    note      = {Recipient of the Claudia Jones Award for Best Graduate Paper},
+    doi       = {10.9999/drc.2022.003}
   }
 sections:
   - id: "sec-sociogeny"

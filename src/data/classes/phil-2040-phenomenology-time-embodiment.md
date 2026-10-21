@@ -6,7 +6,7 @@ academicYear: "2025 – 2026"
 term: "Monsoon"
 level: "Undergraduate"
 schedule: "Ashoka University · Department of Philosophy"
-syllabusPdf: "/cv"
+syllabusPdf: "/syllabi/phil-2040-prototype.pdf"
 summary: "An introduction to the phenomenological tradition and its contemporary transformations. Tracing the analysis of lived time, bodily orientation, and worldhood from Edmund Husserl, Martin Heidegger, and Maurice Merleau-Ponty to Sara Ahmed, Frantz Fanon, and Bernard Stiegler, we ask how technical objects and historical habits shape perception and temporality."
 weeks:
   - weekNumber: "WK 01"

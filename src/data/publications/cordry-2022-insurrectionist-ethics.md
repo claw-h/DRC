@@ -7,14 +7,15 @@ venue: "Transactions of the Charles S. Peirce Society"
 volumeIssue: "A Quarterly Journal in American Philosophy"
 coAuthors: []
 abstract: "A critical examination of 'Insurrectionist Ethics: Radical Perspectives on Social Justice' (edited by Jacoby Adeshei Carter and Daryl Scriven, Palgrave Macmillan). This essay explores how insurrectionist moral philosophy challenges accommodating norms within American pragmatism and normative ethics, foregrounding traditions of radical advocacy, abolitionism, and liberatory praxis."
-doi: "https://philpeople.org/profiles/duncan-r-cordry"
-pdfUrl: "https://philpeople.org/profiles/duncan-r-cordry"
+doi: "10.9999/drc.2022.002"
+pdfUrl: "/papers/drc-2022-insurrectionist-ethics-prototype.pdf"
 citationBibtex: |
   @article{cordry2022insurrectionist,
     author  = {Cordry, Duncan R.},
     title   = {Review of Insurrectionist Ethics: Radical Perspectives on Social Justice, edited by Jacoby Adeshei Carter and Daryl Scriven},
     journal = {Transactions of the Charles S. Peirce Society},
-    year    = {2022}
+    year    = {2022},
+    doi     = {10.9999/drc.2022.002}
   }
 sections:
   - id: "sec-insurrectionist-turn"

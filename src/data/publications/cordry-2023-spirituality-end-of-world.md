@@ -7,8 +7,8 @@ venue: "Purdue University Doctoral Dissertations & PhilPeople Archive"
 volumeIssue: "Department of Philosophy · Ross-Lynn Research Fellowship Monograph"
 coAuthors: []
 abstract: "This work investigates how technical objects and systems support specific spiritual practices, traditions, and forms of social cohesion amidst contemporary ecological and psychic crisis. Drawing on Michel Foucault's late concept of 'political spirituality', Bernard Stiegler's organology and pharmacology of tertiary retention, Gilbert Simondon's theory of transindividuation, and Leonard Harris's insurrectionist ethics, this essay argues that liberatory politics cannot be reduced to material-economic restructuring alone: it requires a pharmacological transformation of attention, temporal orientation, and psychic-collective individuation."
-doi: "10.25394/PGS.23713000"
-pdfUrl: "https://philpeople.org/profiles/duncan-r-cordry"
+doi: "10.9999/drc.2023.004"
+pdfUrl: "/papers/drc-2023-spirituality-prototype.pdf"
 citationBibtex: |
   @phdthesis{cordry2023spirituality,
     author  = {Cordry, Duncan Reed},
@@ -16,7 +16,8 @@ citationBibtex: |
     school  = {Purdue University},
     year    = {2023},
     address = {West Lafayette, IN},
-    note    = {Ross-Lynn Research Fellow, Department of Philosophy}
+    note    = {Ross-Lynn Research Fellow, Department of Philosophy},
+    doi     = {10.9999/drc.2023.004}
   }
 sections:
   - id: "sec-political-spirituality"

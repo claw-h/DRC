@@ -217,6 +217,7 @@ async function migrateAndSeed() {
           new Date().toISOString(),
         ],
       });
+
     }
     console.log(`✓ Seeded ${pubFiles.length} publications into Turso`);
   } catch (err) {
@@ -266,13 +267,14 @@ async function migrateAndSeed() {
       const parsed = await parseMarkdownFile(path.join(classesDir, f));
       if (!parsed) continue;
       const d = parsed.data;
+      const classId = d.id || path.basename(f, '.md');
       await db.execute({
         sql: `INSERT OR REPLACE INTO classes (
                 id, course_code, title, academic_year, term, level, schedule,
               syllabus_pdf, summary, weeks, reviews, accepting_reviews, updated_at
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         args: [
-          d.id || path.basename(f, '.md'),
+          classId,
           d.courseCode || 'PHIL',
           d.title || 'Seminar',
           d.academicYear || '2025–2026',
@@ -287,8 +289,34 @@ async function migrateAndSeed() {
           new Date().toISOString(),
         ],
       });
+
+      // Seed the same prototype reviews into the normalized review table.
+      // Stable IDs make repeated seed runs idempotent.
+      for (const [index, review] of (d.reviews || []).entries()) {
+        const score = Number.parseFloat(String(review.rating || '5').replace(/[^0-9.]/g, '')) || 5;
+        const timestamp = new Date(Date.UTC(2026, 0, index + 1)).toISOString();
+        await db.execute({
+          sql: `INSERT OR REPLACE INTO class_reviews (
+                  id, class_id, author, role, term, rating, highlight, quote,
+                  status, created_at, updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'approved', ?, ?)`,
+          args: [
+            `prototype-${classId}-${index + 1}`,
+            classId,
+            review.author || 'Prototype Student',
+            review.role || 'Prototype Cohort',
+            review.term || 'Prototype Term',
+            Math.max(1, Math.min(5, Math.round(score))),
+            review.highlight || '',
+            review.quote || '',
+            timestamp,
+            timestamp,
+          ],
+        });
+      }
     }
     console.log(`✓ Seeded ${classFiles.length} classes into Turso`);
+    console.log('✓ Seeded prototype course reviews into class_reviews');
   } catch (err) {
     console.warn('! Could not seed classes:', err.message);
   }

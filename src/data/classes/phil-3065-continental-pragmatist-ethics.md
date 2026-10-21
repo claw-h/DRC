@@ -6,7 +6,7 @@ academicYear: "2025 – 2026"
 term: "Spring"
 level: "Undergraduate"
 schedule: "Ashoka University · Department of Philosophy"
-syllabusPdf: "/cv"
+syllabusPdf: "/syllabi/phil-3065-prototype.pdf"
 summary: "Bridges European continental ethical thought with American pragmatism and insurrectionist ethics. Focusing on 'philosophy born of struggle', this course examines how moral agency, collective solidarity, and spiritual practices operate under conditions of structural domination, engaging Alain Locke, Leonard Harris, Frantz Fanon, Simone de Beauvoir, and Michel Foucault."
 weeks:
   - weekNumber: "WK 01"

@@ -4,7 +4,7 @@ title: "Spirituality at the End of the World"
 subtitle: "An Essay on Technology, Transindividuation and Orientation in the Light of Pharmacology and Insurrection"
 year: 2023
 publisher: "Purdue University · Department of Philosophy"
-isbn: "DOI: 10.25394/PGS.23713000"
+isbn: "978-1-55555-000-4"
 pages: 248
 coverImage: "/images/books/epistemic-space.svg"
 synopsis: "Completed under the Ross-Lynn Research Fellowship at Purdue University, this doctoral monograph investigates how political spirituality expands revolutionary politics beyond material-economic structures to encompass psychic, libidinal, and technical transformations. Synthesizing Bernard Stiegler's pharmacology of tertiary retention, Gilbert Simondon's theory of transindividuation, Michel Foucault's late lectures on spirituality, and Leonard Harris's insurrectionist ethics, Cordry demonstrates how technical systems condition collective orientation and practices of liberation."
