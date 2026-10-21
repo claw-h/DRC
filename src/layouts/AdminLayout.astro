@@ -43,6 +43,9 @@ const activeItem = navItems.find((item) => {
   isAdmin={true}
 >
   <div class="admin-shell" data-csrf={csrfToken} data-expiry={sessionExpiry || ''}>
+    <!-- Sovereign Administrative Page Navigation Progress Bar -->
+    <div id="admin-nav-progress" class="admin-nav-progress" aria-hidden="true"></div>
+
     <!-- Sovereign Minimalist Admin Header (Zero Bloat, Dynamic Active Module Anchored) -->
     <header class="admin-header">
       <div class="admin-header-lead">
@@ -98,6 +101,7 @@ const activeItem = navItems.find((item) => {
                         class={`picker-item ${isActive ? 'is-current' : ''}`}
                         role="menuitem"
                         data-module-id={item.id}
+                        data-astro-prefetch="hover"
                         aria-current={isActive ? 'page' : undefined}
                       >
                         <span class="picker-code">{item.code}</span>
@@ -323,6 +327,7 @@ const activeItem = navItems.find((item) => {
                       class={`admin-nav-link ${isActive ? 'is-active' : ''}`}
                       aria-current={isActive ? 'page' : undefined}
                       data-module-id={item.id}
+                      data-astro-prefetch="hover"
                       role="tab"
                       aria-selected={isActive ? 'true' : 'false'}
                       data-tooltip={item.label}
@@ -405,6 +410,29 @@ const activeItem = navItems.find((item) => {
   </div>
 
   <script>
+    // Administrative Route Instant Progress Feedback
+    const navProgress = document.getElementById('admin-nav-progress');
+    document.addEventListener('click', (e) => {
+      const link = (e.target as HTMLElement).closest('a[href^="/admin"]') as HTMLAnchorElement | null;
+      if (!link) return;
+      const targetUrl = new URL(link.href, window.location.origin);
+      if (targetUrl.pathname !== window.location.pathname && !targetUrl.hash) {
+        if (navProgress) {
+          navProgress.classList.remove('is-complete');
+          navProgress.classList.add('is-navigating');
+        }
+      }
+    });
+
+    window.addEventListener('pageshow', () => {
+      if (navProgress?.classList.contains('is-navigating')) {
+        navProgress.classList.add('is-complete');
+        setTimeout(() => {
+          navProgress.classList.remove('is-navigating', 'is-complete');
+        }, 400);
+      }
+    });
+
     // Expose global CSRF token & notification dispatch across all admin sub-pages
     const shell = document.querySelector('.admin-shell') as HTMLElement | null;
     const csrf = shell?.dataset.csrf || '';
@@ -561,14 +589,54 @@ const activeItem = navItems.find((item) => {
     }
     syncPinBtn();
 
+    function triggerSecretCurvedCollapse(modal: HTMLElement) {
+      const sidebar = document.getElementById('admin-sidebar');
+      const studioShell = document.getElementById('content-modal-shell');
+      const backdrop = document.getElementById('content-editor-backdrop');
+
+      sidebar?.classList.add('is-secret-collapsing');
+      modal?.classList.add('is-secret-collapsing');
+      studioShell?.classList.add('is-secret-collapsing');
+      backdrop?.classList.add('is-secret-collapsing');
+
+      (window as any).notify?.('✦ Dual Harmonic Collapse: Fascicle Studio & Observatory Pillar plunging into the void...', 'info');
+
+      setTimeout(() => {
+        try {
+          (window as any).closeContentStudio?.() || (modal as HTMLDialogElement).close?.();
+        } catch {}
+
+        backdrop?.classList.remove('is-visible', 'is-secret-collapsing');
+        sidebar?.classList.remove('is-secret-collapsing');
+        modal?.classList.remove('is-secret-collapsing');
+        studioShell?.classList.remove('is-secret-collapsing');
+
+        // Reset sidebar to receded resting state
+        document.documentElement.removeAttribute('data-sidebar-pinned');
+        try { localStorage.setItem('drc-admin-sidebar-pinned', 'false'); } catch {}
+        syncPinBtn();
+      }, 850);
+    }
+
     pinBtn?.addEventListener('click', (e) => {
       e.stopPropagation();
+
+      const fascicleModal = document.getElementById('content-editor-modal') as HTMLDialogElement | null;
+      const isModalOpen = fascicleModal && fascicleModal.open && !fascicleModal.hasAttribute('data-closing');
+
+      // SECRET INTERACTION: If Fascicle modal is open when user triggers pin action,
+      // both collapse vertically gracefully on a curve
+      if (isModalOpen) {
+        triggerSecretCurvedCollapse(fascicleModal);
+        return;
+      }
+
       const current = document.documentElement.getAttribute('data-sidebar-pinned') === 'true';
       const target = !current;
       if (target) {
         document.documentElement.setAttribute('data-sidebar-pinned', 'true');
         try { localStorage.setItem('drc-admin-sidebar-pinned', 'true'); } catch {}
-        (window as any).notify?.('Navigation rail pinned open', 'info');
+        (window as any).notify?.('Navigation rail pinned open with celestial pillar', 'info');
       } else {
         document.documentElement.removeAttribute('data-sidebar-pinned');
         try { localStorage.setItem('drc-admin-sidebar-pinned', 'false'); } catch {}
@@ -666,10 +734,40 @@ const activeItem = navItems.find((item) => {
     navigation: auto;
   }
 
+  /* Sovereign Administrative Page Navigation Progress Bar */
+  .admin-nav-progress {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 0%;
+    height: 3px;
+    background: linear-gradient(90deg, #d4af37, #fde047, #d4af37);
+    box-shadow: 0 0 12px rgba(212, 175, 55, 0.75), 0 0 4px rgba(212, 175, 55, 1);
+    z-index: 999999;
+    opacity: 0;
+    pointer-events: none;
+    transition: width 0.3s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.25s ease;
+  }
+
+  .admin-nav-progress.is-navigating {
+    opacity: 1;
+    width: 72%;
+  }
+
+  .admin-nav-progress.is-complete {
+    opacity: 1;
+    width: 100%;
+    transition: width 0.15s ease-out, opacity 0.3s ease 0.15s;
+  }
+
+  :root {
+    --admin-rail-gutter: 2.25rem;
+  }
+
   .admin-shell {
     max-width: 1480px;
     margin: 0 auto;
-    padding: 0 1.5rem 6rem;
+    padding: 0 var(--admin-rail-gutter) 6rem;
     color: var(--text-primary);
   }
 
@@ -679,7 +777,7 @@ const activeItem = navItems.find((item) => {
   .admin-header {
     position: sticky;
     top: 0;
-    z-index: 50;
+    z-index: 2000;
     /* Pure Midnight Indigo Obsidian Glass — Zero Reddish Tint/Gradient */
     background: color-mix(in srgb, var(--bg-canvas) 88%, transparent);
     backdrop-filter: blur(16px);
@@ -1241,52 +1339,57 @@ const activeItem = navItems.find((item) => {
     }
   }
 
-  /* Main Workbench Layout: Receding Side Tabs + Content Stage */
+  /* Main Workbench Layout: Symmetrical Left & Right Gutter Centering with Full Vertical Stretch */
   .admin-workbench-layout {
     display: grid;
     grid-template-columns: 56px minmax(0, 1fr);
-    gap: 2rem;
-    align-items: start;
+    gap: var(--admin-rail-gutter);
+    align-items: stretch;
     margin-top: 1rem;
-    transition: grid-template-columns 0.3s cubic-bezier(0.2, 0, 0, 1), gap 0.3s cubic-bezier(0.2, 0, 0, 1);
+    transition: grid-template-columns 0.38s cubic-bezier(0.16, 1, 0.3, 1), gap 0.38s cubic-bezier(0.16, 1, 0.3, 1);
   }
 
-  /* When Pinned: expands the grid column track */
+  /* When Pinned: expands the grid column track with identical symmetrical spacing */
   :root[data-sidebar-pinned="true"] .admin-workbench-layout {
     grid-template-columns: 280px minmax(0, 1fr);
-    gap: 2.25rem;
+    gap: var(--admin-rail-gutter);
   }
 
   .admin-sidebar-track {
     width: 56px;
     min-width: 56px;
+    height: 100%;
     position: relative;
-    transition: width 0.3s cubic-bezier(0.2, 0, 0, 1);
+    z-index: 1000;
+    transition: width 0.38s cubic-bezier(0.16, 1, 0.3, 1);
   }
 
   :root[data-sidebar-pinned="true"] .admin-sidebar-track {
     width: 280px;
     min-width: 280px;
+    height: 100%;
   }
 
-  /* Floating / Sticky Sidebar Container (Fades into background when idle) */
+  /* Floating / Sticky Sidebar Container (Pinned under header at top: 4.85rem, strictly under header z-index: 2000) */
   .admin-sidebar {
     position: sticky;
     top: 4.85rem;
     width: 56px;
-    padding: 0.75rem 0;
+    height: 370px;
+    padding: 0.75rem 0 0;
     border-radius: 8px;
     border: 1px solid transparent;
     background: transparent;
     box-shadow: none;
     display: flex;
     flex-direction: column;
-    gap: 1rem;
-    transition: width 0.32s cubic-bezier(0.16, 1, 0.3, 1),
-                background 0.25s ease,
+    gap: 0.75rem;
+    transition: width 0.38s cubic-bezier(0.16, 1, 0.3, 1),
+                height 0.45s cubic-bezier(0.16, 1, 0.3, 1),
+                background 0.35s ease,
                 border-color 0.25s ease,
-                box-shadow 0.25s ease;
-    z-index: 40;
+                box-shadow 0.35s ease;
+    z-index: 1000;
     box-sizing: border-box;
     overflow: hidden;
   }
@@ -1294,26 +1397,107 @@ const activeItem = navItems.find((item) => {
   /* Hover to Peek: Solidifies and expands into elevated lapis panel */
   :root:not([data-sidebar-pinned="true"]) .admin-sidebar:hover {
     width: 280px;
+    height: 370px;
     background: var(--bg-surface);
     border: 1px solid var(--border-subtle);
     box-shadow: 0 16px 44px -8px rgba(0, 0, 0, 0.7);
     overflow: hidden;
   }
 
-  /* Pinned State */
+  /* Pinned State: Seamless Monolithic Pillar plunging rapidly into dark midnight blue and solid pure black */
   :root[data-sidebar-pinned="true"] .admin-sidebar {
     width: 280px;
-    background: var(--bg-surface);
+    height: calc(100vh - 6.2rem);
+    min-height: calc(100vh - 6.2rem);
+    background: linear-gradient(
+      180deg,
+      var(--bg-surface) 0%,
+      var(--bg-surface) 140px,
+      #091126 210px,
+      #050814 290px,
+      #020308 380px,
+      #000000 460px,
+      #000000 100%
+    );
     border: 1px solid var(--border-hairline);
-    box-shadow: none;
+    border-bottom: none;
+    box-shadow: 0 16px 44px -8px rgba(0, 0, 0, 0.7);
     overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    /* Softly fade side borders and background into black void at base */
+    mask-image: linear-gradient(
+      to bottom,
+      black 0%,
+      black calc(100% - 90px),
+      rgba(0, 0, 0, 0.3) calc(100% - 20px),
+      transparent 100%
+    );
+    -webkit-mask-image: linear-gradient(
+      to bottom,
+      black 0%,
+      black calc(100% - 90px),
+      rgba(0, 0, 0, 0.3) calc(100% - 20px),
+      transparent 100%
+    );
+  }
+
+  /* Fine Atmospheric Stippled Noise Grain blending into the fast-darkening pillar */
+  :root[data-sidebar-pinned="true"] .admin-sidebar::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    opacity: 0.16;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+    background-repeat: repeat;
+    background-size: 160px 160px;
+    mix-blend-mode: overlay;
+    pointer-events: none;
+    z-index: 1;
+    mask-image: linear-gradient(to bottom, transparent 150px, black 260px);
+    -webkit-mask-image: linear-gradient(to bottom, transparent 150px, black 260px);
+  }
+
+  /* Secret Interaction: Graceful Parabolic Curve Vertical Collapse */
+  .admin-sidebar.is-secret-collapsing {
+    animation: graceful-vertical-curve-collapse 0.85s cubic-bezier(0.45, 0, 0.15, 1) forwards !important;
+    pointer-events: none !important;
+    transform-origin: bottom center !important;
+  }
+
+  @keyframes graceful-vertical-curve-collapse {
+    0% {
+      transform: translateY(0) scaleY(1) scaleX(1);
+      opacity: 1;
+      filter: blur(0px);
+    }
+    18% {
+      transform: translateY(-16px) scaleY(1.03) scaleX(0.99);
+      opacity: 1;
+      filter: blur(0px);
+    }
+    45% {
+      transform: translateY(32vh) scaleY(0.68) scaleX(0.96) skewY(1.2deg);
+      opacity: 0.85;
+      filter: blur(2px);
+    }
+    75% {
+      transform: translateY(85vh) scaleY(0.25) scaleX(0.9) skewY(2.4deg);
+      opacity: 0.4;
+      filter: blur(6px);
+    }
+    100% {
+      transform: translateY(135vh) scaleY(0.02) scaleX(0.8) skewY(3.5deg);
+      opacity: 0;
+      filter: blur(14px);
+    }
   }
 
   /* Continuous Golden Trim Line (Always glowing between numbers on recession/idle) */
   .spine-golden-axis {
     position: absolute;
     top: calc(0.75rem + 36px + 6px);
-    bottom: calc(0.75rem + 40px + 6px);
+    height: 252px;
     left: 28px;
     width: 1.5px;
     transform: translateX(-50%);
@@ -1376,17 +1560,20 @@ const activeItem = navItems.find((item) => {
     font-weight: 600;
     color: var(--accent);
     opacity: 0;
+    transform: translateX(-4px);
     pointer-events: none;
     white-space: nowrap;
     overflow: hidden;
-    transition: opacity 0.08s ease 0s;
+    transition: opacity 0.15s ease 0s, transform 0.15s ease 0s;
   }
 
   :root[data-sidebar-pinned="true"] .sidebar-kicker,
   .admin-sidebar:hover .sidebar-kicker {
     opacity: 1;
+    transform: translateX(0);
     pointer-events: auto;
-    transition: opacity 0.26s cubic-bezier(0.16, 1, 0.3, 1) 0.12s;
+    transition: opacity 0.26s cubic-bezier(0.16, 1, 0.3, 1) 0.08s,
+                transform 0.26s cubic-bezier(0.16, 1, 0.3, 1) 0.08s;
   }
 
   .sidebar-kicker .fleuron {
@@ -1582,7 +1769,7 @@ const activeItem = navItems.find((item) => {
     }
   }
 
-  /* Fixed-Width Text Group: Serene Calligraphic Reveal (Zero Motion Scramble) */
+  /* Fixed-Width Text Group: Serene Calligraphic Reveal with Focal Bloom */
   .nav-text-group {
     display: flex;
     flex-direction: column;
@@ -1594,36 +1781,48 @@ const activeItem = navItems.find((item) => {
     padding-left: 0.4rem;
     padding-right: 0.6rem;
     opacity: 0;
+    transform: translateX(-6px);
+    filter: blur(2px);
     pointer-events: none;
-    transition: opacity 0.08s ease 0s;
+    transition: opacity 0.15s ease 0s, transform 0.15s ease 0s, filter 0.15s ease 0s;
     box-sizing: border-box;
   }
 
   :root[data-sidebar-pinned="true"] .nav-text-group,
   .admin-sidebar:hover .nav-text-group {
     opacity: 1;
+    transform: translateX(0);
+    filter: blur(0);
     pointer-events: auto;
-    transition: opacity 0.26s cubic-bezier(0.16, 1, 0.3, 1) 0.14s;
+    transition: opacity 0.28s cubic-bezier(0.16, 1, 0.3, 1) 0.1s,
+                transform 0.28s cubic-bezier(0.16, 1, 0.3, 1) 0.1s,
+                filter 0.28s cubic-bezier(0.16, 1, 0.3, 1) 0.1s;
   }
 
   /* Staggered serene reveal for each chapter node */
+  :root[data-sidebar-pinned="true"] .admin-nav-item:nth-child(1) .nav-text-group,
   .admin-sidebar:hover .admin-nav-item:nth-child(1) .nav-text-group {
+    transition-delay: 0.08s;
+  }
+  :root[data-sidebar-pinned="true"] .admin-nav-item:nth-child(2) .nav-text-group,
+  .admin-sidebar:hover .admin-nav-item:nth-child(2) .nav-text-group {
     transition-delay: 0.12s;
   }
-  .admin-sidebar:hover .admin-nav-item:nth-child(2) .nav-text-group {
+  :root[data-sidebar-pinned="true"] .admin-nav-item:nth-child(3) .nav-text-group,
+  .admin-sidebar:hover .admin-nav-item:nth-child(3) .nav-text-group {
     transition-delay: 0.16s;
   }
-  .admin-sidebar:hover .admin-nav-item:nth-child(3) .nav-text-group {
-    transition-delay: 0.20s;
-  }
+  :root[data-sidebar-pinned="true"] .admin-nav-item:nth-child(4) .nav-text-group,
   .admin-sidebar:hover .admin-nav-item:nth-child(4) .nav-text-group {
-    transition-delay: 0.24s;
+    transition-delay: 0.20s;
   }
 
   /* Instant exit transition on unhover to prevent clip flicker */
   :root:not([data-sidebar-pinned="true"]) .admin-sidebar:not(:hover) .nav-text-group {
     opacity: 0;
-    transition: opacity 0.08s ease 0s;
+    transform: translateX(-6px);
+    filter: blur(2px);
+    transition: opacity 0.12s ease 0s, transform 0.12s ease 0s, filter 0.12s ease 0s;
   }
 
   .nav-label {
@@ -1653,30 +1852,24 @@ const activeItem = navItems.find((item) => {
     overflow-wrap: break-word;
   }
 
-  /* Marginal Colophon (Height strictly locked at 40px to prevent ducking/shifting) */
+  /* Marginal Colophon (Strictly locked 40px height, 0.75rem margin, zero-clip alignment) */
   .sidebar-colophon {
     display: flex;
     align-items: center;
-    justify-content: center;
+    justify-content: flex-start;
     height: 40px;
     min-height: 40px;
     max-height: 40px;
-    width: 56px;
-    margin-top: auto;
+    width: 100%;
+    margin-top: 0.75rem;
     position: relative;
     z-index: 2;
     box-sizing: border-box;
-    border-top: 1px solid transparent;
-    padding: 0 0.65rem;
+    border-top: 1px solid var(--border-hairline);
+    padding: 0;
+    gap: 0;
+    overflow: hidden;
     transition: border-color 0.2s ease;
-  }
-
-  :root[data-sidebar-pinned="true"] .sidebar-colophon,
-  .admin-sidebar:hover .sidebar-colophon {
-    width: 100%;
-    justify-content: flex-start;
-    border-top-color: var(--border-hairline);
-    gap: 0.65rem;
   }
 
   .colophon-seal {
@@ -1685,15 +1878,22 @@ const activeItem = navItems.find((item) => {
     text-shadow: 0 0 8px var(--accent);
     flex-shrink: 0;
     width: 56px;
+    min-width: 56px;
+    max-width: 56px;
+    height: 40px;
     text-align: center;
     display: flex;
     align-items: center;
     justify-content: center;
+    margin: 0;
+    padding: 0;
   }
 
   :root[data-sidebar-pinned="true"] .colophon-seal,
   .admin-sidebar:hover .colophon-seal {
-    width: 24px;
+    width: 56px;
+    min-width: 56px;
+    max-width: 56px;
   }
 
   .colophon-meta {
@@ -1701,23 +1901,39 @@ const activeItem = navItems.find((item) => {
     flex-direction: column;
     justify-content: center;
     gap: 0.1rem;
-    width: 190px;
-    min-width: 190px;
+    width: 214px;
+    min-width: 214px;
+    max-width: 214px;
+    padding-left: 0.4rem;
+    padding-right: 0.6rem;
+    margin: 0;
     opacity: 0;
+    transform: translateX(-6px);
+    filter: blur(2px);
     pointer-events: none;
-    transition: opacity 0.08s ease 0s;
+    transition: opacity 0.15s ease 0s, transform 0.15s ease 0s, filter 0.15s ease 0s;
+    box-sizing: border-box;
   }
 
   :root[data-sidebar-pinned="true"] .colophon-meta,
   .admin-sidebar:hover .colophon-meta {
     opacity: 1;
+    transform: translateX(0);
+    filter: blur(0);
     pointer-events: auto;
-    transition: opacity 0.24s cubic-bezier(0.16, 1, 0.3, 1) 0.22s;
+    visibility: visible;
+    transition: opacity 0.28s cubic-bezier(0.16, 1, 0.3, 1) 0.18s,
+                transform 0.28s cubic-bezier(0.16, 1, 0.3, 1) 0.18s,
+                filter 0.28s cubic-bezier(0.16, 1, 0.3, 1) 0.18s;
   }
 
   :root:not([data-sidebar-pinned="true"]) .admin-sidebar:not(:hover) .colophon-meta {
     opacity: 0;
-    transition: opacity 0.08s ease 0s;
+    transform: translateX(-6px);
+    filter: blur(2px);
+    pointer-events: none;
+    visibility: hidden;
+    transition: opacity 0.12s ease 0s, transform 0.12s ease 0s, filter 0.12s ease 0s;
   }
 
   .colophon-title {

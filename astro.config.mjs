@@ -4,6 +4,10 @@ import vercel from '@astrojs/vercel';
 export default defineConfig({
   site: 'https://duncancordry.edu',
   adapter: vercel(),
+  prefetch: {
+    prefetchAll: false,
+    defaultStrategy: 'hover',
+  },
   security: {
     checkOrigin: false,
   },

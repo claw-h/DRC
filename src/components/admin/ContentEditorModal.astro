@@ -4,6 +4,8 @@
 // Authentic Public Reader Fidelity, Greyed-Out Scholarly Sample Data & Auto-Split Curation
 ---
 
+<div id="content-editor-backdrop" class="content-editor-backdrop" aria-hidden="true"></div>
+
 <dialog
   id="content-editor-modal"
   class="content-editor-dialog persistent-content-studio"
@@ -93,6 +95,9 @@
       </div>
     </header>
 
+    <!-- Golden Telemetry Shimmer Line (Active During Lazy Archival Loading) -->
+    <div class="atelier-shimmer-progress" id="atelier-shimmer-progress" aria-hidden="true"></div>
+
     <!-- Main Studio Stage: Split or Focus -->
     <main class="studio-main-stage is-focus-mode" id="studio-main-stage">
       
@@ -100,6 +105,46 @@
            LEFT STAGE: INTAKE & SCHEMATIC CURATION WORKBENCH
            ======================================================== -->
       <section class="stage-workbench-pane" id="stage-workbench-pane" aria-label="Content Schema Workbench">
+        <!-- Fast Sync Pill for Immediate Pre-filled Catalog Records -->
+        <div class="atelier-sync-pill" id="atelier-sync-pill" aria-live="polite" hidden>
+          <span class="sync-pip" aria-hidden="true">✦</span>
+          <span class="sync-text" id="atelier-sync-text">Syncing full manuscript archive…</span>
+        </div>
+
+        <!-- In-Situ Lazy Retrieval Skeleton Overlay (When fetching uncached records) -->
+        <div class="atelier-lazy-scrim" id="atelier-lazy-scrim" aria-hidden="true" hidden>
+          <div class="lazy-scrim-chassis">
+            <div class="lazy-astrolabe-orb">
+              <span class="lazy-astrolabe-glyph">❧</span>
+              <div class="lazy-astrolabe-ring ring-1"></div>
+              <div class="lazy-astrolabe-ring ring-2"></div>
+            </div>
+            <div class="lazy-text-lockup">
+              <span class="lazy-kicker">OBSERVATORY RECORD ATELIER</span>
+              <h4 class="lazy-title" id="lazy-scrim-title">Retrieving Archival Record…</h4>
+              <p class="lazy-desc" id="lazy-scrim-desc">Querying edge repository and assembling scholarly frontmatter.</p>
+            </div>
+            <div class="lazy-skeleton-stack">
+              <div class="lazy-skeleton-line sk-title"></div>
+              <div class="lazy-skeleton-row">
+                <div class="lazy-skeleton-line sk-half"></div>
+                <div class="lazy-skeleton-line sk-half"></div>
+              </div>
+              <div class="lazy-skeleton-line sk-block"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- In-Situ Error Retrieval Card -->
+        <div class="atelier-error-card" id="atelier-error-card" hidden>
+          <span class="error-fleuron" aria-hidden="true">✠</span>
+          <h4 class="error-title">Archival Record Unavailable</h4>
+          <p class="error-msg" id="atelier-error-msg">Could not establish contact with the edge database.</p>
+          <button type="button" id="btn-retry-atelier-fetch" class="study-btn study-btn--ignite study-btn--sm">
+            <span>↺ Retry Retrieval</span>
+          </button>
+        </div>
+
         <div class="workbench-scroll-area">
           
           <!-- 1. PUBLICATIONS FORM -->
@@ -1049,7 +1094,9 @@
   // Close Studio with Smooth Cubic Bezier Transition
   function closeStudio() {
     if (!dialog || !dialog.open) return;
+    const backdrop = document.getElementById('content-editor-backdrop');
     dialog.setAttribute('data-closing', 'true');
+    backdrop?.classList.remove('is-visible');
     setTimeout(() => {
       dialog.close();
       dialog.removeAttribute('data-closing');
@@ -1060,8 +1107,19 @@
     }, 320);
   }
 
+  (window as any).closeContentStudio = closeStudio;
+
   closeBtn?.addEventListener('click', closeStudio);
   cancelBtn?.addEventListener('click', closeStudio);
+
+  const backdropEl = document.getElementById('content-editor-backdrop');
+  backdropEl?.addEventListener('click', closeStudio);
+
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && dialog?.open && !dialog.hasAttribute('data-closing')) {
+      closeStudio();
+    }
+  });
 
   dialog?.addEventListener('cancel', (e) => {
     e.preventDefault();
@@ -2128,6 +2186,24 @@
 
       if (res?.ok) {
         setDirty(false);
+        const savedId = res.slug || existingId;
+        if (savedId) {
+          ATELIER_RECORD_CACHE.set(`${type}:${savedId}`, {
+            data: res.item?.data || payload,
+            body: res.item?.body || '',
+            timestamp: Date.now(),
+          });
+          if ((window as any).__DRC_CATALOG?.[type]) {
+            const list = (window as any).__DRC_CATALOG[type];
+            const idx = list.findIndex((it: any) => it.id === savedId);
+            if (idx >= 0) {
+              list[idx] = { id: savedId, data: res.item?.data || payload };
+            } else {
+              list.unshift({ id: savedId, data: res.item?.data || payload });
+            }
+          }
+        }
+
         (window as any).notify?.(res.message || 'Record committed successfully!', 'success');
 
         window.dispatchEvent(
@@ -2172,7 +2248,211 @@
   });
 
   // ==========================================
-  // GLOBAL SINGLETON DISPATCHER
+  // LAZY PERSISTENT RECORD CACHE & HYDRATION HELPERS
+  // ==========================================
+
+  const ATELIER_RECORD_CACHE = new Map<string, { data: any; body: string; timestamp: number }>();
+
+  function setAtelierLoading(loading: boolean, message?: string, isSilentSync: boolean = false) {
+    const shell = document.getElementById('content-modal-shell');
+    const chip = document.getElementById('editor-mode-chip');
+    const breadcrumbState = document.getElementById('atelier-breadcrumb-state');
+    const scrim = document.getElementById('atelier-lazy-scrim');
+    const syncPill = document.getElementById('atelier-sync-pill');
+    const syncText = document.getElementById('atelier-sync-text');
+    const errorCard = document.getElementById('atelier-error-card');
+
+    if (errorCard) errorCard.hidden = true;
+
+    if (loading) {
+      shell?.classList.add('is-atelier-loading');
+      if (isSilentSync) {
+        if (scrim) scrim.hidden = true;
+        if (syncPill) {
+          if (syncText && message) syncText.textContent = message;
+          syncPill.hidden = false;
+        }
+        if (chip) chip.textContent = 'SYNCING ✦';
+      } else {
+        if (syncPill) syncPill.hidden = true;
+        if (scrim) {
+          scrim.hidden = false;
+          const scrimTitle = document.getElementById('lazy-scrim-title');
+          if (scrimTitle && message) scrimTitle.textContent = message;
+        }
+        if (chip) chip.textContent = 'RETRIEVING ✦';
+      }
+      if (breadcrumbState && message) {
+        breadcrumbState.textContent = message;
+      }
+    } else {
+      shell?.classList.remove('is-atelier-loading');
+      if (scrim) scrim.hidden = true;
+      if (syncPill) syncPill.hidden = true;
+      if (chip) chip.textContent = ATELIER_STATE.activeMode === 'edit' ? 'EDITING' : 'READY';
+      if (breadcrumbState) {
+        breadcrumbState.textContent = ATELIER_STATE.activeMode === 'edit' ? (ATELIER_STATE.activeId || 'Active Record') : 'New Intake';
+      }
+    }
+  }
+
+  function setAtelierError(errorMsg: string, retryFn?: () => void) {
+    setAtelierLoading(false);
+    const errorCard = document.getElementById('atelier-error-card');
+    const errorText = document.getElementById('atelier-error-msg');
+    const retryBtn = document.getElementById('btn-retry-atelier-fetch') as HTMLButtonElement | null;
+    if (errorCard) {
+      if (errorText) errorText.textContent = errorMsg;
+      errorCard.hidden = false;
+      if (retryBtn) {
+        retryBtn.onclick = () => {
+          errorCard.hidden = true;
+          retryFn?.();
+        };
+      }
+    }
+    (window as any).notify?.(errorMsg, 'error');
+  }
+
+  function populateAtelierForm(targetType: 'publications' | 'books' | 'classes', d: any, bodyContent: string = '') {
+    if (targetType === 'publications') {
+      const titleInput = document.getElementById('wb-pub-title') as HTMLInputElement | null;
+      if (titleInput) titleInput.value = d.title || '';
+      const subtitleInput = document.getElementById('wb-pub-subtitle') as HTMLInputElement | null;
+      if (subtitleInput) subtitleInput.value = d.subtitle || '';
+      const yearInput = document.getElementById('wb-pub-year') as HTMLInputElement | null;
+      if (yearInput) yearInput.value = String(d.year || 2026);
+      const venueInput = document.getElementById('wb-pub-venue') as HTMLInputElement | null;
+      if (venueInput) venueInput.value = d.venue || '';
+      const volumeInput = document.getElementById('wb-pub-volume') as HTMLInputElement | null;
+      if (volumeInput) volumeInput.value = d.volumeIssue || '';
+      const doiInput = document.getElementById('wb-pub-doi') as HTMLInputElement | null;
+      if (doiInput) doiInput.value = d.doi || '';
+      const authorsInput = document.getElementById('wb-pub-authors') as HTMLInputElement | null;
+      if (authorsInput) authorsInput.value = Array.isArray(d.coAuthors) ? d.coAuthors.join(', ') : (d.coAuthors || '');
+      const pdfInput = document.getElementById('wb-pub-pdf') as HTMLInputElement | null;
+      if (pdfInput) pdfInput.value = d.pdfUrl || '';
+      const abstractInput = document.getElementById('wb-pub-abstract') as HTMLTextAreaElement | null;
+      if (abstractInput) abstractInput.value = d.abstract || bodyContent || '';
+      const bibtexInput = document.getElementById('wb-pub-bibtex') as HTMLTextAreaElement | null;
+      if (bibtexInput) bibtexInput.value = d.citationBibtex || '';
+    } else if (targetType === 'books') {
+      const titleInput = document.getElementById('wb-book-title') as HTMLInputElement | null;
+      if (titleInput) titleInput.value = d.title || '';
+      const subtitleInput = document.getElementById('wb-book-subtitle') as HTMLInputElement | null;
+      if (subtitleInput) subtitleInput.value = d.subtitle || '';
+      const yearInput = document.getElementById('wb-book-year') as HTMLInputElement | null;
+      if (yearInput) yearInput.value = String(d.year || 2026);
+      const publisherInput = document.getElementById('wb-book-publisher') as HTMLInputElement | null;
+      if (publisherInput) publisherInput.value = d.publisher || '';
+      const isbnInput = document.getElementById('wb-book-isbn') as HTMLInputElement | null;
+      if (isbnInput) isbnInput.value = d.isbn || '';
+      const pagesInput = document.getElementById('wb-book-pages') as HTMLInputElement | null;
+      if (pagesInput) pagesInput.value = String(d.pages || 200);
+      const coverInput = document.getElementById('wb-book-cover') as HTMLInputElement | null;
+      if (coverInput) coverInput.value = d.coverImage || '';
+      const thumb = document.getElementById('wb-book-cover-thumb') as HTMLImageElement | null;
+      if (thumb) thumb.src = d.coverImage || '/images/books/monograph-cover-0080.webp';
+      const synopsisInput = document.getElementById('wb-book-synopsis') as HTMLTextAreaElement | null;
+      if (synopsisInput) synopsisInput.value = d.synopsis || bodyContent || '';
+
+      // Populate chapters
+      const chContainer = document.getElementById('wb-chapters-container');
+      if (chContainer && Array.isArray(d.chapters)) {
+        chContainer.innerHTML = '';
+        d.chapters.forEach((ch: any) => {
+          const row = document.createElement('div');
+          row.className = 'repeater-item repeater-card chapter-row';
+          row.innerHTML = `
+            <div class="repeater-card-header">
+              <div class="repeater-card-lead">
+                <span class="repeater-card-tag">CH.</span>
+                <input type="text" class="ch-num" placeholder="${ch.number || '01'}" value="${ch.number || '01'}" aria-label="Chapter Number" />
+              </div>
+              <div class="repeater-card-main">
+                <input type="text" class="ch-title" placeholder="Chapter Title" value="${ch.title || ''}" aria-label="Chapter Title" />
+              </div>
+              <button type="button" class="btn-remove-row" title="Remove chapter" aria-label="Remove chapter">✕</button>
+            </div>
+            <div class="repeater-card-body">
+              <textarea class="ch-summary" rows="2" placeholder="Chapter argument or summary synopsis..." aria-label="Chapter Summary">${ch.summary || ''}</textarea>
+            </div>
+          `;
+          chContainer.appendChild(row);
+        });
+      }
+    } else if (targetType === 'classes') {
+      const codeInput = document.getElementById('wb-class-code') as HTMLInputElement | null;
+      if (codeInput) codeInput.value = d.courseCode || '';
+      const titleInput = document.getElementById('wb-class-title') as HTMLInputElement | null;
+      if (titleInput) titleInput.value = d.title || '';
+      const termInput = document.getElementById('wb-class-term') as HTMLInputElement | null;
+      if (termInput) termInput.value = d.term || '';
+      const yearInput = document.getElementById('wb-class-year') as HTMLInputElement | null;
+      if (yearInput) yearInput.value = d.academicYear || '';
+      const levelInput = document.getElementById('wb-class-level') as HTMLSelectElement | null;
+      if (levelInput) levelInput.value = d.level || 'Seminar';
+      const locInput = document.getElementById('wb-class-location') as HTMLInputElement | null;
+      if (locInput) locInput.value = d.schedule || '';
+      const pdfInput = document.getElementById('wb-class-pdf') as HTMLInputElement | null;
+      if (pdfInput) pdfInput.value = d.syllabusPdf || '';
+      const descInput = document.getElementById('wb-class-desc') as HTMLTextAreaElement | null;
+      if (descInput) descInput.value = d.summary || bodyContent || '';
+
+      // Populate weeks
+      const wkContainer = document.getElementById('wb-weeks-container');
+      if (wkContainer && Array.isArray(d.weeks)) {
+        wkContainer.innerHTML = '';
+        d.weeks.forEach((w: any) => {
+          const row = document.createElement('div');
+          row.className = 'repeater-item repeater-card week-row';
+          const readingsStr = Array.isArray(w.readings) ? w.readings.join('\n') : '';
+          row.innerHTML = `
+            <div class="repeater-card-header">
+              <div class="repeater-card-lead">
+                <span class="repeater-card-tag">SEMINAR</span>
+                <input type="text" class="wk-num" placeholder="${w.weekNumber || 'WK 01'}" value="${w.weekNumber || 'WK 01'}" aria-label="Week Number" />
+              </div>
+              <div class="repeater-card-main">
+                <input type="text" class="wk-topic" placeholder="Weekly Seminar Topic" value="${w.topic || ''}" aria-label="Weekly Topic" />
+              </div>
+              <button type="button" class="btn-remove-row" title="Remove week" aria-label="Remove week">✕</button>
+            </div>
+            <div class="repeater-card-body">
+              <div class="repeater-card-subhead">
+                <span class="subhead-label">Required Readings &amp; Sources (one entry per line)</span>
+              </div>
+              <textarea class="wk-readings" rows="2" placeholder="Required readings (one per line)" aria-label="Required Readings">${readingsStr}</textarea>
+            </div>
+          `;
+          wkContainer.appendChild(row);
+        });
+      }
+    }
+
+    updateTargetSlugDisplay();
+    updateLiveMirror();
+  }
+
+  // Global Specimen Record Hover Prefetcher
+  (window as any).prefetchContentRecord = async (type: string, id: string) => {
+    if (!type || !id) return;
+    const key = `${type}:${id}`;
+    if (ATELIER_RECORD_CACHE.has(key)) return;
+    try {
+      const res = await (window as any).postAdmin?.('/api/admin/content', {
+        action: 'get-content',
+        type,
+        id,
+      });
+      if (res?.ok && res?.data) {
+        ATELIER_RECORD_CACHE.set(key, { data: res.data, body: res.body || '', timestamp: Date.now() });
+      }
+    } catch {}
+  };
+
+  // ==========================================
+  // GLOBAL SINGLETON DISPATCHER (0ms Instant Modal + Distributed Lazy Loading)
   // ==========================================
 
   (window as any).openContentEditor = async (options: OpenContentEditorOptions = {}) => {
@@ -2182,23 +2462,45 @@
 
     const targetType = options.type || 'publications';
     ATELIER_STATE.activeType = targetType;
-
-    // Reset dirty state
     setDirty(false);
 
+    // 1. OPEN PERSISTENT MODAL IMMEDIATELY ON FIRST FRAME (0ms Latency!)
+    if (dialog && !dialog.open) {
+      dialog.removeAttribute('data-closing');
+      dialog.show();
+      const backdrop = document.getElementById('content-editor-backdrop');
+      backdrop?.classList.add('is-visible');
+    }
+
     if (options.mode === 'edit' && options.id) {
-      // Edit Mode
       ATELIER_STATE.activeId = options.id;
       ATELIER_STATE.originalEditType = targetType;
       ATELIER_STATE.originalEditId = options.id;
 
-      // Set Domain Archetype (Publications, Books, Classes) & sync breadcrumbs
       setDomainType(targetType);
+      setViewMode('split'); // Open in Split View so they see form + preview immediately
 
-      setViewMode('split'); // Open in Split View so they see form + preview immediately!
+      const cacheKey = `${targetType}:${options.id}`;
+      const cached = ATELIER_RECORD_CACHE.get(cacheKey);
 
-      (window as any).notify?.(`Loading ${options.id} from ${targetType}…`, 'info');
+      // Case 1: Record already in memory cache (Instant 0ms display!)
+      if (cached) {
+        setAtelierLoading(false);
+        populateAtelierForm(targetType, cached.data, cached.body);
+        return;
+      }
 
+      // Case 2: Preliminary record data available in local catalog
+      const catalogItem = (window as any).__DRC_CATALOG?.[targetType]?.find?.((it: any) => it.id === options.id);
+      if (catalogItem?.data) {
+        populateAtelierForm(targetType, catalogItem.data, catalogItem.body || '');
+        setAtelierLoading(true, `Syncing full archival record for ${options.id}…`, true);
+      } else {
+        // Case 3: Fresh record, display animated astrolabe skeleton loader
+        setAtelierLoading(true, `Retrieving ${options.id} from ${targetType}…`, false);
+      }
+
+      // Asynchronous background lazy fetch
       try {
         const res = await (window as any).postAdmin?.('/api/admin/content', {
           action: 'get-content',
@@ -2207,114 +2509,28 @@
         });
 
         if (res?.ok && res?.data) {
-          const d = res.data;
-
-          if (targetType === 'publications') {
-            (document.getElementById('wb-pub-title') as HTMLInputElement).value = d.title || '';
-            (document.getElementById('wb-pub-subtitle') as HTMLInputElement).value = d.subtitle || '';
-            (document.getElementById('wb-pub-year') as HTMLInputElement).value = String(d.year || 2026);
-            (document.getElementById('wb-pub-venue') as HTMLInputElement).value = d.venue || '';
-            (document.getElementById('wb-pub-volume') as HTMLInputElement).value = d.volumeIssue || '';
-            (document.getElementById('wb-pub-doi') as HTMLInputElement).value = d.doi || '';
-            (document.getElementById('wb-pub-authors') as HTMLInputElement).value = (d.coAuthors || []).join(', ');
-            (document.getElementById('wb-pub-pdf') as HTMLInputElement).value = d.pdfUrl || '';
-            (document.getElementById('wb-pub-abstract') as HTMLTextAreaElement).value = d.abstract || res.body || '';
-            (document.getElementById('wb-pub-bibtex') as HTMLTextAreaElement).value = d.citationBibtex || '';
-          } else if (targetType === 'books') {
-            (document.getElementById('wb-book-title') as HTMLInputElement).value = d.title || '';
-            (document.getElementById('wb-book-subtitle') as HTMLInputElement).value = d.subtitle || '';
-            (document.getElementById('wb-book-year') as HTMLInputElement).value = String(d.year || 2026);
-            (document.getElementById('wb-book-publisher') as HTMLInputElement).value = d.publisher || '';
-            (document.getElementById('wb-book-isbn') as HTMLInputElement).value = d.isbn || '';
-            (document.getElementById('wb-book-pages') as HTMLInputElement).value = String(d.pages || 200);
-            (document.getElementById('wb-book-cover') as HTMLInputElement).value = d.coverImage || '';
-            (document.getElementById('wb-book-cover-thumb') as HTMLImageElement).src = d.coverImage || '/images/books/monograph-cover-0080.webp';
-            (document.getElementById('wb-book-synopsis') as HTMLTextAreaElement).value = d.synopsis || res.body || '';
-
-            // Populate chapters
-            const chContainer = document.getElementById('wb-chapters-container');
-            if (chContainer && Array.isArray(d.chapters)) {
-              chContainer.innerHTML = '';
-              d.chapters.forEach((ch: any) => {
-                const row = document.createElement('div');
-                row.className = 'repeater-item repeater-card chapter-row';
-                row.innerHTML = `
-                  <div class="repeater-card-header">
-                    <div class="repeater-card-lead">
-                      <span class="repeater-card-tag">CH.</span>
-                      <input type="text" class="ch-num" placeholder="${ch.number || '01'}" value="${ch.number || '01'}" aria-label="Chapter Number" />
-                    </div>
-                    <div class="repeater-card-main">
-                      <input type="text" class="ch-title" placeholder="Chapter Title" value="${ch.title || ''}" aria-label="Chapter Title" />
-                    </div>
-                    <button type="button" class="btn-remove-row" title="Remove chapter" aria-label="Remove chapter">✕</button>
-                  </div>
-                  <div class="repeater-card-body">
-                    <textarea class="ch-summary" rows="2" placeholder="Chapter argument or summary synopsis..." aria-label="Chapter Summary">${ch.summary || ''}</textarea>
-                  </div>
-                `;
-                chContainer.appendChild(row);
-              });
-            }
-          } else if (targetType === 'classes') {
-            (document.getElementById('wb-class-code') as HTMLInputElement).value = d.courseCode || '';
-            (document.getElementById('wb-class-title') as HTMLInputElement).value = d.title || '';
-            (document.getElementById('wb-class-term') as HTMLInputElement).value = d.term || '';
-            (document.getElementById('wb-class-year') as HTMLInputElement).value = d.academicYear || '';
-            (document.getElementById('wb-class-level') as HTMLSelectElement).value = d.level || 'Seminar';
-            (document.getElementById('wb-class-location') as HTMLInputElement).value = d.schedule || '';
-            (document.getElementById('wb-class-pdf') as HTMLInputElement).value = d.syllabusPdf || '';
-            (document.getElementById('wb-class-desc') as HTMLTextAreaElement).value = d.summary || res.body || '';
-
-            // Populate weeks
-            const wkContainer = document.getElementById('wb-weeks-container');
-            if (wkContainer && Array.isArray(d.weeks)) {
-              wkContainer.innerHTML = '';
-              d.weeks.forEach((w: any) => {
-                const row = document.createElement('div');
-                row.className = 'repeater-item repeater-card week-row';
-                const readingsStr = Array.isArray(w.readings) ? w.readings.join('\n') : '';
-                row.innerHTML = `
-                  <div class="repeater-card-header">
-                    <div class="repeater-card-lead">
-                      <span class="repeater-card-tag">SEMINAR</span>
-                      <input type="text" class="wk-num" placeholder="${w.weekNumber || 'WK 01'}" value="${w.weekNumber || 'WK 01'}" aria-label="Week Number" />
-                    </div>
-                    <div class="repeater-card-main">
-                      <input type="text" class="wk-topic" placeholder="Weekly Seminar Topic" value="${w.topic || ''}" aria-label="Weekly Topic" />
-                    </div>
-                    <button type="button" class="btn-remove-row" title="Remove week" aria-label="Remove week">✕</button>
-                  </div>
-                  <div class="repeater-card-body">
-                    <div class="repeater-card-subhead">
-                      <span class="subhead-label">Required Readings &amp; Sources (one entry per line)</span>
-                    </div>
-                    <textarea class="wk-readings" rows="2" placeholder="Required readings (one per line)" aria-label="Required Readings">${readingsStr}</textarea>
-                  </div>
-                `;
-                wkContainer.appendChild(row);
-              });
-            }
-          }
-
-          updateTargetSlugDisplay();
-          updateLiveMirror();
+          ATELIER_RECORD_CACHE.set(cacheKey, { data: res.data, body: res.body || '', timestamp: Date.now() });
+          populateAtelierForm(targetType, res.data, res.body || '');
+          setAtelierLoading(false);
         } else {
-          (window as any).notify?.('Could not load record details.', 'error');
+          setAtelierError(res?.error || 'Could not load record details.', () => {
+            (window as any).openContentEditor?.(options);
+          });
         }
       } catch (err: any) {
-        (window as any).notify?.(`Failed to fetch record: ${err.message}`, 'error');
+        setAtelierError(`Failed to fetch record: ${err.message}`, () => {
+          (window as any).openContentEditor?.(options);
+        });
       }
     } else {
       // Create New Record Mode
       ATELIER_STATE.activeId = '';
       ATELIER_STATE.originalEditType = '';
       ATELIER_STATE.originalEditId = '';
+      setAtelierLoading(false);
 
-      // Set Domain Archetype (Publications, Books, Classes) & sync breadcrumbs
       setDomainType(targetType);
 
-      // Reset form fields
       const pubForm = document.getElementById('form-pub-workbench') as HTMLFormElement | null;
       const bookForm = document.getElementById('form-book-workbench') as HTMLFormElement | null;
       const classForm = document.getElementById('form-class-workbench') as HTMLFormElement | null;
@@ -2322,16 +2538,15 @@
       bookForm?.reset();
       classForm?.reset();
 
-      // Start in Focus Mode with clean intake
-      setViewMode('focus');
+      // Clear repeater rows
+      const chContainer = document.getElementById('wb-chapters-container');
+      if (chContainer) chContainer.innerHTML = '';
+      const wkContainer = document.getElementById('wb-weeks-container');
+      if (wkContainer) wkContainer.innerHTML = '';
 
+      setViewMode('focus');
       updateTargetSlugDisplay();
       updateLiveMirror();
-    }
-
-    if (dialog && !dialog.open) {
-      dialog.removeAttribute('data-closing');
-      dialog.showModal();
     }
   };
 </script>
@@ -2341,6 +2556,270 @@
      Strict Zero-Scroll Co-Present Content Atelier Modal
      ========================================================================= */
 
+  /* =========================================================================
+     LAZY PERSISTENT ATELIER LOADING & SKELETON TELEMETRY
+     ========================================================================= */
+
+  /* Golden Telemetry Shimmer Progress Trace */
+  .atelier-shimmer-progress {
+    position: absolute;
+    top: 55px; /* Directly below the studio header */
+    left: 0;
+    right: 0;
+    height: 2.5px;
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(212, 175, 55, 0.15) 20%,
+      rgba(254, 240, 138, 0.95) 50%,
+      rgba(212, 175, 55, 0.15) 80%,
+      transparent 100%
+    );
+    background-size: 200% 100%;
+    opacity: 0;
+    pointer-events: none;
+    z-index: 60;
+    transition: opacity 0.24s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .content-studio-shell.is-atelier-loading .atelier-shimmer-progress {
+    opacity: 1;
+    animation: atelier-shimmer-sweep 1.4s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  }
+
+  @keyframes atelier-shimmer-sweep {
+    0% {
+      background-position: 200% 0;
+    }
+    100% {
+      background-position: -200% 0;
+    }
+  }
+
+  /* Fast Sync Telemetry Pill (When preliminary catalog data is loaded, syncing DB) */
+  .atelier-sync-pill {
+    position: sticky;
+    top: 0.75rem;
+    margin-inline-start: auto;
+    margin-inline-end: 1rem;
+    margin-block-end: 0.75rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.3rem 0.75rem;
+    font-size: 0.68rem;
+    font-family: var(--font-mono, monospace);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #fef08a;
+    background: rgba(212, 175, 55, 0.12);
+    border: 1px solid rgba(212, 175, 55, 0.35);
+    border-radius: 999px;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    z-index: 40;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.28);
+    animation: atelier-sync-glow 2s ease-in-out infinite alternate;
+  }
+
+  .atelier-sync-pill .sync-pip {
+    color: #ffd700;
+    font-size: 0.75rem;
+    animation: atelier-pip-spin 4s linear infinite;
+  }
+
+  @keyframes atelier-pip-spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+
+  @keyframes atelier-sync-glow {
+    from { border-color: rgba(212, 175, 55, 0.3); box-shadow: 0 0 8px rgba(212, 175, 55, 0.15); }
+    to { border-color: rgba(254, 240, 138, 0.6); box-shadow: 0 0 16px rgba(212, 175, 55, 0.35); }
+  }
+
+  /* Astrolabe Lazy Retrieval Skeleton Scrim (When no preliminary data exists) */
+  .atelier-lazy-scrim {
+    position: absolute;
+    inset: 0;
+    background: var(--bg-surface, #0d121f);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 50;
+    padding: 2.5rem;
+    animation: atelier-scrim-fadein 0.28s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  @keyframes atelier-scrim-fadein {
+    from { opacity: 0; transform: scale(0.99); }
+    to { opacity: 1; transform: scale(1); }
+  }
+
+  .lazy-scrim-chassis {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    max-width: 520px;
+    width: 100%;
+    margin: 0 auto;
+  }
+
+  .lazy-astrolabe-orb {
+    position: relative;
+    width: 64px;
+    height: 64px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 1.25rem;
+  }
+
+  .lazy-astrolabe-glyph {
+    font-size: 1.8rem;
+    color: #d4af37;
+    text-shadow: 0 0 18px rgba(212, 175, 55, 0.6);
+    animation: astrolabe-glyph-float 3s ease-in-out infinite;
+  }
+
+  .lazy-astrolabe-ring {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    border: 1px dashed rgba(212, 175, 55, 0.4);
+  }
+
+  .lazy-astrolabe-ring.ring-1 {
+    animation: astrolabe-ring-spin 8s linear infinite;
+  }
+
+  .lazy-astrolabe-ring.ring-2 {
+    inset: -6px;
+    border: 1px dotted rgba(212, 175, 55, 0.2);
+    animation: astrolabe-ring-spin 14s linear infinite reverse;
+  }
+
+  @keyframes astrolabe-ring-spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+
+  @keyframes astrolabe-glyph-float {
+    0%, 100% { transform: translateY(0) scale(1); }
+    50% { transform: translateY(-3px) scale(1.08); }
+  }
+
+  .lazy-text-lockup {
+    margin-bottom: 2rem;
+  }
+
+  .lazy-kicker {
+    display: block;
+    font-family: var(--font-mono, monospace);
+    font-size: 0.65rem;
+    letter-spacing: 0.14em;
+    color: #d4af37;
+    margin-bottom: 0.35rem;
+  }
+
+  .lazy-title {
+    font-family: var(--font-serif, serif);
+    font-size: 1.35rem;
+    font-weight: 500;
+    color: var(--text-primary, #fff);
+    margin: 0 0 0.4rem 0;
+    letter-spacing: -0.01em;
+  }
+
+  .lazy-desc {
+    font-size: 0.82rem;
+    color: var(--text-secondary, #94a3b8);
+    margin: 0;
+    line-height: 1.45;
+  }
+
+  .lazy-skeleton-stack {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+  }
+
+  .lazy-skeleton-line {
+    border-radius: 4px;
+    background: linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0.04) 25%,
+      rgba(255, 255, 255, 0.09) 50%,
+      rgba(255, 255, 255, 0.04) 75%
+    );
+    background-size: 200% 100%;
+    animation: skeleton-sweep 1.6s ease-in-out infinite;
+  }
+
+  @keyframes skeleton-sweep {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+
+  .lazy-skeleton-line.sk-title {
+    height: 38px;
+    width: 85%;
+    margin: 0 auto;
+  }
+
+  .lazy-skeleton-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.85rem;
+    width: 100%;
+  }
+
+  .lazy-skeleton-line.sk-half {
+    height: 38px;
+    width: 100%;
+  }
+
+  .lazy-skeleton-line.sk-block {
+    height: 96px;
+    width: 100%;
+  }
+
+  /* In-situ Error Card */
+  .atelier-error-card {
+    position: absolute;
+    inset: 0;
+    background: var(--bg-surface, #0d121f);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 55;
+    padding: 2.5rem;
+    text-align: center;
+  }
+
+  .error-fleuron {
+    font-size: 2rem;
+    color: #ef4444;
+    margin-bottom: 0.75rem;
+  }
+
+  .error-title {
+    font-family: var(--font-serif, serif);
+    font-size: 1.25rem;
+    color: var(--text-primary, #fff);
+    margin: 0 0 0.5rem 0;
+  }
+
+  .error-msg {
+    font-size: 0.85rem;
+    color: var(--text-secondary, #94a3b8);
+    max-width: 400px;
+    margin: 0 0 1.25rem 0;
+  }
+
   /* Global HTML hidden safeguard: MUST BE !important to prevent CSS display rules from overriding hidden */
   [hidden] {
     display: none !important;
@@ -2349,6 +2828,31 @@
   .persistent-content-studio:not([open]) {
     display: none !important;
     pointer-events: none !important;
+  }
+
+  /* Non-blocking companion backdrop that permits clicks on elevated sidebar */
+  .content-editor-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(7, 10, 22, 0.82);
+    backdrop-filter: blur(16px) saturate(140%);
+    -webkit-backdrop-filter: blur(16px) saturate(140%);
+    z-index: 900;
+    opacity: 0;
+    pointer-events: none;
+    transition:
+      opacity 0.36s cubic-bezier(0.16, 1, 0.3, 1),
+      backdrop-filter 0.36s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .content-editor-backdrop.is-visible {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .content-editor-backdrop.is-secret-collapsing {
+    opacity: 0 !important;
+    transition: opacity 0.8s cubic-bezier(0.45, 0, 0.15, 1) !important;
   }
 
   .persistent-content-studio {
@@ -2363,7 +2867,7 @@
     block-size: min(94dvh, 920px);
     max-block-size: 100dvh;
     overflow: hidden;
-    z-index: 1000;
+    z-index: 1500;
     pointer-events: none;
 
     opacity: 0;
@@ -2401,6 +2905,42 @@
       opacity 0.32s cubic-bezier(0.16, 1, 0.3, 1),
       transform 0.32s cubic-bezier(0.16, 1, 0.3, 1),
       filter 0.32s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  /* Secret Interaction: Graceful Parabolic Curve Vertical Collapse */
+  .persistent-content-studio.is-secret-collapsing,
+  .content-studio-shell.is-secret-collapsing {
+    animation: graceful-vertical-curve-collapse 0.85s cubic-bezier(0.45, 0, 0.15, 1) forwards !important;
+    pointer-events: none !important;
+    transform-origin: bottom center !important;
+  }
+
+  @keyframes graceful-vertical-curve-collapse {
+    0% {
+      transform: translateY(0) scaleY(1) scaleX(1);
+      opacity: 1;
+      filter: blur(0px);
+    }
+    18% {
+      transform: translateY(-16px) scaleY(1.03) scaleX(0.99);
+      opacity: 1;
+      filter: blur(0px);
+    }
+    45% {
+      transform: translateY(32vh) scaleY(0.68) scaleX(0.96) skewY(1.2deg);
+      opacity: 0.85;
+      filter: blur(2px);
+    }
+    75% {
+      transform: translateY(85vh) scaleY(0.25) scaleX(0.9) skewY(2.4deg);
+      opacity: 0.4;
+      filter: blur(6px);
+    }
+    100% {
+      transform: translateY(135vh) scaleY(0.02) scaleX(0.8) skewY(3.5deg);
+      opacity: 0;
+      filter: blur(14px);
+    }
   }
 
   .persistent-content-studio::backdrop {

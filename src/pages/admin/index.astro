@@ -13,6 +13,19 @@ const totalCount = publications.length + books.length + classes.length;
 
 <AdminLayout title="Content & Syllabi Ledger" activeModule="content">
   <div class="module-container">
+    <!-- Client-side Catalog Data for 0ms Instant Modal Pre-hydration -->
+    <script id="drc-admin-catalog-data" type="application/json" set:html={JSON.stringify({
+      publications: publications.map(p => ({ id: p.id, data: p.data })),
+      books: books.map(b => ({ id: b.id, data: b.data })),
+      classes: classes.map(c => ({ id: c.id, data: c.data })),
+    })}></script>
+    <script is:inline>
+      try {
+        const el = document.getElementById('drc-admin-catalog-data');
+        if (el) window.__DRC_CATALOG = JSON.parse(el.textContent || '{}');
+      } catch (e) {}
+    </script>
+
     <!-- Module Header with Telemetry Stats -->
     <div class="module-header">
       <div class="header-split">
@@ -1016,6 +1029,17 @@ const totalCount = publications.length + books.length + classes.length;
         });
       }
     });
+
+    // 5a. Specimen Record Prefetch on Hover / Touch
+    document.addEventListener('pointerover', (e) => {
+      const el = (e.target as HTMLElement).closest('.specimen-card, .btn-table-edit, .btn-card-edit, .specimen-table-row') as HTMLElement | null;
+      if (!el) return;
+      const type = el.dataset.cardType || el.dataset.editType;
+      const id = el.dataset.cardId || el.dataset.editId;
+      if (type && id) {
+        (window as any).prefetchContentRecord?.(type, id);
+      }
+    }, { passive: true });
 
     // 5. Delete Actions from Table Rows & Mobile Cards
     document.addEventListener('click', (e) => {
