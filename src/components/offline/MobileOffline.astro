@@ -1,0 +1,1303 @@
+---
+// src/components/offline/MobileOffline.astro
+// Dedicated Mobile Sovereign Observatory Offline Experience
+// Features: Smooth Celestial Constellation Sky, Metallic Sheen Translucent Modal,
+// 4 Corner Chrome Hearts Clover Rivets, Spinning Pixelated & Blurred Star, No Header
+
+interface Props {
+  state: {
+    offlineMode: boolean;
+    updatedAt: string;
+    featuredConstellationId?: string | null;
+  };
+  profile: {
+    name: string;
+    title: string;
+    department: string;
+    institution: string;
+    email: string;
+  };
+  isMaintenance?: boolean;
+}
+
+const { state, profile, isMaintenance = false } = Astro.props;
+---
+
+<!-- Hidden SVG Definitions for Chrome Hearts Clover Rivet & Spinning Pixelated Star -->
+<svg width="0" height="0" style="position:absolute;visibility:hidden" aria-hidden="true">
+  <defs>
+    <!-- Chrome Hearts Antique Sterling Silver Clover Rivet Gradients -->
+    <radialGradient id="mChRivetFlangeGrad" cx="35%" cy="30%" r="70%">
+      <stop offset="0%" stop-color="#f1f5f9" />
+      <stop offset="25%" stop-color="#cbd5e1" />
+      <stop offset="65%" stop-color="#64748b" />
+      <stop offset="100%" stop-color="#1e293b" />
+    </radialGradient>
+
+    <linearGradient id="mChSilverPetalGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" />
+      <stop offset="20%" stop-color="#f1f5f9" />
+      <stop offset="55%" stop-color="#94a3b8" />
+      <stop offset="85%" stop-color="#475569" />
+      <stop offset="100%" stop-color="#1e293b" />
+    </linearGradient>
+
+    <radialGradient id="mChCenterBossGrad" cx="30%" cy="30%" r="65%">
+      <stop offset="0%" stop-color="#ffffff" />
+      <stop offset="35%" stop-color="#e2e8f0" />
+      <stop offset="75%" stop-color="#475569" />
+      <stop offset="100%" stop-color="#0f172a" />
+    </radialGradient>
+
+    <!-- Chrome Hearts Gothic Clover Cross Rivet -->
+    <g id="mobile-ch-clover-rivet-def">
+      <!-- Outer Beveled Sterling Silver Flange Washer -->
+      <circle cx="0" cy="0" r="14.5" fill="url(#mChRivetFlangeGrad)" stroke="#1e293b" stroke-width="0.8" />
+      <circle cx="0" cy="0" r="13" fill="none" stroke="rgba(255, 255, 255, 0.45)" stroke-width="0.5" />
+      <circle cx="0" cy="0" r="11.5" fill="none" stroke="#0f172a" stroke-width="0.5" stroke-dasharray="1.2 1.2" />
+      
+      <!-- Deep Recessed Oxidized Shadow Pit -->
+      <circle cx="0" cy="0" r="10" fill="#070a12" />
+
+      <!-- Chrome Hearts 4-Lobe Gothic Clover Petals (Sterling Silver) -->
+      <path d="M-2.2,-2 C-4.2,-4.8 -6.5,-7.5 -3.8,-10.2 C-1.5,-11.2 1.5,-11.2 3.8,-10.2 C6.5,-7.5 4.2,-4.8 2.2,-2 Z" fill="url(#mChSilverPetalGrad)" stroke="#cbd5e1" stroke-width="0.4" />
+      <path d="M-2.2,2 C-4.2,4.8 -6.5,7.5 -3.8,10.2 C-1.5,11.2 1.5,11.2 3.8,10.2 C6.5,7.5 4.2,4.8 2.2,2 Z" fill="url(#mChSilverPetalGrad)" stroke="#cbd5e1" stroke-width="0.4" />
+      <path d="M-2,-2.2 C-4.8,-4.2 -7.5,-6.5 -10.2,-3.8 C-11.2,-1.5 -11.2,1.5 -10.2,3.8 C-7.5,6.5 -4.8,4.2 -2,2.2 Z" fill="url(#mChSilverPetalGrad)" stroke="#cbd5e1" stroke-width="0.4" />
+      <path d="M2,-2.2 C4.8,-4.2 7.5,-6.5 10.2,-3.8 C11.2,-1.5 11.2,1.5 10.2,3.8 C7.5,6.5 4.8,4.2 2,2.2 Z" fill="url(#mChSilverPetalGrad)" stroke="#cbd5e1" stroke-width="0.4" />
+
+      <!-- 4 Inter-Cardinal Diamond Fleuron Accents -->
+      <rect x="-5.2" y="-5.2" width="2" height="2" transform="rotate(45 -4.2 -4.2)" fill="#cbd5e1" stroke="#334155" stroke-width="0.3" />
+      <rect x="3.2" y="-5.2" width="2" height="2" transform="rotate(45 4.2 -4.2)" fill="#cbd5e1" stroke="#334155" stroke-width="0.3" />
+      <rect x="-5.2" y="3.2" width="2" height="2" transform="rotate(45 -4.2 4.2)" fill="#cbd5e1" stroke="#334155" stroke-width="0.3" />
+      <rect x="3.2" y="3.2" width="2" height="2" transform="rotate(45 4.2 4.2)" fill="#cbd5e1" stroke="#334155" stroke-width="0.3" />
+
+      <!-- Central Domed Screw Boss -->
+      <circle cx="0" cy="0" r="3.6" fill="url(#mChCenterBossGrad)" stroke="#1e293b" stroke-width="0.5" />
+      <circle cx="-0.8" cy="-0.8" r="0.8" fill="rgba(255, 255, 255, 0.9)" />
+      <line x1="-1.8" y1="0" x2="1.8" y2="0" stroke="#050811" stroke-width="0.7" />
+      <line x1="0" y1="-1.8" x2="0" y2="1.8" stroke="#050811" stroke-width="0.7" />
+    </g>
+
+    <!-- Mobile Spinning Pixel Star Definition - Red Hot Core & Orange Outwards -->
+    <g id="mobile-spinning-pixel-star-def" shape-rendering="crispEdges">
+      <!-- Center Red Hot Core (4x4 px) -->
+      <rect x="-2" y="-2" width="4" height="4" fill="#dc2626" />
+      <rect x="-1" y="-1" width="2" height="2" fill="#ff2222" />
+      
+      <!-- Primary Cardinal Rays (North, South, East, West) - Red Hot Center -> Orange Outwards -->
+      <!-- North -->
+      <rect x="-2" y="-5" width="4" height="3" fill="#ea580c" />
+      <rect x="-1" y="-9" width="2" height="4" fill="#f97316" />
+      <rect x="-1" y="-14" width="2" height="5" fill="#fb923c" />
+      <rect x="-0.5" y="-18" width="1" height="4" fill="#f97316" />
+
+      <!-- South -->
+      <rect x="-2" y="2" width="4" height="3" fill="#ea580c" />
+      <rect x="-1" y="5" width="2" height="4" fill="#f97316" />
+      <rect x="-1" y="9" width="2" height="5" fill="#fb923c" />
+      <rect x="-0.5" y="14" width="1" height="4" fill="#f97316" />
+
+      <!-- West -->
+      <rect x="-5" y="-2" width="3" height="4" fill="#ea580c" />
+      <rect x="-9" y="-1" width="4" height="2" fill="#f97316" />
+      <rect x="-14" y="-1" width="5" height="2" fill="#fb923c" />
+      <rect x="-18" y="-0.5" width="4" height="1" fill="#f97316" />
+
+      <!-- East -->
+      <rect x="2" y="-2" width="3" height="4" fill="#ea580c" />
+      <rect x="5" y="-1" width="4" height="2" fill="#f97316" />
+      <rect x="9" y="-1" width="5" height="2" fill="#fb923c" />
+      <rect x="14" y="-0.5" width="4" height="1" fill="#f97316" />
+
+      <!-- 4 Diagonal Stepped Pixel Rays (NW, NE, SW, SE) -->
+      <!-- NW -->
+      <rect x="-5" y="-5" width="3" height="3" fill="#ea580c" />
+      <rect x="-8" y="-8" width="2" height="2" fill="#f97316" />
+      <rect x="-11" y="-11" width="2" height="2" fill="#fb923c" />
+
+      <!-- NE -->
+      <rect x="2" y="-5" width="3" height="3" fill="#ea580c" />
+      <rect x="6" y="-8" width="2" height="2" fill="#f97316" />
+      <rect x="9" y="-11" width="2" height="2" fill="#fb923c" />
+
+      <!-- SW -->
+      <rect x="-5" y="2" width="3" height="3" fill="#ea580c" />
+      <rect x="-8" y="6" width="2" height="2" fill="#f97316" />
+      <rect x="-11" y="9" width="2" height="2" fill="#fb923c" />
+
+      <!-- SE -->
+      <rect x="2" y="2" width="3" height="3" fill="#ea580c" />
+      <rect x="6" y="6" width="2" height="2" fill="#f97316" />
+      <rect x="9" y="9" width="2" height="2" fill="#fb923c" />
+    </g>
+  </defs>
+</svg>
+
+<div class="offline-mobile-stage" id="offline-mobile-stage">
+  <!-- Clean, Smooth Celestial Constellation Sky Backdrop -->
+  <div class="mobile-constellation-container" aria-hidden="true">
+    <canvas id="mobile-constellation-canvas" class="mobile-constellation-canvas"></canvas>
+    <div class="mobile-vignette-scrim"></div>
+  </div>
+
+  <!-- Main Viewport: Centered Translucent Metallic Modal (NO HEADER) -->
+  <main class="mobile-modal-viewport">
+    <div class="mobile-offline-glass-modal" role="dialog" aria-labelledby="mobile-offline-headline">
+      
+      <!-- Metallic Sheen & Brushed Hairline Overlays -->
+      <div class="m-modal-metallic-sheen" aria-hidden="true"></div>
+      <div class="m-modal-brushed-texture" aria-hidden="true"></div>
+
+      <!-- 4 Corner Chrome Hearts Clover Rivets -->
+      <div class="m-corner-rivet m-corner-tl" aria-hidden="true">
+        <svg class="m-ch-clover-rivet-svg" viewBox="-16 -16 32 32">
+          <use href="#mobile-ch-clover-rivet-def" />
+        </svg>
+      </div>
+      <div class="m-corner-rivet m-corner-tr" aria-hidden="true">
+        <svg class="m-ch-clover-rivet-svg" viewBox="-16 -16 32 32">
+          <use href="#mobile-ch-clover-rivet-def" />
+        </svg>
+      </div>
+      <div class="m-corner-rivet m-corner-bl" aria-hidden="true">
+        <svg class="m-ch-clover-rivet-svg" viewBox="-16 -16 32 32">
+          <use href="#mobile-ch-clover-rivet-def" />
+        </svg>
+      </div>
+      <div class="m-corner-rivet m-corner-br" aria-hidden="true">
+        <svg class="m-ch-clover-rivet-svg" viewBox="-16 -16 32 32">
+          <use href="#mobile-ch-clover-rivet-def" />
+        </svg>
+      </div>
+
+      <!-- Ported Mechanical Iris Diaphragm Shutter Graphic (Mobile Scaled) -->
+      <div class="mobile-iris-diaphragm" aria-hidden="true">
+        <div class="mobile-iris-outer-bezel">
+          <div class="mobile-bezel-track-dials"></div>
+          <div class="mobile-bezel-notches">
+            <span></span><span></span><span></span><span></span>
+            <span></span><span></span><span></span><span></span>
+          </div>
+        </div>
+
+        <div class="mobile-iris-orbital-ring"></div>
+        <div class="mobile-iris-counter-ring"></div>
+
+        <!-- 3D METALLIC DEATH STAR SPHERE (MOBILE SCALE / SYMMETRIC POLAR CHASM) -->
+        <div class="m-dreadnought-sphere-stage" role="img" aria-label="3D Metallic Death Star Sphere with Symmetric Polar Chasm">
+          <svg class="m-deathstar-sphere-svg" viewBox="-135 -135 270 270">
+            <defs>
+              <radialGradient id="mDsLeftShellGrad" cx="24%" cy="20%" r="78%">
+                <stop offset="0%" stop-color="#ffffff" stop-opacity="0.95" />
+                <stop offset="14%" stop-color="#cbd5e1" />
+                <stop offset="38%" stop-color="#64748b" />
+                <stop offset="68%" stop-color="#1e293b" />
+                <stop offset="92%" stop-color="#0a0f1d" />
+                <stop offset="100%" stop-color="#04060c" />
+              </radialGradient>
+
+              <radialGradient id="mDsRightShellGrad" cx="76%" cy="28%" r="76%">
+                <stop offset="0%" stop-color="#e2e8f0" stop-opacity="0.85" />
+                <stop offset="22%" stop-color="#94a3b8" />
+                <stop offset="55%" stop-color="#334155" />
+                <stop offset="85%" stop-color="#0f172a" />
+                <stop offset="100%" stop-color="#04060c" />
+              </radialGradient>
+
+              <radialGradient id="mChasmAOGrad" cx="50%" cy="50%" r="50%">
+                <stop offset="0%" stop-color="#f59e0b" stop-opacity="0.3" />
+                <stop offset="35%" stop-color="#b45309" stop-opacity="0.15" />
+                <stop offset="65%" stop-color="#190a02" />
+                <stop offset="85%" stop-color="#060201" />
+                <stop offset="100%" stop-color="#000000" />
+              </radialGradient>
+
+              <linearGradient id="mChasmLeftAO" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stop-color="#000000" stop-opacity="0.95" />
+                <stop offset="40%" stop-color="#0d0501" stop-opacity="0.8" />
+                <stop offset="85%" stop-color="#331404" stop-opacity="0.3" />
+                <stop offset="100%" stop-color="transparent" />
+              </linearGradient>
+
+              <linearGradient id="mChasmRightAO" x1="100%" y1="0%" x2="0%" y2="0%">
+                <stop offset="0%" stop-color="#000000" stop-opacity="0.95" />
+                <stop offset="40%" stop-color="#0d0501" stop-opacity="0.8" />
+                <stop offset="85%" stop-color="#331404" stop-opacity="0.3" />
+                <stop offset="100%" stop-color="transparent" />
+              </linearGradient>
+
+              <linearGradient id="mChasmRimHighlight" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stop-color="#cbd5e1" stop-opacity="0.4" />
+                <stop offset="30%" stop-color="#ffd700" stop-opacity="0.85" />
+                <stop offset="50%" stop-color="#ffffff" stop-opacity="1" />
+                <stop offset="70%" stop-color="#ffd700" stop-opacity="0.85" />
+                <stop offset="100%" stop-color="#cbd5e1" stop-opacity="0.4" />
+              </linearGradient>
+
+              <radialGradient id="mVolumetricCoreLight" cx="50%" cy="50%" r="50%">
+                <stop offset="0%" stop-color="#ff3333" stop-opacity="0.95" />
+                <stop offset="25%" stop-color="#ea580c" stop-opacity="0.75" />
+                <stop offset="50%" stop-color="#f97316" stop-opacity="0.45" />
+                <stop offset="78%" stop-color="#c2410c" stop-opacity="0.15" />
+                <stop offset="100%" stop-color="transparent" />
+              </radialGradient>
+
+              <linearGradient id="mSpindleGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stop-color="#94a3b8" />
+                <stop offset="40%" stop-color="#ffffff" />
+                <stop offset="70%" stop-color="#cbd5e1" />
+                <stop offset="100%" stop-color="#334155" />
+              </linearGradient>
+
+              <!-- Gritty Micro-Noise & Metallic Stipple Pattern -->
+              <pattern id="mDsMicroStipple" width="6" height="6" patternUnits="userSpaceOnUse">
+                <circle cx="1.5" cy="1.5" r="0.65" fill="#ffffff" opacity="0.16" />
+                <circle cx="4.5" cy="4.5" r="0.8" fill="#000000" opacity="0.32" />
+                <circle cx="1.5" cy="4.5" r="0.45" fill="#94a3b8" opacity="0.14" />
+                <circle cx="4.5" cy="1.5" r="0.55" fill="#020617" opacity="0.25" />
+              </pattern>
+            </defs>
+
+            <!-- 1. Outer Spherical Shadow Foundation -->
+            <circle cx="0" cy="0" r="120" fill="#04060c" />
+
+            <!-- 2. Volumetric Core Light Bleed -->
+            <circle cx="0" cy="0" r="120" fill="url(#mChasmAOGrad)" />
+            <ellipse cx="0" cy="0" rx="48" ry="120" fill="url(#mVolumetricCoreLight)" />
+
+            <!-- 3. Chasm Substructure Girders / Collapse Bulkheads -->
+            <g stroke="#334155" stroke-width="1.4" opacity="0.65">
+              <line x1="-16" y1="-95" x2="16" y2="-95" />
+              <line x1="-24" y1="-80" x2="24" y2="-80" />
+              <line x1="-30" y1="-60" x2="30" y2="-60" />
+              <line x1="-36" y1="-40" x2="36" y2="-40" />
+              <line x1="-36" y1="40" x2="36" y2="40" />
+              <line x1="-30" y1="60" x2="30" y2="60" />
+              <line x1="-24" y1="80" x2="24" y2="80" />
+              <line x1="-16" y1="95" x2="16" y2="95" />
+            </g>
+
+            <!-- 4. Left Outer Spherical Shell (Translucent Modular Titanium Plating) -->
+            <path
+              d="M 0,-120 A 120 120 0 0 0 0,120 C -24,70 -38,35 -38,0 C -38,-35 -24,-70 0,-120 Z"
+              fill="url(#mDsLeftShellGrad)"
+              opacity="0.48"
+              stroke="rgba(255, 255, 255, 0.28)"
+              stroke-width="0.8"
+            />
+
+            <!-- Randomly Spread Translucent Modular Armor Tiles (Left Hemisphere) -->
+            <g class="m-translucent-tiles-left" stroke="rgba(255, 255, 255, 0.15)" stroke-width="0.5">
+              <path d="M -18,-85 A 120 30 0 0 1 -75,-85 L -50,-115 A 120 120 0 0 1 -15,-119 Z" fill="#94a3b8" opacity="0.22" />
+              <path d="M -30,-55 A 120 45 0 0 1 -70,-55 L -65,-85 A 120 30 0 0 0 -22,-85 Z" fill="#cbd5e1" opacity="0.62" />
+              <path d="M -70,-55 A 120 45 0 0 1 -107,-55 L -85,-85 A 120 30 0 0 0 -65,-85 Z" fill="#64748b" opacity="0.18" />
+              <path d="M -36,-25 A 120 55 0 0 1 -80,-25 L -75,-55 A 120 45 0 0 0 -30,-55 Z" fill="#cbd5e1" opacity="0.45" />
+              <path d="M -80,-25 A 120 55 0 0 1 -117,-25 L -107,-55 A 120 45 0 0 0 -75,-55 Z" fill="#94a3b8" opacity="0.72" />
+              <path d="M -36,25 A 120 55 0 0 1 -80,25 L -80,5.5 L -38,5.5 Z" fill="#64748b" opacity="0.25" />
+              <path d="M -80,25 A 120 55 0 0 1 -117,25 L -120,5.5 L -80,5.5 Z" fill="#cbd5e1" opacity="0.55" />
+              <path d="M -30,55 A 120 45 0 0 1 -70,55 L -65,85 A 120 30 0 0 0 -22,85 Z" fill="#94a3b8" opacity="0.2" />
+              <path d="M -70,55 A 120 45 0 0 1 -107,55 L -85,85 A 120 30 0 0 0 -65,85 Z" fill="#cbd5e1" opacity="0.68" />
+              <path d="M -18,85 A 120 30 0 0 1 -75,85 L -50,115 A 120 120 0 0 0 -15,119 Z" fill="#64748b" opacity="0.35" />
+            </g>
+
+            <!-- Left Equatorial Superstructure Trench -->
+            <path d="M -120,-5.5 L -38,-5.5 L -38,5.5 L -120,5.5 Z" fill="#060912" stroke="#1e293b" stroke-width="0.75" />
+            <rect x="-114" y="-3.5" width="16" height="7" fill="#1e293b" />
+            <rect x="-92" y="-3.5" width="22" height="7" fill="#293548" />
+            <rect x="-64" y="-3.5" width="18" height="7" fill="#1e293b" />
+
+            <!-- Left Latitude Panel Seams -->
+            <path d="M -85,-85 A 120 30 0 0 0 -18,-85" fill="none" stroke="rgba(203, 213, 225, 0.22)" stroke-width="0.7" />
+            <path d="M -107,-55 A 120 45 0 0 0 -30,-55" fill="none" stroke="rgba(203, 213, 225, 0.22)" stroke-width="0.7" />
+            <path d="M -117,-25 A 120 55 0 0 0 -36,-25" fill="none" stroke="rgba(203, 213, 225, 0.22)" stroke-width="0.7" />
+            <path d="M -117,25 A 120 55 0 0 0 -36,25" fill="none" stroke="rgba(203, 213, 225, 0.22)" stroke-width="0.7" />
+            <path d="M -107,55 A 120 45 0 0 0 -30,55" fill="none" stroke="rgba(203, 213, 225, 0.22)" stroke-width="0.7" />
+            <path d="M -85,85 A 120 30 0 0 0 -18,85" fill="none" stroke="rgba(203, 213, 225, 0.22)" stroke-width="0.7" />
+
+            <!-- 5. Right Outer Spherical Shell (Translucent Modular Titanium Plating) -->
+            <path
+              d="M 0,-120 A 120 120 0 0 1 0,120 C 24,70 38,35 38,0 C 38,-35 24,-70 0,-120 Z"
+              fill="url(#mDsRightShellGrad)"
+              opacity="0.45"
+              stroke="rgba(255, 255, 255, 0.22)"
+              stroke-width="0.8"
+            />
+
+            <!-- Randomly Spread Translucent Modular Armor Tiles (Right Hemisphere) -->
+            <g class="m-translucent-tiles-right" stroke="rgba(255, 255, 255, 0.15)" stroke-width="0.5">
+              <path d="M 18,-85 A 120 30 0 0 0 75,-85 L 50,-115 A 120 120 0 0 0 15,-119 Z" fill="#94a3b8" opacity="0.65" />
+              <path d="M 30,-55 A 120 45 0 0 0 70,-55 L 65,-85 A 120 30 0 0 1 22,-85 Z" fill="#64748b" opacity="0.2" />
+              <path d="M 70,-55 A 120 45 0 0 0 107,-55 L 85,-85 A 120 30 0 0 1 65,-85 Z" fill="#cbd5e1" opacity="0.52" />
+              <path d="M 36,-25 A 120 55 0 0 0 80,-25 L 75,-55 A 120 45 0 0 1 30,-55 Z" fill="#94a3b8" opacity="0.28" />
+              <path d="M 80,-25 A 120 55 0 0 0 117,-25 L 107,-55 A 120 45 0 0 1 75,-55 Z" fill="#64748b" opacity="0.75" />
+              <path d="M 36,25 A 120 55 0 0 0 80,25 L 80,5.5 L 38,5.5 Z" fill="#cbd5e1" opacity="0.38" />
+              <path d="M 80,25 A 120 55 0 0 0 117,25 L 120,5.5 L 80,5.5 Z" fill="#94a3b8" opacity="0.15" />
+              <path d="M 30,55 A 120 45 0 0 0 70,55 L 65,85 A 120 30 0 0 1 22,85 Z" fill="#64748b" opacity="0.6" />
+              <path d="M 70,55 A 120 45 0 0 0 107,55 L 85,85 A 120 30 0 0 1 65,85 Z" fill="#cbd5e1" opacity="0.24" />
+              <path d="M 18,85 A 120 30 0 0 0 75,85 L 50,115 A 120 120 0 0 1 15,119 Z" fill="#94a3b8" opacity="0.48" />
+            </g>
+
+            <!-- Right Equatorial Superstructure Trench -->
+            <path d="M 38,-5.5 L 120,-5.5 L 120,5.5 L 38,5.5 Z" fill="#060912" stroke="#1e293b" stroke-width="0.75" />
+            <rect x="46" y="-3.5" width="18" height="7" fill="#1e293b" />
+            <rect x="70" y="-3.5" width="22" height="7" fill="#293548" />
+            <rect x="98" y="-3.5" width="16" height="7" fill="#1e293b" />
+
+            <!-- Right Latitude Panel Seams -->
+            <path d="M 18,-85 A 120 30 0 0 0 85,-85" fill="none" stroke="rgba(203, 213, 225, 0.2)" stroke-width="0.7" />
+            <path d="M 30,-55 A 120 45 0 0 0 107,-55" fill="none" stroke="rgba(203, 213, 225, 0.2)" stroke-width="0.7" />
+            <path d="M 36,-25 A 120 55 0 0 0 117,-25" fill="none" stroke="rgba(203, 213, 225, 0.2)" stroke-width="0.7" />
+            <path d="M 36,25 A 120 55 0 0 0 117,25" fill="none" stroke="rgba(203, 213, 225, 0.2)" stroke-width="0.7" />
+            <path d="M 30,55 A 120 45 0 0 0 107,55" fill="none" stroke="rgba(203, 213, 225, 0.2)" stroke-width="0.7" />
+            <path d="M 18,85 A 120 30 0 0 0 85,85" fill="none" stroke="rgba(203, 213, 225, 0.2)" stroke-width="0.7" />
+
+            <!-- 6. Ambient Occlusion (AO) Shadows along Chasm Walls -->
+            <path d="M 0,-120 C -24,-70 -38,-35 -38,0 C -38,35 -24,70 0,120 L -10,120 C -30,70 -46,35 -46,0 C -46,-35 -30,-70 -10,-120 Z" fill="url(#mChasmLeftAO)" pointer-events="none" />
+            <path d="M 0,-120 C 24,-70 38,-35 38,0 C 38,35 24,70 0,120 L 10,120 C 30,70 46,35 46,0 C 46,-35 30,-70 10,-120 Z" fill="url(#mChasmRightAO)" pointer-events="none" />
+
+            <!-- 7. Searing Scorched Rim Light along Chasm Lips -->
+            <path d="M 0,-120 C -24,-70 -38,-35 -38,0 C -38,35 -24,70 0,120" fill="none" stroke="url(#mChasmRimHighlight)" stroke-width="1.4" />
+            <path d="M 0,-120 C 24,-70 38,-35 38,0 C 38,35 24,70 0,120" fill="none" stroke="url(#mChasmRimHighlight)" stroke-width="1.4" />
+
+            <!-- 8. Polar Spindle Shafts & Gimbals -->
+            <line x1="0" y1="-120" x2="0" y2="-36" stroke="url(#mSpindleGrad)" stroke-width="2.2" stroke-linecap="round" />
+            <line x1="0" y1="36" x2="0" y2="120" stroke="url(#mSpindleGrad)" stroke-width="2.2" stroke-linecap="round" />
+
+            <rect x="-10" y="-126" width="20" height="10" rx="3" fill="url(#mSpindleGrad)" stroke="#0f172a" stroke-width="1.2" />
+            <circle cx="0" cy="-121" r="2" fill="#ffffff" />
+
+            <rect x="-10" y="116" width="20" height="10" rx="3" fill="url(#mSpindleGrad)" stroke="#0f172a" stroke-width="1.2" />
+            <circle cx="0" cy="121" r="2" fill="#ffffff" />
+
+            <!-- 9. Central Spherical Core Socket Ring with AO -->
+            <circle cx="0" cy="0" r="38" fill="none" stroke="#000000" stroke-width="4" opacity="0.8" />
+            <circle cx="0" cy="0" r="36" fill="url(#mVolumetricCoreLight)" stroke="rgba(249, 115, 22, 0.7)" stroke-width="1.4" />
+
+            <!-- 10. Gritty Metallic Surface Stipple Texture -->
+            <circle cx="0" cy="0" r="120" fill="url(#mDsMicroStipple)" pointer-events="none" />
+          </svg>
+
+          <!-- Mobile Tactile Grainy Noise Overlay on Metallic Death Star Sphere -->
+          <div class="m-deathstar-grain-texture" aria-hidden="true"></div>
+
+          <!-- Core Ambient Occlusion Glow Pulse -->
+          <div class="m-core-ao-glow-pulse" aria-hidden="true"></div>
+
+          <!-- BLAZING SPINNING PIXELATED & BLURRED STAR (FULL SCALE & VISIBLE) -->
+          <div class="m-dreadnought-star-assembly">
+            <div class="m-dreadnought-star-glow">
+              <svg class="m-ds-pixel-star-svg" viewBox="-24 -24 48 48">
+                <use href="#mobile-spinning-pixel-star-def" />
+              </svg>
+            </div>
+            <div class="m-dreadnought-star-core">
+              <svg class="m-ds-pixel-star-svg" viewBox="-24 -24 48 48">
+                <use href="#mobile-spinning-pixel-star-def" />
+              </svg>
+            </div>
+          </div>
+
+          <span class="mobile-aperture-glyph">✠</span>
+        </div>
+      </div>
+
+      <!-- Narrative & Telemetry Lockup -->
+      <div class="mobile-narrative-lockup">
+        <div class="mobile-eyebrow">
+          <span class="mobile-eyebrow-fleuron">❧</span>
+          <span class="mobile-eyebrow-text">
+            {isMaintenance ? 'SCHEDULED CALIBRATION · DOME SEALED' : 'CONNECTION INTERRUPTED · LOCAL FOLIO'}
+          </span>
+        </div>
+
+        <h1 class="mobile-headline" id="mobile-offline-headline">
+          {isMaintenance ? 'Observatory Closed' : 'You are offline!'}
+        </h1>
+
+        <p class="mobile-prose">
+          {isMaintenance ? (
+            <>
+              Dr. Duncan R. Cordry's scholarly archive, monographs, and celestial atlas are undergoing 
+              scheduled calibration. The public dome will reopen automatically once telemetry sync completes.
+            </>
+          ) : (
+            <>
+              Your handheld device has disconnected from the observatory telescope link. 
+              The active constellation plate has been rendered in the background, 
+              and cached monographs remain available in your local folio.
+            </>
+          )}
+        </p>
+
+        <!-- Compact 2x2 Telemetry Matrix -->
+        <div class="mobile-telemetry-grid">
+          <div class="mobile-telemetry-item">
+            <span class="m-item-label">CONNECTION</span>
+            <strong class="m-item-value value-amber">
+              {isMaintenance ? 'Maintenance' : (state.offlineMode ? 'Offline (Shutter)' : 'Offline')}
+            </strong>
+          </div>
+          <div class="mobile-telemetry-item">
+            <span class="m-item-label">ACTIVE PLATE</span>
+            <strong class="m-item-value value-gold" id="mobile-cached-plate-label">
+              Orion (Plate LX)
+            </strong>
+          </div>
+          <div class="mobile-telemetry-item">
+            <span class="m-item-label">FOLIO ENGINE</span>
+            <strong class="m-item-value">Service Worker</strong>
+          </div>
+          <div class="mobile-telemetry-item">
+            <span class="m-item-label">INSTITUTION</span>
+            <strong class="m-item-value">{profile.institution}</strong>
+          </div>
+        </div>
+
+        <!-- Tactile Reconnect Button -->
+        <div class="mobile-action-area">
+          <button
+            type="button"
+            id="btn-mobile-check-status"
+            class="mobile-study-btn"
+            aria-label="Check if observatory connection is restored"
+          >
+            <span class="mobile-btn-ripple" aria-hidden="true"></span>
+            <span class="mobile-btn-spinner" aria-hidden="true"></span>
+            <span class="mobile-btn-icon">❖</span>
+            <span id="mobile-ping-label" class="mobile-btn-text">Check Connection / Reconnect</span>
+          </button>
+        </div>
+
+        <!-- Academic Bypass Link -->
+        <div class="mobile-footer-links">
+          <a href="/admin" class="mobile-admin-link">
+            <span>Sovereign Admin Panel (/admin) →</span>
+          </a>
+          <span class="mobile-institution-note">
+            {profile.name} · {profile.department}
+          </span>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Floating Mobile Status Notice Banner -->
+  <div id="mobile-status-toast" class="mobile-status-toast" role="status" aria-live="polite" hidden>
+    <div class="toast-content">
+      <span class="toast-pip"></span>
+      <span id="mobile-toast-msg" class="toast-msg">Connecting to node…</span>
+    </div>
+  </div>
+</div>
+
+<script is:inline>
+  // Mobile Smooth Constellation Sky Engine (NO PIXELATION ON BACKGROUND)
+  (function initMobileSmoothConstellation() {
+    const ORION_MOBILE = {
+      name: "Orion",
+      plate: "Plate LX",
+      stars: [
+        [3190, 3576, 4.42, 2, 29038, "", "ν"],
+        [3791, 2597, 4.39, 3, 27913, "", "χ1"],
+        [3384, 2608, 4.64, 2, 28716, "", "χ2"],
+        [2995, 3670, 4.45, 2, 29426, "", "ξ"],
+        [3392, 4506, 4.12, 3, 28614, "", "μ"],
+        [3704, 4914, 0.45, 7, 3500, "Betelgeuse", "α"],
+        [5036, 5113, 1.64, 6, 22000, "Bellatrix", "γ"],
+        [6368, 4420, 4.64, 2, 22845, "", "π1"],
+        [6227, 5936, 4.47, 3, 23123, "", "π6"],
+        [6419, 5804, 3.71, 3, 22797, "", "π5"],
+        [6386, 5323, 3.68, 3, 8500, "", "π4"],
+        [6176, 4955, 3.19, 3, 6500, "", "π3"],
+        [6155, 4771, 4.35, 2, 20000, "", "π2"],
+        [5698, 4578, 4.41, 2, 18000, "", "ο2"],
+        [5712, 3968, 4.71, 2, 19000, "", "ο1"],
+        [4833, 4075, 4.07, 3, 24000, "Meissa", "λ"],
+        [4837, 3918, 5.61, 1, 25000, "", "φ1"],
+        [4648, 3816, 4.09, 3, 26000, "", "φ2"],
+        [4883, 7552, 0.18, 7, 12000, "Rigel", "β"],
+        [4618, 6469, 2.23, 5, 28000, "Mintaka", "δ"],
+        [4274, 6608, 1.69, 5, 29000, "Alnilam", "ε"],
+        [3976, 6806, 1.74, 5, 29500, "Alnitak", "ζ"],
+        [3601, 7476, 2.07, 5, 28000, "Saiph", "κ"]
+      ],
+      edges: [
+        [0,1],[1,2],[2,3],[3,4],[4,5],[5,6],[6,7],[8,9],[9,10],[10,11],[11,12],
+        [12,7],[7,13],[13,14],[14,15],[16,17],[17,18],[18,6],[6,19],[19,5],
+        [5,20],[20,21],[20,22],[22,18]
+      ]
+    };
+
+    function renderMobileSky() {
+      const canvas = document.getElementById('mobile-constellation-canvas');
+      if (!canvas) return;
+
+      const w = window.innerWidth;
+      const h = window.innerHeight;
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+
+      canvas.width = Math.floor(w * dpr);
+      canvas.height = Math.floor(h * dpr);
+      canvas.style.width = w + 'px';
+      canvas.style.height = h + 'px';
+
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
+
+      ctx.scale(dpr, dpr);
+
+      const viewSize = Math.min(w, h) * 0.88;
+      const scale = viewSize / 9200;
+      const offX = (w - 10000 * scale) / 2;
+      const offY = (h - 10000 * scale) / 2;
+
+      function toScreen(x, y) {
+        return [
+          x * scale + offX,
+          y * scale + offY
+        ];
+      }
+
+      let seed = 93;
+      function rand() {
+        seed = (seed * 16807) % 2147483647;
+        return (seed - 1) / 2147483646;
+      }
+      const starCount = Math.floor((w * h) / 3200);
+      for (let i = 0; i < starCount; i++) {
+        const sx = rand() * w;
+        const sy = rand() * h;
+        const col = rand() > 0.75 ? '#ffd700' : (rand() > 0.4 ? '#93c5fd' : '#ffffff');
+        const r = rand() > 0.9 ? 1.5 : (rand() > 0.6 ? 1.0 : 0.6);
+        ctx.fillStyle = col;
+        ctx.globalAlpha = 0.25 + rand() * 0.7;
+        ctx.beginPath();
+        ctx.arc(sx, sy, r, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      ctx.globalAlpha = 0.55;
+      ctx.strokeStyle = 'rgba(212, 175, 55, 0.55)';
+      ctx.lineWidth = 1.15;
+      ctx.setLineDash([5, 4]);
+
+      ORION_MOBILE.edges.forEach(([i1, i2]) => {
+        const s1 = ORION_MOBILE.stars[i1];
+        const s2 = ORION_MOBILE.stars[i2];
+        if (!s1 || !s2) return;
+        const [x1, y1] = toScreen(s1[0], s1[1]);
+        const [x2, y2] = toScreen(s2[0], s2[1]);
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2, y2);
+        ctx.stroke();
+      });
+      ctx.setLineDash([]);
+
+      ORION_MOBILE.stars.forEach((star) => {
+        const [x, y] = toScreen(star[0], star[1]);
+        const rad = star[3];
+        const temp = star[4];
+        const name = star[5];
+
+        let core = '#ffffff';
+        let halo = 'rgba(255, 215, 0, 0.45)';
+        if (temp < 4000 || name === 'Betelgeuse') {
+          core = '#ffedd5';
+          halo = 'rgba(249, 115, 22, 0.6)';
+        } else if (temp > 18000 || name === 'Rigel') {
+          core = '#eff6ff';
+          halo = 'rgba(96, 165, 250, 0.6)';
+        } else if (rad >= 5) {
+          core = '#fef08a';
+          halo = 'rgba(255, 215, 0, 0.5)';
+        }
+
+        const haloR = rad * 3.5;
+        const grad = ctx.createRadialGradient(x, y, 0, x, y, haloR);
+        grad.addColorStop(0, halo);
+        grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+        ctx.globalAlpha = 0.85;
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.arc(x, y, haloR, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.globalAlpha = 1.0;
+        ctx.fillStyle = core;
+        ctx.beginPath();
+        ctx.arc(x, y, Math.max(1.8, rad * 0.85), 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.arc(x, y, Math.max(1, rad * 0.4), 0, Math.PI * 2);
+        ctx.fill();
+      });
+
+      try {
+        const pLabel = document.getElementById('mobile-cached-plate-label');
+        const sName = localStorage.getItem('drc-constellation-name');
+        if (sName && pLabel) pLabel.textContent = sName;
+      } catch {}
+    }
+
+    renderMobileSky();
+    window.addEventListener('resize', renderMobileSky);
+  })();
+</script>
+
+<script>
+  // Mobile Reopening Status Probe
+  const mobilePingBtn = document.getElementById('btn-mobile-check-status');
+  const mobileLabel = document.getElementById('mobile-ping-label');
+  const toast = document.getElementById('mobile-status-toast');
+  const toastMsg = document.getElementById('mobile-toast-msg');
+  let toastTimer: any = null;
+
+  function showToast(message: string, duration: number = 3500) {
+    if (!toast || !toastMsg) return;
+    toastMsg.textContent = message;
+    toast.hidden = false;
+    toast.classList.remove('is-closing');
+    toast.classList.add('is-visible');
+
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => {
+      toast.classList.add('is-closing');
+      setTimeout(() => {
+        toast.hidden = true;
+        toast.classList.remove('is-visible', 'is-closing');
+      }, 250);
+    }, duration);
+  }
+
+  mobilePingBtn?.addEventListener('click', async () => {
+    const ripple = mobilePingBtn.querySelector('.mobile-btn-ripple') as HTMLElement | null;
+    if (ripple) {
+      ripple.classList.remove('is-rippling');
+      void ripple.offsetWidth;
+      ripple.classList.add('is-rippling');
+    }
+
+    mobilePingBtn.classList.add('is-probing');
+    if (mobileLabel) mobileLabel.textContent = 'Probing Connection…';
+
+    showToast('Transmitting telemetry ping to observatory node…', 2000);
+
+    try {
+      const res = await fetch(`/api/status?t=${Date.now()}`, {
+        cache: 'no-store',
+        headers: { Accept: 'application/json' },
+      });
+      const data = await res.json().catch(() => null);
+
+      if (data && data.offlineMode === false) {
+        showToast('✦ Connection Restored! Returning to observatory…', 4000);
+        setTimeout(() => {
+          window.location.href = '/';
+        }, 1000);
+      } else {
+        const time = new Date().toLocaleTimeString('en-US', { hour12: false });
+        showToast(`[${time}] Observatory link remains offline.`, 3500);
+      }
+    } catch {
+      showToast('Network probe unreachable. You remain offline.', 3000);
+    } finally {
+      setTimeout(() => {
+        mobilePingBtn.classList.remove('is-probing');
+        if (mobileLabel) mobileLabel.textContent = 'Check Connection / Reconnect';
+      }, 1000);
+    }
+  });
+
+  window.addEventListener('online', () => {
+    showToast('✦ Physical network restored! Reopening observatory…', 3000);
+    setTimeout(() => {
+      window.location.href = '/';
+    }, 800);
+  });
+</script>
+
+<style>
+  /* ==========================================================================
+     MOBILE SOVEREIGN OBSERVATORY OFFLINE VIEW (<= 768px)
+     Smooth Constellation Sky + Metallic Sheen Modal + 4 CH Clover Rivets
+     ========================================================================== */
+
+  .offline-mobile-stage {
+    position: relative;
+    min-height: 100dvh;
+    width: 100%;
+    background: #03050c;
+    color: var(--text-primary, #f1f5f9);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    box-sizing: border-box;
+    overflow-x: hidden;
+    padding: 0.85rem 0.85rem calc(1rem + env(safe-area-inset-bottom, 8px));
+  }
+
+  /* Fullscreen Smooth Constellation Sky Container */
+  .mobile-constellation-container {
+    position: fixed;
+    inset: 0;
+    z-index: 1;
+    overflow: hidden;
+    background: radial-gradient(circle at 50% 45%, #080f24 0%, #040714 60%, #010206 100%);
+    pointer-events: none;
+  }
+
+  .mobile-constellation-canvas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+  }
+
+  .mobile-vignette-scrim {
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at 50% 45%, rgba(3, 6, 14, 0.3) 0%, rgba(2, 4, 10, 0.75) 70%, #010206 100%);
+    pointer-events: none;
+  }
+
+  /* Main Viewport & Translucent Metallic Modal (NO HEADER) */
+  .mobile-modal-viewport {
+    position: relative;
+    z-index: 10;
+    width: 100%;
+    max-width: 440px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .mobile-offline-glass-modal {
+    position: relative;
+    width: 100%;
+    padding: 1.5rem 1.15rem 1.35rem;
+    box-sizing: border-box;
+
+    /* Deep Space Obsidian Glass Plate */
+    background: linear-gradient(
+      140deg,
+      rgba(15, 23, 42, 0.82) 0%,
+      rgba(8, 12, 22, 0.76) 35%,
+      rgba(13, 20, 36, 0.78) 70%,
+      rgba(6, 9, 18, 0.84) 100%
+    );
+    backdrop-filter: blur(24px) saturate(140%);
+    -webkit-backdrop-filter: blur(24px) saturate(140%);
+    
+    /* Cold Lunar Rim: Whisper-Thin Specular Reflection from Space */
+    border: 1px solid rgba(226, 232, 240, 0.12);
+    border-top: 1px solid rgba(248, 250, 252, 0.22);
+    border-left: 1px solid rgba(248, 250, 252, 0.16);
+    border-radius: 18px;
+    box-shadow: 
+      0 25px 60px -10px rgba(0, 0, 0, 0.9),
+      0 0 1px 1px rgba(255, 255, 255, 0.04),
+      inset 0 1px 1px rgba(255, 255, 255, 0.16),
+      inset 1px 0 1px rgba(255, 255, 255, 0.08),
+      inset 0 -1px 2px rgba(0, 0, 0, 0.7);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 0.75rem;
+    overflow: hidden;
+  }
+
+  /* Whisper-Thin Lunar Moonlight Wash (Extremely Subtle Specular Reflection) */
+  .m-modal-metallic-sheen {
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    z-index: 1;
+    background: 
+      radial-gradient(
+        110% 75% at 15% 10%,
+        rgba(235, 242, 255, 0.055) 0%,
+        rgba(203, 213, 225, 0.02) 45%,
+        transparent 75%
+      ),
+      linear-gradient(
+        125deg,
+        rgba(255, 255, 255, 0.04) 0%,
+        rgba(226, 232, 240, 0.015) 30%,
+        transparent 55%,
+        rgba(226, 232, 240, 0.02) 85%,
+        rgba(248, 250, 252, 0.035) 100%
+      );
+  }
+
+  /* Ultra-Fine Micro-Matte Finish */
+  .m-modal-brushed-texture {
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    z-index: 1;
+    background: repeating-linear-gradient(
+      105deg,
+      rgba(255, 255, 255, 0.006) 0px,
+      rgba(255, 255, 255, 0.006) 1px,
+      transparent 1px,
+      transparent 4px
+    );
+    opacity: 0.35;
+  }
+
+  /* 4 Corner Chrome Hearts Clover Rivets (Micro-Machined Sterling Silver) */
+  .m-corner-rivet {
+    position: absolute;
+    width: 13px;
+    height: 13px;
+    z-index: 15;
+    pointer-events: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0.62;
+    filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.7));
+    transition: opacity 0.25s ease;
+  }
+
+  .m-corner-tl { top: 11px; left: 11px; }
+  .m-corner-tr { top: 11px; right: 11px; }
+  .m-corner-bl { bottom: 11px; left: 11px; }
+  .m-corner-br { bottom: 11px; right: 11px; }
+
+  .m-ch-clover-rivet-svg {
+    width: 13px;
+    height: 13px;
+    display: block;
+  }
+
+  /* Ported Mechanical Iris Diaphragm */
+  .mobile-iris-diaphragm {
+    position: relative;
+    z-index: 5;
+    width: 110px;
+    height: 110px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 0 30px rgba(0, 0, 0, 0.8), 0 0 16px rgba(212, 175, 55, 0.1);
+    flex-shrink: 0;
+  }
+
+  .mobile-iris-outer-bezel {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    border: 2px solid rgba(212, 175, 55, 0.45);
+    background: linear-gradient(135deg, rgba(24, 34, 61, 0.85) 0%, rgba(13, 18, 34, 0.95) 100%);
+    box-shadow: inset 0 0 15px rgba(0, 0, 0, 0.9);
+  }
+
+  .mobile-bezel-track-dials {
+    position: absolute;
+    inset: 5px;
+    border-radius: 50%;
+    border: 1px dashed rgba(212, 175, 55, 0.35);
+  }
+
+  .mobile-bezel-notches {
+    position: absolute;
+    inset: 2px;
+    border-radius: 50%;
+  }
+
+  .mobile-bezel-notches span {
+    position: absolute;
+    width: 1.5px;
+    height: 4.5px;
+    background: rgba(212, 175, 55, 0.5);
+    left: 50%;
+    top: 2px;
+    transform-origin: 50% 53px;
+  }
+
+  .mobile-bezel-notches span:nth-child(1) { transform: rotate(0deg); }
+  .mobile-bezel-notches span:nth-child(2) { transform: rotate(45deg); }
+  .mobile-bezel-notches span:nth-child(3) { transform: rotate(90deg); }
+  .mobile-bezel-notches span:nth-child(4) { transform: rotate(135deg); }
+  .mobile-bezel-notches span:nth-child(5) { transform: rotate(180deg); }
+  .mobile-bezel-notches span:nth-child(6) { transform: rotate(225deg); }
+  .mobile-bezel-notches span:nth-child(7) { transform: rotate(270deg); }
+  .mobile-bezel-notches span:nth-child(8) { transform: rotate(315deg); }
+
+  .mobile-iris-orbital-ring {
+    position: absolute;
+    inset: 7px;
+    border-radius: 50%;
+    border: 1px dotted rgba(254, 240, 138, 0.45);
+    animation: mobile-orbit 35s linear infinite;
+  }
+
+  .mobile-iris-counter-ring {
+    position: absolute;
+    inset: 14px;
+    border-radius: 50%;
+    border: 1px dashed rgba(212, 175, 55, 0.3);
+    animation: mobile-orbit 60s linear infinite reverse;
+  }
+
+  @keyframes mobile-orbit {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+
+  /* 3D Metallic Death Star Sphere with Symmetric Polar Chasm (Mobile) */
+  .m-dreadnought-sphere-stage {
+    position: relative;
+    z-index: 10;
+    width: 94px;
+    height: 94px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+  }
+
+  .m-deathstar-sphere-svg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    display: block;
+    z-index: 2;
+    filter: drop-shadow(0 0 16px rgba(0, 0, 0, 0.95)) drop-shadow(0 0 10px rgba(234, 88, 12, 0.25));
+  }
+
+  /* Mobile Tactile Grainy Noise & Cast-Metal Surface Texture */
+  .m-deathstar-grain-texture {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 2;
+    opacity: 0.44;
+    mix-blend-mode: overlay;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='dsNoise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='matrix' values='0.33 0.33 0.33 0 0  0.33 0.33 0.33 0 0  0.33 0.33 0.33 0 0  0 0 0 1 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23dsNoise)'/%3E%3C/svg%3E");
+    background-size: 80px 80px;
+    background-repeat: repeat;
+  }
+
+  .m-core-ao-glow-pulse {
+    position: absolute;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(239, 68, 68, 0.8) 0%, rgba(249, 115, 22, 0.5) 45%, rgba(234, 88, 12, 0.2) 70%, transparent 85%);
+    animation: m-core-ao-pulse 2.4s ease-in-out infinite alternate;
+    z-index: 3;
+    pointer-events: none;
+  }
+
+  @keyframes m-core-ao-pulse {
+    from { transform: scale(0.92); opacity: 0.7; }
+    to { transform: scale(1.15); opacity: 1; }
+  }
+
+  /* ==========================================================================
+     MOBILE SPINNING PIXELATED & BLURRED STAR IN MODAL CORE
+     ========================================================================== */
+  .m-dreadnought-star-assembly {
+    position: absolute;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+    z-index: 6;
+    animation: mobile-star-spin 12s linear infinite;
+  }
+
+  .m-ds-pixel-star-svg {
+    width: 32px;
+    height: 32px;
+    display: block;
+    image-rendering: pixelated;
+    image-rendering: -moz-crisp-edges;
+    image-rendering: crisp-edges;
+  }
+
+  .m-dreadnought-star-glow {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    filter: blur(6px) brightness(2) saturate(2.2);
+    opacity: 0.95;
+  }
+
+  .m-dreadnought-star-core {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    filter: blur(1.5px) drop-shadow(0 0 6px #ef4444) drop-shadow(0 0 12px #f97316) drop-shadow(0 0 20px rgba(234, 88, 12, 0.9));
+  }
+
+  @keyframes mobile-star-spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+
+  .mobile-aperture-glyph {
+    position: absolute;
+    font-size: 0.8rem;
+    color: rgba(69, 26, 3, 0.85);
+    font-weight: 900;
+    z-index: 6;
+  }
+
+  /* Narrative Lockup */
+  .mobile-narrative-lockup {
+    position: relative;
+    z-index: 5;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.65rem;
+    width: 100%;
+  }
+
+  .mobile-eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-family: var(--font-mono, monospace);
+    font-size: 0.62rem;
+    letter-spacing: 0.1em;
+    color: #fbbf24;
+    text-transform: uppercase;
+  }
+
+  .mobile-eyebrow-fleuron {
+    color: #ffd700;
+    font-size: 0.8rem;
+  }
+
+  .mobile-headline {
+    font-family: var(--font-serif, serif);
+    font-size: 1.55rem;
+    line-height: 1.15;
+    font-weight: 500;
+    color: #ffffff;
+    margin: 0;
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
+  }
+
+  .mobile-prose {
+    font-family: var(--font-serif, serif);
+    font-size: 0.84rem;
+    line-height: 1.45;
+    color: #cbd5e1;
+    margin: 0;
+    max-width: 380px;
+  }
+
+  /* Telemetry 2x2 Grid */
+  .mobile-telemetry-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.45rem;
+    width: 100%;
+    margin-top: 0.2rem;
+  }
+
+  .mobile-telemetry-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.15rem;
+    padding: 0.45rem 0.35rem;
+    background: rgba(15, 23, 42, 0.55);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 9px;
+    backdrop-filter: blur(10px);
+  }
+
+  .m-item-label {
+    font-family: var(--font-mono, monospace);
+    font-size: 0.55rem;
+    letter-spacing: 0.08em;
+    color: #94a3b8;
+    text-transform: uppercase;
+  }
+
+  .m-item-value {
+    font-family: var(--font-mono, monospace);
+    font-size: 0.74rem;
+    color: #f1f5f9;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+  }
+
+  .value-amber { color: #fbbf24; }
+  .value-gold { color: #ffd700; }
+
+  /* Action Area */
+  .mobile-action-area {
+    width: 100%;
+    margin-top: 0.25rem;
+  }
+
+  .mobile-study-btn {
+    position: relative;
+    width: 100%;
+    padding: 0.72rem 1.1rem;
+    background: linear-gradient(135deg, rgba(212, 175, 55, 0.22) 0%, rgba(184, 147, 43, 0.14) 100%);
+    border: 1px solid rgba(212, 175, 55, 0.4);
+    border-radius: 11px;
+    color: #ffd700;
+    font-family: var(--font-serif, serif);
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    overflow: hidden;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.55rem;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+    transition: transform 0.15s ease, background 0.15s ease;
+  }
+
+  .mobile-study-btn:active {
+    transform: scale(0.97);
+  }
+
+  .mobile-study-btn.is-probing {
+    background: rgba(212, 175, 55, 0.1);
+    color: #fbbf24;
+  }
+
+  .mobile-btn-ripple {
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle, rgba(254, 240, 138, 0.4) 0%, transparent 70%);
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .mobile-btn-ripple.is-rippling {
+    animation: ripple-shockwave 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+
+  @keyframes ripple-shockwave {
+    0% { transform: scale(0.2); opacity: 0.8; }
+    100% { transform: scale(2.5); opacity: 0; }
+  }
+
+  .mobile-btn-icon {
+    font-size: 0.9rem;
+  }
+
+  .mobile-btn-spinner {
+    display: none;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    border: 2px solid rgba(254, 240, 138, 0.3);
+    border-top-color: #ffd700;
+    animation: mobile-spin 0.8s linear infinite;
+  }
+
+  .is-probing .mobile-btn-spinner {
+    display: inline-block;
+  }
+
+  .is-probing .mobile-btn-icon {
+    display: none;
+  }
+
+  @keyframes mobile-spin {
+    to { transform: rotate(360deg); }
+  }
+
+  /* Footer Links */
+  .mobile-footer-links {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.45rem;
+    margin-top: 0.3rem;
+  }
+
+  .mobile-admin-link {
+    font-family: var(--font-mono, monospace);
+    font-size: 0.72rem;
+    color: #94a3b8;
+    text-decoration: none;
+    transition: color 0.2s ease;
+  }
+
+  .mobile-admin-link:hover {
+    color: #ffd700;
+  }
+
+  .mobile-institution-note {
+    font-size: 0.7rem;
+    color: #64748b;
+  }
+
+  /* Toast Notification */
+  .mobile-status-toast {
+    position: fixed;
+    bottom: calc(1.5rem + env(safe-area-inset-bottom, 12px));
+    left: 1.25rem;
+    right: 1.25rem;
+    z-index: 100;
+    display: flex;
+    justify-content: center;
+    pointer-events: none;
+  }
+
+  .toast-content {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.65rem;
+    padding: 0.75rem 1.25rem;
+    background: rgba(15, 23, 42, 0.92);
+    border: 1px solid rgba(212, 175, 55, 0.45);
+    border-radius: 999px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(12px);
+    animation: toast-up 0.3s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  .toast-pip {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #ffd700;
+    box-shadow: 0 0 8px #ffd700;
+  }
+
+  .toast-msg {
+    font-family: var(--font-mono, monospace);
+    font-size: 0.76rem;
+    color: #fef08a;
+  }
+
+  @keyframes toast-up {
+    from { opacity: 0; transform: translateY(12px) scale(0.95); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+  }
+</style>

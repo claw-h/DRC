@@ -1,274 +1,146 @@
 @layer components {
-  #contact-trigger-btn {
-    anchor-name: --contact-btn;
-  }
+  #contact-trigger-btn { anchor-name: --contact-btn; }
 
   .chrome-icon-btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-inline-size: 2.5rem;
-    min-block-size: 2.5rem;
-    border-radius: 999px;
-    border: 1px solid var(--border-subtle);
-    background: var(--bg-elevated);
-    color: var(--text-primary);
-    cursor: pointer;
-    transition: border-color 0.2s ease, transform 0.15s ease;
+    display: inline-flex; align-items: center; justify-content: center;
+    min-inline-size: 2.5rem; min-block-size: 2.5rem; border-radius: 999px;
+    border: 1px solid var(--border-subtle); background: var(--bg-elevated);
+    color: var(--text-primary); cursor: pointer; transition: border-color .2s, transform .15s;
   }
-
-  @media (pointer: coarse) {
-    .chrome-icon-btn {
-      min-inline-size: 3rem;
-      min-block-size: 3rem;
-    }
-  }
-
-  .chrome-icon-btn:hover {
-    border-color: var(--accent);
-  }
+  .chrome-icon-btn:hover { border-color: var(--accent); }
+  @media (pointer: coarse) { .chrome-icon-btn { min-inline-size: 3rem; min-block-size: 3rem; } }
 
   .id-card-dialog {
-    position: fixed;
-    inset: auto;
-    inset-block-start: 0.5rem;
-    inset-inline-end: clamp(0.75rem, 3vw, 2.25rem);
-    margin: 0;
-    padding: 0;
-    border: 1px solid color-mix(in oklab, var(--accent) 65%, transparent);
-    border-radius: 12px;
-    inline-size: min(375px, calc(100dvw - 1.5rem));
-    background: var(--bg-surface);
-    color: var(--text-primary);
-    box-shadow: 
-      0 0 0 1px oklch(76% 0.08 85 / 0.35),
-      var(--shadow-modal-3d);
-
-    @supports (anchor-name: --contact-btn) {
-      position-anchor: --contact-btn;
-      inset-block-start: anchor(top);
-      inset-inline-end: anchor(right);
-    }
-
-    transform-origin: top right;
-    opacity: 0;
-    transform: scale(0.11);
-    clip-path: inset(0 0 calc(100% - 40px) calc(100% - 40px) round 999px);
-
-    transition-property: opacity, transform, clip-path, display, overlay;
-    transition-duration: 0.34s;
-    transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
-    transition-behavior: allow-discrete;
+    position: fixed !important; inset: auto !important; inset-block-start: var(--card-anchor-top, 4.25rem) !important; inset-inline-end: var(--card-anchor-right, clamp(.75rem, 3vw, 2.25rem)) !important;
+    margin: 0 !important; padding: 0; border: 0; border-radius: 15px; inline-size: min(440px, calc(100dvw - 1.5rem));
+    max-inline-size: calc(100dvw - 1.5rem); max-block-size: min(90dvh, 820px); overflow: visible;
+    background: transparent; color: var(--text-primary); box-shadow: none;
+    opacity: 0; transform: scale(.96) translateY(-8px); transform-origin: top right;
+    transition: opacity .28s ease, transform .34s cubic-bezier(.22,1,.36,1), display .34s allow-discrete, overlay .34s allow-discrete;
   }
-
-  .id-card-dialog[open]:where(:not([data-closing])) {
-    opacity: 1;
-    transform: scale(1);
-    clip-path: inset(0 0 0 0 round 12px);
-
-    @starting-style {
-      opacity: 0;
-      transform: scale(0.11);
-      clip-path: inset(0 0 calc(100% - 40px) calc(100% - 40px) round 999px);
-    }
-
-    &::backdrop {
-      background-color: oklch(0% 0 0 / 0.42);
-      backdrop-filter: blur(3px);
-
-      @starting-style {
-        background-color: transparent;
-        backdrop-filter: blur(0px);
-      }
-    }
+  .id-card-dialog[open]:where(:not([data-closing])) { opacity: 1; transform: translateY(0) scale(1); }
+  @starting-style {
+    .id-card-dialog[open]:where(:not([data-closing])) { opacity: 0; transform: scale(.92) translateY(-10px); }
   }
-
-  .id-card-dialog::backdrop {
-    background-color: transparent;
-    backdrop-filter: blur(0px);
-    transition-property: background-color, backdrop-filter, display, overlay;
-    transition-duration: 0.28s;
-    transition-behavior: allow-discrete;
-  }
+  .id-card-dialog::backdrop { background: transparent; backdrop-filter: blur(0); transition: background .28s ease, backdrop-filter .28s ease, display .28s allow-discrete, overlay .28s allow-discrete; }
+  .id-card-dialog[open]::backdrop { background: rgb(3 6 13 / .44); backdrop-filter: blur(4px) contrast(1.05); }
+  @starting-style { .id-card-dialog[open]::backdrop { background: transparent; backdrop-filter: blur(0); } }
+  .id-card-dialog[data-closing] { opacity: 0; transform: translateY(-7px) scale(.97); }
 
   .id-card-surface {
-    position: relative;
-    padding: 1.35rem 1.45rem 1.25rem;
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-    border-radius: 12px;
-    background: 
-      radial-gradient(
-        360px circle at var(--card-light-x, 85%) var(--card-light-y, 15%),
-        color-mix(in oklab, var(--bg-surface) 86%, var(--paper-vellum, #f4efe6) 14%),
-        var(--bg-surface) 65%
-      );
-    box-shadow: 
-      inset 0 1px 1px oklch(100% 0 0 / 0.18),
-      inset 0 -1px 2px oklch(0% 0 0 / 0.35);
-    transform-style: preserve-3d;
-    transform: perspective(900px) rotateX(var(--card-tilt-x, 0deg)) rotateY(var(--card-tilt-y, 0deg));
-    transition: transform 0.12s ease-out;
+    --card-light-x: 82%; --card-light-y: 12%; position: relative; isolation: isolate; overflow: hidden;
+    display: flex; flex-direction: column; gap: .85rem; inline-size: 100%; box-sizing: border-box;
+    padding: 1.35rem 1.45rem 1rem; border: 1px solid #9ca3af; border-radius: 14px;
+    color: var(--text-primary); background:
+      radial-gradient(360px circle at var(--card-light-x) var(--card-light-y), rgb(255 255 255 / .13), transparent 62%),
+      linear-gradient(145deg, color-mix(in oklab, var(--bg-surface) 88%, #c4a65a 12%), var(--bg-surface) 42%, color-mix(in oklab, var(--bg-surface) 91%, #94a3b8 9%));
+    box-shadow: inset 0 1px 1px rgb(255 255 255 / .22), inset 0 -1px 3px rgb(0 0 0 / .4), 0 18px 45px rgb(0 0 0 / .34), 0 0 0 1px rgb(255 255 255 / .09);
+    transform-style: preserve-3d; transform: perspective(1000px) rotateX(var(--card-tilt-x, 0deg)) rotateY(var(--card-tilt-y, 0deg));
+    transition: transform .14s ease-out, box-shadow .25s ease;
   }
+  .id-card-surface::before { content: ''; position: absolute; inset: 5px; z-index: -1; border: 1px solid rgb(192 164 102 / .25); border-radius: 9px; pointer-events: none; }
+  .id-card-material { position: absolute; inset: 0; z-index: -1; pointer-events: none; opacity: .18; background-image: repeating-linear-gradient(0deg, transparent 0 5px, rgb(255 255 255 / .04) 5.5px), repeating-linear-gradient(90deg, transparent 0 7px, rgb(0 0 0 / .035) 7.5px); }
+  .id-card-watermark { position: absolute; inset: auto 1.25rem 2.6rem auto; z-index: -1; font-size: 9rem; line-height: 1; color: rgb(192 164 102 / .055); transform: rotate(-12deg); pointer-events: none; }
+  .rivet-definitions { position: absolute; inline-size: 0; block-size: 0; overflow: hidden; }
+  .bookplate-corner { position: absolute; z-index: 3; inline-size: 27px; block-size: 27px; pointer-events: none; filter: drop-shadow(0 1px 2px #0009); }
+  .bookplate-corner svg { display: block; inline-size: 100%; block-size: 100%; }
+  .bookplate-corner--tl { inset-block-start: 6px; inset-inline-start: 6px; }
+  .bookplate-corner--tr { inset-block-start: 6px; inset-inline-end: 6px; }
+  .bookplate-corner--bl { inset-block-end: 6px; inset-inline-start: 6px; }
+  .bookplate-corner--br { inset-block-end: 6px; inset-inline-end: 6px; }
+  .id-card-lanyard-notch { position: absolute; inset-block-start: -1px; inset-inline-start: 50%; transform: translateX(-50%); inline-size: 62px; block-size: 10px; border: 1px solid #69717d; border-block-start: 0; border-radius: 0 0 8px 8px; background: linear-gradient(#080a0f,#171b23); box-shadow: inset 0 -1px 2px #000, 0 1px #ffffff17; }
+  .id-card-lanyard-notch span { position: absolute; inset: 2px 9px 2px; border-radius: 99px; background: #05070b; box-shadow: inset 0 1px 2px #000; }
+  .id-card-strip { display: flex; align-items: center; justify-content: space-between; gap: .5rem; min-block-size: 1.1rem; padding: 0 1.1rem .6rem; border-block-end: 1px solid rgb(192 164 102 / .35); color: var(--accent); font: 600 .7rem/1.35 var(--font-mono); letter-spacing: .1em; text-transform: uppercase; }
+  .id-card-institution, .id-card-folio { display: inline-flex; align-items: center; gap: .4rem; min-inline-size: 0; }
+  .id-card-folio { gap: .6rem; text-align: end; }
+  .pcb-seal { position: relative; inline-size: 15px; block-size: 15px; flex: none; border: 1px solid #c8a64b; border-radius: 3px; background: linear-gradient(135deg,#f7e29a,#9e7823); box-shadow: inset 0 0 0 2px #30250c; }
+  .pcb-seal::before,.pcb-seal::after,.pcb-seal i { content: ''; position: absolute; background: #5f4917; }
+  .pcb-seal::before { inline-size: 1px; block-size: 11px; inset-inline-start: 6px; inset-block-start: 1px; }
+  .pcb-seal::after { block-size: 1px; inline-size: 11px; inset-inline-start: 1px; inset-block-start: 6px; }
+  .pcb-seal i { inline-size: 3px; block-size: 3px; inset: 5px; border-radius: 50%; background: #f7e29a; }
+  .id-card-close-btn { display: grid; place-items: center; inline-size: 30px; block-size: 30px; border: 1px solid var(--border-subtle); border-radius: 50%; background: var(--bg-canvas); color: var(--text-muted); font-size: 1.1rem; cursor: pointer; }
+  .id-card-body { display: grid; grid-template-columns: 92px minmax(0,1fr); gap: 1rem; align-items: center; }
+  .id-card-photo-frame { position: relative; inline-size: 92px; padding: 4px; border: 1px solid rgb(192 164 102 / .5); border-radius: 5px; background: #10131a; box-shadow: inset 0 1px 5px #000b, 0 1px 0 #ffffff1a; }
+  .id-card-photo { display: block; inline-size: 100%; aspect-ratio: 4/5; object-fit: cover; object-position: center top; border-radius: 2px; }
+  .photo-bracket { position: absolute; inline-size: 9px; block-size: 9px; border-color: #e2c46d; }
+  .photo-bracket--tl { inset: 1px auto auto 1px; border-inline-start: 1px solid; border-block-start: 1px solid; }
+  .photo-bracket--br { inset: auto 1px 1px auto; border-inline-end: 1px solid; border-block-end: 1px solid; }
+  .id-card-identity { min-inline-size: 0; }
+  .id-card-clearance { display: block; margin-block-end: .28rem; color: var(--accent); font: 600 .65rem/1.35 var(--font-mono); letter-spacing: .12em; }
+  .id-card-name { margin: 0 0 .22rem; color: var(--text-primary); font: 600 1.4rem/1.18 var(--font-serif); text-shadow: var(--text-intaglio-shadow); }
+  .id-card-title { margin: 0 0 .32rem; color: var(--text-secondary); font-size: .9rem; line-height: 1.4; }
+  .id-card-dept { margin: 0 0 .48rem; color: var(--text-muted); font: .7rem/1.5 var(--font-mono); }
+  .id-card-status { display: inline-flex; align-items: center; gap: .4rem; color: #b6d3a0; font: 600 .62rem/1.1 var(--font-mono); letter-spacing: .075em; }
+  .id-card-status i { inline-size: 6px; block-size: 6px; border-radius: 50%; background: #9cbd72; box-shadow: 0 0 8px #9cbd72; animation: id-card-pulse 2.2s ease-in-out infinite; }
+  @keyframes id-card-pulse { 50% { opacity: .45; transform: scale(.78); } }
+  .id-card-telemetry { display: grid; grid-template-columns: 1fr 1fr; gap: 0; margin: 0; padding: .15rem 0; border-block: 1px solid rgb(192 164 102 / .26); }
+  .id-card-telemetry > div { min-inline-size: 0; padding: .55rem .65rem; }
+  .id-card-telemetry > div:nth-child(odd) { border-inline-end: 1px solid rgb(192 164 102 / .2); }
+  .id-card-telemetry > div:nth-child(-n+2) { border-block-end: 1px solid rgb(192 164 102 / .2); }
+  .id-card-telemetry dt { margin: 0 0 .24rem; color: var(--text-muted); font: 600 .62rem/1.25 var(--font-mono); letter-spacing: .065em; }
+  .id-card-telemetry dd { margin: 0; color: var(--text-primary); font-size: .78rem; line-height: 1.45; overflow-wrap: anywhere; }
+  .id-card-telemetry a { color: inherit; text-decoration-color: color-mix(in oklab, var(--accent) 60%, transparent); text-underline-offset: 2px; }
+  .id-card-actions { display: flex; flex-direction: column; gap: .45rem; }
+  .id-card-email-btn { display: flex; align-items: center; justify-content: space-between; min-block-size: 44px; padding: .58rem .8rem; border: 1px solid #ddc16e; border-radius: 5px; background: linear-gradient(110deg,#ddc16e,#a98432 55%,#d7b85d); color: #17140c; font: 700 .76rem/1.25 var(--font-mono); letter-spacing: .065em; text-decoration: none; text-transform: uppercase; box-shadow: inset 0 1px #fff8, 0 3px 12px #a9843225; transition: filter .2s, box-shadow .2s; }
+  .id-card-email-btn:hover { filter: brightness(1.08); box-shadow: 0 0 16px #d8b85a55; }
+  .id-card-secondary-row { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: .35rem; }
+  .id-card-sub-btn { display: flex; align-items: center; justify-content: center; min-inline-size: 0; min-block-size: 36px; padding: .42rem .25rem; border: 1px solid var(--border-subtle); border-radius: 4px; background: color-mix(in oklab, var(--bg-canvas) 82%, transparent); color: var(--text-secondary); font: 500 .64rem/1.2 var(--font-mono); text-align: center; text-decoration: none; cursor: pointer; }
+  .id-card-sub-btn:hover { border-color: var(--accent); color: var(--text-primary); }
+  .id-card-serial { display: flex; align-items: end; justify-content: space-between; gap: .5rem; padding-inline: 30px; color: var(--text-muted); font: .56rem/1.1 var(--font-mono); letter-spacing: .065em; }
+  .id-card-serial svg { inline-size: 23px; block-size: 23px; flex: none; color: var(--text-primary); opacity: .72; }
+  .id-card-surface--standalone { max-inline-size: 440px; inline-size: 100%; margin: 0 auto; }
+  .id-card-surface--standalone[data-card-variant="desktop"] { inline-size: 440px; max-inline-size: 100%; }
+  .id-card-surface--standalone[data-card-variant="mobile"] { inline-size: 100%; max-inline-size: 390px; }
 
-  .bookplate-corner {
-    position: absolute;
-    font-family: var(--font-serif);
-    font-size: 0.95rem;
-    color: color-mix(in oklab, var(--accent) 60%, transparent);
-    user-select: none;
-    line-height: 1;
-    pointer-events: none;
-    z-index: 2;
-  }
-
-  .bookplate-corner--tl { inset-block-start: 0.55rem; inset-inline-start: 0.65rem; }
-  .bookplate-corner--tr { inset-block-start: 0.55rem; inset-inline-end: 0.65rem; }
-  .bookplate-corner--bl { inset-block-end: 0.55rem; inset-inline-start: 0.65rem; }
-  .bookplate-corner--br { inset-block-end: 0.55rem; inset-inline-end: 0.65rem; }
-
-  .id-card-strip {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding-block-end: 0.65rem;
-    border-block-end: 1px solid var(--border-subtle);
-    font-family: var(--font-mono);
-    font-size: 0.68rem;
-    letter-spacing: 0.14em;
-    color: var(--accent);
-    text-shadow: var(--text-intaglio-shadow);
-  }
-
-  .id-card-body {
-    display: grid;
-    grid-template-columns: 96px 1fr;
-    gap: 1rem;
-    align-items: center;
-  }
-
-  .id-card-photo-frame {
-    position: relative;
-    display: inline-block;
-    border-radius: 6px;
-    padding: 3px;
-    background: color-mix(in oklab, var(--bg-canvas) 85%, transparent);
-    box-shadow: 
-      inset 0 2px 4px oklch(0% 0 0 / 0.55),
-      inset 0 0 0 1px oklch(0% 0 0 / 0.35),
-      0 1px 0 oklch(100% 0 0 / 0.12);
-    overflow: hidden;
-  }
-
-  .id-card-photo {
-    inline-size: 96px;
-    block-size: 120px;
-    aspect-ratio: 4 / 5;
-    object-fit: cover;
-    border-radius: 4px;
-    display: block;
-  }
-
-  .id-card-name {
-    font-size: 1.15rem;
-    font-weight: 600;
-    margin-block-end: 0.25rem;
-    text-shadow: var(--text-intaglio-shadow);
-  }
-
-  .id-card-title {
-    font-size: 0.82rem;
-    color: var(--text-secondary);
-    line-height: 1.35;
-    margin-block-end: 0.35rem;
-  }
-
-  .id-card-dept {
-    font-family: var(--font-mono);
-    font-size: 0.7rem;
-    color: var(--text-muted);
-  }
-
-  .id-card-telemetry,
-  .id-card-credentials {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 0.75rem;
-    padding: 0.75rem;
-    border-radius: 4px;
-    background: color-mix(in oklab, var(--bg-surface) 90%, var(--paper-vellum, #f4efe6) 10%);
-    border: 1px solid var(--border-subtle);
-    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.05);
-    font-size: 0.75rem;
-  }
-
-  .id-card-telemetry dt,
-  .id-card-credentials dt {
-    font-family: var(--font-mono);
-    font-size: 0.62rem;
-    color: var(--text-muted);
-    letter-spacing: 0.12em;
-    margin-block-end: 0.15rem;
-  }
-
-  .id-card-telemetry dd,
-  .id-card-credentials dd {
-    font-weight: 500;
-    color: var(--text-primary);
-  }
-
-  .id-card-actions {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-  }
-
-  .id-card-email-btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    padding: 0.65rem 1rem;
-    border-radius: 6px;
-    background: var(--accent);
-    color: var(--bg-canvas);
-    font-family: var(--font-mono);
-    font-size: 0.76rem;
-    font-weight: 600;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    text-decoration: none;
-  }
-
-  .id-card-secondary-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 0.5rem;
-  }
-
-  .id-card-sub-btn {
-    padding: 0.5rem 0.65rem;
-    border-radius: 6px;
-    border: 1px solid var(--border-subtle);
-    background: var(--bg-canvas);
-    font-family: var(--font-mono);
-    font-size: 0.68rem;
-    text-align: center;
-    text-decoration: none;
-    cursor: pointer;
-  }
-
-  @media (prefers-reduced-motion: reduce) {
+  @media (max-width: 767px) {
     .id-card-dialog {
-      transform: none;
-      clip-path: none;
-      transition-duration: 0.1s;
+      position: fixed !important; position-anchor: none !important; inset: auto !important;
+      inset-block-end: calc(env(safe-area-inset-bottom, 12px) + .75rem) !important;
+      inset-inline: .75rem !important; margin-inline: auto !important;
+      inline-size: min(420px, calc(100dvw - 1.5rem)); max-inline-size: calc(100dvw - 1.5rem);
+      max-block-size: calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 12px) - 1.5rem);
+      overflow: auto; overscroll-behavior: contain; border-radius: 15px;
+      transform: translateY(28px) scale(.97); transform-origin: bottom center;
     }
-    @starting-style {
-      .id-card-dialog[open]:where(:not([data-closing])) {
-        transform: none;
-        clip-path: none;
-      }
-    }
+    .id-card-dialog[open]:where(:not([data-closing])) { transform: translateY(0) scale(1); }
+    @starting-style { .id-card-dialog[open]:where(:not([data-closing])) { transform: translateY(28px) scale(.97); } }
+    .id-card-dialog::backdrop { background: transparent; backdrop-filter: none; }
+    .id-card-dialog[open]::backdrop { background: rgb(3 6 13 / .58); backdrop-filter: blur(10px) contrast(1.1); }
+    .id-card-surface { padding: 1.2rem 1.05rem .9rem; gap: .7rem; }
+    .id-card-strip { padding-inline: .9rem; font-size: .63rem; }
+    .id-card-body { grid-template-columns: 78px minmax(0,1fr); gap: .75rem; }
+    .id-card-photo-frame { inline-size: 78px; }
+    .id-card-name { font-size: 1.22rem; }
+    .id-card-title { font-size: .8rem; }
+    .id-card-dept { font-size: .63rem; }
+    .id-card-telemetry > div { padding: .45rem .5rem; }
+    .id-card-telemetry dt { font-size: .56rem; }
+    .id-card-telemetry dd { font-size: .73rem; }
+    .id-card-email-btn { min-block-size: 48px; }
+    .id-card-sub-btn { min-block-size: 44px; padding-inline: .15rem; font-size: .6rem; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .id-card-dialog, .id-card-dialog::backdrop, .id-card-surface, .id-card-status i { transition-duration: .01ms; animation-duration: .01ms; }
+  }
+}
+
+/* Top-layer dialogs need unlayered placement rules to beat the browser's
+   built-in centered-dialog insets. The script refines the desktop position. */
+#contact-id-card {
+  position: fixed;
+  inset: auto;
+  inset-block-start: 4.25rem;
+  inset-inline-end: clamp(.75rem, 3vw, 2.25rem);
+  margin: 0;
+}
+
+@media (max-width: 767px) {
+  #contact-id-card {
+    position: fixed;
+    inset: auto .75rem calc(env(safe-area-inset-bottom, 12px) + .75rem);
+    margin-inline: auto;
+    max-block-size: calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 12px) - 1.5rem);
+    overflow: auto;
+    overscroll-behavior: contain;
   }
 }

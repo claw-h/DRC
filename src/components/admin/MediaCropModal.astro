@@ -857,11 +857,20 @@
      Desktop is 100% untouched as regular modal; Mobile is full-screen sheet
      ========================================================================== */
   @media (max-width: 640px) {
+    .media-crop-dialog,
+    .media-crop-dialog *,
+    .media-crop-dialog *::before,
+    .media-crop-dialog *::after {
+      box-sizing: border-box;
+    }
+
     .media-crop-dialog[open] {
       display: block !important;
     }
 
     .media-crop-dialog {
+      width: 100vw !important;
+      max-width: 100vw !important;
       inline-size: 100dvw !important;
       max-inline-size: 100dvw !important;
       block-size: 100dvh !important;
@@ -870,20 +879,62 @@
       margin: 0 !important;
       inset: 0 !important;
       border: none !important;
+      overflow: hidden !important;
     }
 
     .crop-modal-shell {
       transform: none !important;
+      width: 100% !important;
+      max-width: 100% !important;
       inline-size: 100% !important;
       block-size: 100% !important;
       max-block-size: 100dvh !important;
+      min-inline-size: 0 !important;
       border-radius: 0 !important;
       border: none !important;
     }
 
+    .crop-modal-header {
+      flex-wrap: wrap;
+      padding: 0.65rem 0.85rem;
+      gap: 0.5rem;
+    }
+
+    .crop-header-lead,
+    .crop-header-titles {
+      min-width: 0;
+    }
+
+    .crop-title {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .crop-header-controls {
+      gap: 0.45rem;
+    }
+
+    .aspect-badge {
+      font-size: 0.58rem;
+      padding: 0.2rem 0.35rem;
+    }
+
     .crop-modal-stage {
-      padding: 0.85rem 0.5rem !important;
-      flex: 1;
+      min-height: 0;
+      min-width: 0;
+      padding: 0.75rem 0.5rem !important;
+      flex: 1 1 auto;
+      overflow: auto;
+    }
+
+    .crop-viewport-container {
+      min-width: 0;
+      gap: 0.75rem;
+    }
+
+    .canvas-matte {
+      max-width: 100%;
     }
 
     .crop-canvas {
@@ -895,8 +946,13 @@
       flex-wrap: wrap !important;
       justify-content: center !important;
       max-inline-size: 100% !important;
+      min-inline-size: 0;
       gap: 0.35rem !important;
       padding: 0.45rem 0.6rem !important;
+    }
+
+    .hud-slider-wrap {
+      inline-size: clamp(64px, 24vw, 90px);
     }
 
     .hud-btn {
@@ -906,6 +962,7 @@
 
     .crop-modal-footer {
       flex-direction: column !important;
+      align-items: stretch !important;
       gap: 0.65rem !important;
       padding: 0.75rem 1rem calc(0.75rem + env(safe-area-inset-bottom, 12px)) !important;
     }
@@ -913,18 +970,25 @@
     .footer-telemetry {
       width: 100%;
       justify-content: center;
+      flex-wrap: wrap;
+      gap: 0.35rem;
+      text-align: center;
     }
 
     .footer-actions {
       width: 100% !important;
-      justify-content: space-between !important;
+      justify-content: stretch !important;
       gap: 0.65rem !important;
+      min-width: 0;
     }
 
     .footer-actions .study-btn {
       flex: 1 !important;
+      min-width: 0;
       min-height: 44px !important;
       justify-content: center !important;
+      white-space: normal;
+      padding-inline: 0.5rem;
     }
 
     .btn-keycap {

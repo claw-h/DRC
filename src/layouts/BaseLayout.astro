@@ -4,6 +4,7 @@ import '../styles/scroll-choreography.css';
 import '../styles/workspace-responsive.css';
 import '../styles/contact-id-card.css';
 import '../styles/artefact-modals.css';
+import PublicMobileNav from '../components/chrome/PublicMobileNav.astro';
 
 interface Props {
   title?: string;
@@ -27,15 +28,33 @@ const {
   isAdmin = false,
   citationMeta,
 } = Astro.props;
+
+const showMobileNav = !isAdmin && !Astro.url.pathname.startsWith('/offline');
+const mobileNavActive = Astro.url.pathname.startsWith('/publications/')
+  ? 'publications'
+  : Astro.url.searchParams.get('section') === 'books'
+    ? 'books'
+    : Astro.url.searchParams.get('section') === 'classes'
+      ? 'classes'
+      : 'explore';
 ---
 
 <!DOCTYPE html>
 <html lang="en" class={isPortfolioRoot ? 'portfolio-scroller' : ''} data-admin-page={isAdmin ? 'true' : undefined}>
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>{title}</title>
     <meta name="description" content={description} />
+    {!isAdmin && <>
+      <meta name="theme-color" content="#070a16" />
+      <meta name="mobile-web-app-capable" content="yes" />
+      <meta name="apple-mobile-web-app-capable" content="yes" />
+      <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+      <link rel="manifest" href="/manifest.webmanifest" />
+      <link rel="icon" href="/icons/drc-mark.svg" type="image/svg+xml" />
+      <link rel="apple-touch-icon" href="/icons/icon-192.png" />
+    </>}
 
     <!-- MANDATORY: Declare support for both light and dark themes & prevent FOUC -->
     <meta name="color-scheme" content="light dark" />
@@ -115,8 +134,72 @@ const {
         {citationMeta.pdfUrl && <meta name="citation_pdf_url" content={citationMeta.pdfUrl} />}
       </>
     )}
+
+    <!-- Observatory Sovereign Service Worker & Network Lifecycle Engine -->
+    {!isAdmin && (
+      <script is:inline>
+        if ('serviceWorker' in navigator) {
+          window.addEventListener('load', () => {
+            navigator.serviceWorker.register('/sw.js', { scope: '/' })
+              .catch((err) => {
+                console.debug('[DRC Observatory] SW registration notice:', err);
+              });
+
+            if (document.documentElement.classList.contains('portfolio-scroller') &&
+                window.matchMedia('(max-width: 767px)').matches && navigator.onLine) {
+              navigator.serviceWorker.ready.then(() => {
+                fetch('/api/public/v1/bootstrap', { headers: { Accept: 'application/json' } }).catch(() => undefined);
+              }).catch(() => undefined);
+            }
+          });
+        }
+
+        window.addEventListener('drc-theme-changed', (event) => {
+          const scheme = event.detail?.scheme;
+          const themeColor = document.querySelector('meta[name="theme-color"]');
+          if (themeColor) themeColor.setAttribute('content', scheme === 'light' ? '#f4efe6' : '#070a16');
+        });
+
+        // Auto-reconnect when physical network is restored while on offline screen
+        window.addEventListener('online', () => {
+          if (window.location.pathname.startsWith('/offline')) {
+            window.location.href = '/';
+          }
+        });
+      </script>
+    )}
   </head>
-  <body data-stage="stage-1">
+  <body data-stage="stage-1" data-portfolio-root={isPortfolioRoot ? 'true' : undefined}>
     <slot />
+    {showMobileNav && <PublicMobileNav active={mobileNavActive as any} />}
+    {showMobileNav && <div id="pwa-network-status" role="status" aria-live="polite" hidden>Offline · showing saved pages where available</div>}
+    {showMobileNav && <script is:inline>
+      const statusBanner = document.getElementById('pwa-network-status');
+      const updateNetworkStatus = () => {
+        if (!statusBanner) return;
+        statusBanner.hidden = navigator.onLine;
+      };
+      window.addEventListener('online', updateNetworkStatus);
+      window.addEventListener('offline', updateNetworkStatus);
+      updateNetworkStatus();
+    </script>}
+    <style is:global>
+      #pwa-network-status {
+        position: fixed;
+        z-index: 1100;
+        inset-block-start: calc(env(safe-area-inset-top, 0px) + 0.45rem);
+        inset-inline: 50% auto;
+        transform: translateX(-50%);
+        padding: 0.45rem 0.75rem;
+        border: 1px solid var(--border-subtle);
+        border-radius: 999px;
+        background: var(--bg-surface);
+        color: var(--text-primary);
+        font: 600 0.68rem/1.2 var(--font-mono);
+        box-shadow: 0 4px 18px rgb(0 0 0 / 0.24);
+        white-space: nowrap;
+      }
+      #pwa-network-status[hidden] { display: none; }
+    </style>
   </body>
 </html>

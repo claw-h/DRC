@@ -2,11 +2,9 @@
 export const prerender = false;
 
 import AdminLayout from '../../layouts/AdminLayout.astro';
-import { getPublicationsList, getBooksList, getClassesList } from '../../lib/turso';
+import { loadObservatoryWorkspaceData } from '../../lib/turso';
 
-const publications = await getPublicationsList();
-const books = await getBooksList();
-const classes = await getClassesList();
+const { publications, books, classes } = await loadObservatoryWorkspaceData();
 
 const totalCount = publications.length + books.length + classes.length;
 ---
@@ -1209,12 +1207,14 @@ const totalCount = publications.length + books.length + classes.length;
     // Attach hover listeners to all specimen cards
     document.querySelectorAll<HTMLElement>('.specimen-card').forEach((card) => {
       card.addEventListener('mouseenter', () => {
+        if (!window.matchMedia('(hover: hover) and (min-width: 801px)').matches) return;
         clearTimeout(hudCloseTimer);
         clearTimeout(hudOpenTimer);
         hudOpenTimer = setTimeout(() => showHud(card), 140);
       });
 
       card.addEventListener('mouseleave', () => {
+        if (!window.matchMedia('(hover: hover) and (min-width: 801px)').matches) return;
         clearTimeout(hudOpenTimer);
         hudCloseTimer = setTimeout(() => hideHud(), 180);
       });
@@ -1261,10 +1261,12 @@ const totalCount = publications.length + books.length + classes.length;
 
     // Keep HUD open when hovering directly inside it
     hud?.addEventListener('mouseenter', () => {
+      if (!window.matchMedia('(hover: hover) and (min-width: 801px)').matches) return;
       clearTimeout(hudCloseTimer);
     });
 
     hud?.addEventListener('mouseleave', () => {
+      if (!window.matchMedia('(hover: hover) and (min-width: 801px)').matches) return;
       hudCloseTimer = setTimeout(() => hideHud(), 180);
     });
 
@@ -3176,9 +3178,9 @@ const totalCount = publications.length + books.length + classes.length;
       display: inline-flex !important;
       align-items: center;
       justify-content: center;
-      width: 36px;
-      height: 36px;
-      min-height: 36px;
+      width: 44px;
+      height: 44px;
+      min-height: 44px;
       padding: 0;
       border-radius: 50%;
       border: 1px solid var(--border-hairline);
@@ -3291,6 +3293,16 @@ const totalCount = publications.length + books.length + classes.length;
     .monograph-meta-slot {
       width: 100% !important;
       min-width: 0 !important;
+    }
+
+    /* Mobile Reactive Button Feedback (Instant Spring Compression) */
+    .study-btn:active,
+    .btn-card-edit:active,
+    .btn-launch:active,
+    .fascicle-tab-btn:active {
+      transform: scale(0.94) !important;
+      filter: brightness(1.2) !important;
+      transition: transform 0.08s cubic-bezier(0.16, 1, 0.3, 1), filter 0.08s ease !important;
     }
   }
 </style>

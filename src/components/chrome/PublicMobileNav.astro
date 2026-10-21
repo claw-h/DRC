@@ -1,0 +1,127 @@
+---
+interface Props {
+  active?: 'explore' | 'publications' | 'books' | 'classes';
+}
+
+const { active = 'explore' } = Astro.props;
+const destinations = [
+  { id: 'explore', label: 'Explore', href: '/#stage-1', icon: '✦' },
+  { id: 'publications', label: 'Papers', href: '/?section=publications', icon: 'Ⅰ' },
+  { id: 'books', label: 'Books', href: '/?section=books', icon: 'Ⅱ' },
+  { id: 'classes', label: 'Teaching', href: '/?section=classes', icon: 'Ⅲ' },
+];
+---
+
+<nav class="public-mobile-tabbar" aria-label="Public site navigation">
+  {destinations.map((item) => (
+    <a
+      href={item.href}
+      class="public-mobile-tab"
+      data-public-mobile-tab={item.id}
+      aria-current={active === item.id ? 'page' : undefined}
+    >
+      <span class="public-mobile-tab-icon" aria-hidden="true">{item.icon}</span>
+      <span class="public-mobile-tab-label">{item.label}</span>
+    </a>
+  ))}
+</nav>
+
+<script>
+  const tabs = [...document.querySelectorAll<HTMLAnchorElement>('[data-public-mobile-tab]')];
+  const rootPage = document.documentElement.classList.contains('portfolio-scroller');
+
+  const activate = (section: string, updateHistory = false) => {
+    if (!rootPage) return;
+    if (section === 'explore') {
+      (window as any).__drcSnapToStage?.(1);
+      if (updateHistory) history.pushState({ section }, '', '/#stage-1');
+      return;
+    }
+
+    const viewButton = document.querySelector<HTMLButtonElement>(`.nav-strip-btn[data-target-view="view-${section}"]`);
+    if (!viewButton) return;
+    viewButton.click();
+    if (document.body.dataset.stage !== 'stage-3') {
+      (window as any).__drcSnapToStage?.(3);
+    }
+    if (updateHistory) history.pushState({ ...(history.state || {}), section }, '', `/?section=${section}`);
+  };
+
+  tabs.forEach((tab) => {
+    tab.addEventListener('click', (event) => {
+      const section = tab.dataset.publicMobileTab || 'explore';
+      if (!rootPage) return;
+      event.preventDefault();
+      activate(section, true);
+      syncActive(section);
+    });
+  });
+
+  function syncActive(section?: string) {
+    const current = section || (document.body.dataset.stage === 'stage-1'
+      ? 'explore'
+      : document.querySelector<HTMLButtonElement>('.nav-strip-btn[aria-current="page"]')?.dataset.targetView?.replace('view-', '') || 'explore');
+    tabs.forEach((tab) => {
+      if (tab.dataset.publicMobileTab === current) tab.setAttribute('aria-current', 'page');
+      else tab.removeAttribute('aria-current');
+    });
+  }
+
+  if (rootPage) {
+    const requested = new URLSearchParams(location.search).get('section');
+    if (requested && ['publications', 'books', 'classes'].includes(requested)) {
+      requestAnimationFrame(() => activate(requested));
+    }
+    const stageObserver = new MutationObserver(() => syncActive());
+    stageObserver.observe(document.body, { attributes: true, attributeFilter: ['data-stage'] });
+    document.querySelectorAll<HTMLButtonElement>('.nav-strip-btn[data-target-view]').forEach((button) => {
+      const viewObserver = new MutationObserver(() => syncActive());
+      viewObserver.observe(button, { attributes: true, attributeFilter: ['aria-current'] });
+    });
+    window.addEventListener('popstate', () => {
+      const section = new URLSearchParams(location.search).get('section') || 'explore';
+      activate(section);
+      syncActive(section);
+    });
+  }
+</script>
+
+<style>
+  .public-mobile-tabbar { display: none; }
+
+  @media (max-width: 767px) {
+    .public-mobile-tabbar {
+      position: fixed;
+      z-index: 1000;
+      inset-inline: 0;
+      inset-block-end: 0;
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 0.2rem;
+      padding: 0.35rem 0.55rem calc(0.35rem + env(safe-area-inset-bottom, 0px));
+      border-block-start: 1px solid var(--border-subtle);
+      background: color-mix(in oklab, var(--bg-surface) 92%, transparent);
+      -webkit-backdrop-filter: blur(18px) saturate(150%);
+      backdrop-filter: blur(18px) saturate(150%);
+    }
+
+    .public-mobile-tab {
+      min-inline-size: 0;
+      min-block-size: 52px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 0.12rem;
+      border-radius: 0.75rem;
+      color: var(--text-muted);
+      text-decoration: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .public-mobile-tab[aria-current="page"] { color: var(--accent); }
+    .public-mobile-tab:active { background: color-mix(in oklab, var(--accent) 12%, transparent); }
+    .public-mobile-tab-icon { font-size: 1.15rem; line-height: 1.1; }
+    .public-mobile-tab-label { font: 600 0.66rem/1.1 var(--font-mono); letter-spacing: 0.04em; }
+  }
+</style>

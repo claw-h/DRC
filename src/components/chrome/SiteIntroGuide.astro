@@ -415,12 +415,19 @@
 
   @media (max-width: 600px) {
     .site-intro-modal {
-      inset-inline-end: 1rem;
-      width: calc(100vw - 2rem);
+      inset-block-start: calc(var(--header-height) + env(safe-area-inset-top, 0px) + 0.5rem);
+      inset-inline: max(0.75rem, env(safe-area-inset-left, 0px)) max(0.75rem, env(safe-area-inset-right, 0px));
+      width: auto;
+      max-block-size: calc(100dvh - var(--header-height) - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 1rem);
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      scrollbar-width: thin;
     }
     .guide-bookplate-frame {
-      padding: 0.95rem 1rem 0.85rem;
+      padding: 0.85rem 0.9rem 0.75rem;
+      gap: 0.45rem;
     }
+    .guide-list { gap: 0.4rem; }
   }
 </style>
 
@@ -454,7 +461,8 @@
 
     // Check reduced motion
     const isReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if (isReducedMotion) {
+    const isMobilePublicExperience = window.matchMedia('(max-width: 767px)').matches;
+    if (isReducedMotion || isMobilePublicExperience) {
       if (curtainEl) curtainEl.style.display = 'none';
       if (stageEl) stageEl.style.display = 'none';
       if (guideEl) guideEl.style.display = 'none';

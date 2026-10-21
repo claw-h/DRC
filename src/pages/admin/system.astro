@@ -97,22 +97,22 @@ const hostPid = process.pid;
         </div>
       </section>
 
-      <!-- Tier 1: Maintenance Mode (HTTP 503) -->
+      <!-- Tier 1: Offline Shutter (Public Access Switch) -->
       <section class="lifecycle-card tier-soft" aria-labelledby="tier-1-heading">
         <div class="tier-lead">
           <div class="tier-header-row">
-            <span class="tier-badge">MAINTENANCE</span>
+            <span class="tier-badge">OFFLINE SHUTTER</span>
             <span class="tier-type">PUBLIC ACCESS SWITCH</span>
           </div>
-          <h3 id="tier-1-heading" class="tier-title">Maintenance Mode (Take Site Offline)</h3>
+          <h3 id="tier-1-heading" class="tier-title">Offline Shutter (Take Site Offline)</h3>
           <p class="tier-desc">
-            Immediately places public portfolio pages into maintenance mode with an HTTP 503 status.
+            Immediately engages the sovereign offline shutter for public visitors.
             The faculty <code>/admin</code> control panel remains 100% accessible to you for updates and preparations.
           </p>
           <div class="status-indicator-row">
             <span>Public Site Status:</span>
             <strong id="shutter-status-label" class={systemState.offlineMode ? 'text-amber' : 'text-green'}>
-              {systemState.offlineMode ? '● Offline (Maintenance Mode Active)' : '● Online (Public Access Enabled)'}
+              {systemState.offlineMode ? '● Offline (Shutter Engaged)' : '● Online (Public Access Enabled)'}
             </strong>
           </div>
         </div>
@@ -124,7 +124,7 @@ const hostPid = process.pid;
             data-currently-offline={String(systemState.offlineMode)}
             class={`study-btn study-btn--lg btn-tier ${systemState.offlineMode ? 'study-btn--ignite btn-tier-success' : 'study-btn--hazard btn-tier-warning'}`}
           >
-            {systemState.offlineMode ? 'Restore Public Site (Disable Maintenance Mode)' : 'Take Site Offline (Enable Maintenance Mode)'}
+            {systemState.offlineMode ? 'Restore Public Site (Bring Online)' : 'Take Site Offline'}
           </button>
         </div>
       </section>
@@ -439,7 +439,7 @@ const hostPid = process.pid;
       const nextOffline = !currentlyOffline;
       offlineBtn.disabled = true;
 
-      notify(nextOffline ? 'Enabling maintenance mode…' : 'Restoring public site access…', 'info');
+      notify(nextOffline ? 'Taking site offline…' : 'Restoring public site access…', 'info');
       const data = await postAdmin('/api/admin/lifecycle', {
         action: 'toggle-offline',
         offline: nextOffline,
@@ -449,17 +449,17 @@ const hostPid = process.pid;
       if (data.ok) {
         offlineBtn.setAttribute('data-currently-offline', String(nextOffline));
         offlineBtn.textContent = nextOffline
-          ? 'Restore Public Site (Disable Maintenance Mode)'
-          : 'Take Site Offline (Enable Maintenance Mode)';
+          ? 'Restore Public Site (Bring Online)'
+          : 'Take Site Offline';
         offlineBtn.className = `study-btn study-btn--lg btn-tier ${nextOffline ? 'study-btn--ignite btn-tier-success' : 'study-btn--hazard btn-tier-warning'}`;
 
         if (statusLabel) {
-          statusLabel.textContent = nextOffline ? '● Offline (Maintenance Mode Active)' : '● Online (Public Access Enabled)';
+          statusLabel.textContent = nextOffline ? '● Offline (Shutter Engaged)' : '● Online (Public Access Enabled)';
           statusLabel.className = nextOffline ? 'text-amber' : 'text-green';
         }
         notify(data.message, 'success');
       } else {
-        notify(data.error || 'Failed to toggle maintenance state.', 'error');
+        notify(data.error || 'Failed to toggle offline state.', 'error');
       }
     });
 

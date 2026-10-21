@@ -5,6 +5,7 @@ import {
   persistSystemStateToDb,
   fetchFacultyProfileFromDb,
   persistFacultyProfileToDb,
+  invalidateTursoCache,
 } from './turso.ts';
 
 export interface SystemState {
@@ -38,27 +39,41 @@ const STATE_PATH = path.resolve(process.cwd(), 'src/data/system-state.json');
 const PROFILE_PATH = path.resolve(process.cwd(), 'src/data/profile.json');
 
 let cachedState: SystemState | null = null;
+let stateCachedAt = 0;
+const STATE_CACHE_TTL = 15_000; // 15 seconds
+
 let cachedProfile: FacultyProfile | null = null;
+let profileCachedAt = 0;
+const PROFILE_CACHE_TTL = 30_000; // 30 seconds
+
+export function clearSystemStateCache(): void {
+  cachedState = null;
+  stateCachedAt = 0;
+  cachedProfile = null;
+  profileCachedAt = 0;
+}
 
 export async function getSystemState(): Promise<SystemState> {
+  const now = Date.now();
+  if (cachedState && (now - stateCachedAt) < STATE_CACHE_TTL) {
+    return cachedState;
+  }
+
   // 1. Try querying Turso edge database
   try {
     const fromDb = await fetchSystemStateFromDb();
     if (fromDb) {
       cachedState = fromDb;
+      stateCachedAt = now;
       return fromDb;
     }
-  } catch (e) {
-    // Turso query failed, proceed to fallback
-  }
+  } catch (e) {}
 
-  // 2. Fall back to memory cache
-  if (cachedState) return cachedState;
-
-  // 3. Fall back to local file
+  // 2. Fall back to local file
   try {
     const raw = await fs.readFile(STATE_PATH, 'utf-8');
     cachedState = JSON.parse(raw) as SystemState;
+    stateCachedAt = now;
     return cachedState;
   } catch {
     return {
@@ -76,7 +91,11 @@ export async function updateSystemState(patch: Partial<SystemState>): Promise<Sy
     ...patch,
     updatedAt: new Date().toISOString(),
   };
-  cachedState = next;
+
+  // Immediate cache invalidation
+  cachedState = null;
+  stateCachedAt = 0;
+  invalidateTursoCache();
 
   // 1. Persist to Turso edge database
   await persistSystemStateToDb(next).catch(() => {});
@@ -90,24 +109,26 @@ export async function updateSystemState(patch: Partial<SystemState>): Promise<Sy
 }
 
 export async function getFacultyProfile(): Promise<FacultyProfile> {
+  const now = Date.now();
+  if (cachedProfile && (now - profileCachedAt) < PROFILE_CACHE_TTL) {
+    return cachedProfile;
+  }
+
   // 1. Try querying Turso edge database
   try {
     const fromDb = await fetchFacultyProfileFromDb();
     if (fromDb) {
       cachedProfile = fromDb;
+      profileCachedAt = now;
       return fromDb;
     }
-  } catch (e) {
-    // Turso query failed, proceed to fallback
-  }
+  } catch (e) {}
 
-  // 2. Fall back to memory cache
-  if (cachedProfile) return cachedProfile;
-
-  // 3. Fall back to local file
+  // 2. Fall back to local file
   try {
     const raw = await fs.readFile(PROFILE_PATH, 'utf-8');
     cachedProfile = JSON.parse(raw) as FacultyProfile;
+    profileCachedAt = now;
     return cachedProfile;
   } catch {
     return {
@@ -139,7 +160,11 @@ export async function getFacultyProfile(): Promise<FacultyProfile> {
 export async function updateFacultyProfile(patch: Partial<FacultyProfile>): Promise<FacultyProfile> {
   const current = await getFacultyProfile();
   const next: FacultyProfile = { ...current, ...patch };
-  cachedProfile = next;
+
+  // Immediate cache invalidation
+  cachedProfile = null;
+  profileCachedAt = 0;
+  invalidateTursoCache();
 
   // 1. Persist to Turso edge database
   await persistFacultyProfileToDb(next).catch(() => {});

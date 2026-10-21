@@ -487,6 +487,26 @@ const { pubCount, bookCount, classCount } = Astro.props;
     }
   }
 
+  @media (max-width: 767px) {
+    .fascicle-cartouche,
+    .folio-scrub-tooltip { display: none !important; }
+    .nav-strip-wrapper { overflow: hidden; }
+    .nav-strip-track { inline-size: 100%; justify-content: space-between; gap: 0.15rem; }
+    .nav-strip-btn { min-block-size: 44px; padding-inline: 0.35rem; letter-spacing: 0.06em; }
+    .nav-strip-expandable,
+    .nav-strip-btn[aria-current="page"] .nav-strip-expandable,
+    .nav-strip-wrapper:hover .nav-strip-expandable,
+    .nav-strip-track:focus-within .nav-strip-expandable {
+      max-inline-size: none;
+      opacity: 1;
+      pointer-events: auto;
+      margin-inline-start: 0.25rem;
+      transform: none;
+    }
+    .nav-strip-keyhint,
+    .nav-strip-connector { display: none; }
+  }
+
   @media (prefers-reduced-motion: reduce) {
     .nav-strip-expandable,
     .nav-strip-ink-rule,

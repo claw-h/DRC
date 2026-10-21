@@ -3,13 +3,13 @@ export const prerender = false;
 
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import PersistentHeader from '../../components/chrome/PersistentHeader.astro';
-import { getFacultyProfile } from '../../lib/system-state';
-import { getPublicationsList, getBooksList, getClassesList } from '../../lib/turso';
+import { loadObservatoryWorkspaceData } from '../../lib/turso';
+
+// Edge CDN Caching: Vercel Edge serves cached HTML in ~15ms and revalidates in the background
+Astro.response.headers.set('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=86400');
 
 const { slug } = Astro.params;
-const publications = await getPublicationsList();
-const books = await getBooksList();
-const classes = await getClassesList();
+const { publications, books, classes, profile } = await loadObservatoryWorkspaceData();
 
 const pub = publications.find((p) => p.data.id === slug);
 if (!pub) {
@@ -19,7 +19,6 @@ if (!pub) {
 const pubCount = publications.length;
 const bookCount = books.length;
 const classCount = classes.length;
-const profile = await getFacultyProfile();
 
 let Content: any = null;
 if (typeof (pub as any).render === 'function') {
@@ -54,6 +53,7 @@ if (typeof (pub as any).render === 'function') {
       <a href="/#stage-3">← Return to Bipartite Observatory Workspace</a>
       <span class="crumb-sep">·</span>
       <span class="crumb-id">{pub.data.id}</span>
+      <button type="button" id="save-paper-offline" class="paper-save-offline" aria-pressed="false">⇩ Save paper offline</button>
     </nav>
 
     <article class="paper-container">
@@ -106,10 +106,83 @@ if (typeof (pub as any).render === 'function') {
 
   <script>
     document.body.dataset.stage = 'stage-3';
+
+    const saveButton = document.getElementById('save-paper-offline') as HTMLButtonElement | null;
+    const savedPagesKey = 'drc-saved-public-pages-v1';
+    const getSavedPages = (): string[] => {
+      try {
+        const saved = JSON.parse(localStorage.getItem(savedPagesKey) || '[]');
+        return Array.isArray(saved) ? saved.filter((item) => typeof item === 'string') : [];
+      } catch {
+        return [];
+      }
+    };
+    const currentPath = `${location.pathname}${location.search}`;
+    const syncSaveButton = () => {
+      const isSaved = getSavedPages().includes(currentPath);
+      saveButton?.setAttribute('aria-pressed', String(isSaved));
+      if (saveButton) saveButton.textContent = isSaved ? '✓ Saved for offline' : '⇩ Save paper offline';
+    };
+
+    syncSaveButton();
+    saveButton?.addEventListener('click', async () => {
+      if (!('serviceWorker' in navigator)) return;
+      const savedPages = getSavedPages();
+      const isSaved = savedPages.includes(currentPath);
+      saveButton.disabled = true;
+      try {
+        const registration = await navigator.serviceWorker.ready;
+        const worker = registration.active;
+        if (!worker) return;
+        const result = await new Promise<{ ok: boolean }>((resolve) => {
+          const channel = new MessageChannel();
+          const timeout = window.setTimeout(() => resolve({ ok: false }), 5000);
+          channel.port1.onmessage = (event) => {
+            window.clearTimeout(timeout);
+            resolve(event.data || { ok: false });
+          };
+          worker.postMessage({
+            type: isSaved ? 'UNSAVE_PUBLIC_PAGE' : 'SAVE_PUBLIC_PAGE',
+            url: currentPath,
+          }, [channel.port2]);
+        });
+        if (!result.ok) {
+          saveButton.textContent = 'Could not save · retry';
+          return;
+        }
+        const updated = isSaved ? savedPages.filter((page) => page !== currentPath) : [...savedPages, currentPath];
+        localStorage.setItem(savedPagesKey, JSON.stringify(updated));
+        syncSaveButton();
+      } catch {
+        saveButton.textContent = 'Could not save · retry';
+      } finally {
+        saveButton.disabled = false;
+      }
+    });
   </script>
 </BaseLayout>
 
 <style>
+  .paper-save-offline { display: none; }
+  @media (max-width: 767px) {
+    .standalone-paper { padding-block-end: calc(6rem + env(safe-area-inset-bottom, 0px)); }
+    .paper-save-offline {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-block-size: 44px;
+      padding: 0.45rem 0.7rem;
+      border: 1px solid var(--border-subtle);
+      border-radius: 999px;
+      background: var(--bg-surface);
+      color: var(--text-primary);
+      font: 600 0.68rem/1.1 var(--font-mono);
+      cursor: pointer;
+    }
+    .paper-save-offline[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); }
+    .paper-save-offline:disabled { opacity: 0.6; }
+  }
+
   .standalone-paper {
     max-width: 780px;
     margin: 0 auto;

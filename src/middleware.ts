@@ -11,7 +11,10 @@ export const onRequest = defineMiddleware(async (context, next) => {
     pathname.startsWith('/images/') ||
     pathname.startsWith('/data/') ||
     pathname.startsWith('/fonts/') ||
-    pathname.startsWith('/favicon')
+    pathname.startsWith('/icons/') ||
+    pathname.startsWith('/favicon') ||
+    pathname === '/sw.js' ||
+    pathname === '/manifest.webmanifest'
   ) {
     return next();
   }
@@ -66,15 +69,22 @@ export const onRequest = defineMiddleware(async (context, next) => {
     return next();
   }
 
-  // 4. Offline screen passthrough
-  if (pathname === '/offline') {
+  // 4. Offline screen & status API passthrough
+  if (pathname.startsWith('/offline') || pathname === '/api/status') {
     return next();
   }
 
   // 5. Public maintenance mode interception
   const state = await getSystemState();
   if (state.offlineMode) {
-    return context.rewrite('/offline');
+    // Allow authenticated faculty preview if explicitly requested via ?preview=true
+    if (context.url.searchParams.get('preview') === 'true' && verifyAdminSession(context.cookies)) {
+      return next();
+    }
+
+    const userAgent = context.request.headers.get('user-agent') || '';
+    const isMobile = /Android|iPhone|iPad|iPod|webOS|BlackBerry|IEMobile|Opera Mini/i.test(userAgent);
+    return context.rewrite(isMobile ? '/offline/mobile?reason=maintenance' : '/offline?reason=maintenance');
   }
 
   return next();

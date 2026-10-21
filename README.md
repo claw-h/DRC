@@ -39,3 +39,5 @@ npm run preview
 ```
 
 See [ARCHITECTURAL_BLUEPRINT.md](./ARCHITECTURAL_BLUEPRINT.md) for the complete technical specification.
+
+For a source-verified mobile-first public site plan, including the current architecture, mobile information architecture, and lessons from the admin mobile shell, see [MOBILE_PORT_BLUEPRINT.md](./MOBILE_PORT_BLUEPRINT.md).

@@ -235,6 +235,9 @@
     perspective: 1000px;
   }
 
+  .header-controls-disclosure { display: flex; align-items: center; z-index: 3; }
+  .header-controls-trigger { display: none; }
+
   /* =====================================================================
      TINY METALLIC MINECRAFT BLOCK (INSCRIBED PCB ORTHODOX CROSS EMBLEM)
      ===================================================================== */
@@ -644,6 +647,75 @@
   /* Info modal dialog only shows on first visit; hidden on subsequent visits */
   html[data-drc-visit="subsequent"] #site-intro-guide {
     display: none !important;
+  }
+
+  @media (max-width: 767px) {
+    .persistent-header { padding-inline: 0.75rem; }
+    .mc-emblem-block { display: none !important; }
+    .persistent-chrome:has(.header-controls-disclosure[open]) { z-index: 1001; }
+    .persistent-header:has(.header-controls-disclosure[open]) { z-index: 2; }
+    .header-controls-disclosure { position: relative; }
+    .header-controls-trigger {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      inline-size: 44px;
+      block-size: 44px;
+      padding: 0;
+      list-style: none;
+      border: 1px solid var(--border-subtle);
+      background: color-mix(in oklab, var(--bg-surface) 92%, transparent);
+      color: var(--text-primary);
+      cursor: pointer;
+      transition: color 0.35s cubic-bezier(0.22, 1, 0.36, 1), border-color 0.35s cubic-bezier(0.22, 1, 0.36, 1), background 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+    .header-controls-trigger::-webkit-details-marker { display: none; }
+    .header-controls-disclosure[open] .header-controls-trigger { color: var(--accent-gold); border-color: var(--accent-gold); }
+    .header-controls-disclosure > .header-actions {
+      display: flex;
+      position: absolute;
+      inset-block-start: calc(100% + 0.45rem);
+      inset-inline-end: 0;
+      inline-size: max-content;
+      padding: 0.4rem;
+      flex-direction: row;
+      align-items: center;
+      justify-content: center;
+      gap: 0.35rem;
+      border: 1px solid var(--border-subtle);
+      background: color-mix(in oklab, var(--bg-surface) 96%, transparent);
+      box-shadow: 0 12px 32px rgba(0,0,0,.28);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+      transform: translateY(-0.45rem) scale(0.94);
+      transform-origin: top right;
+      transition: opacity 0.36s cubic-bezier(0.22, 1, 0.36, 1), transform 0.46s cubic-bezier(0.22, 1, 0.36, 1), visibility 0s linear 0.46s;
+    }
+    .header-controls-disclosure > .header-actions:popover-open {
+      display: flex;
+      position: fixed;
+      inset: auto;
+      inset-block-start: calc(var(--header-height) + 0.45rem + env(safe-area-inset-top, 0px));
+      inset-inline-end: max(0.75rem, env(safe-area-inset-right, 0px));
+      z-index: auto;
+    }
+    .header-controls-disclosure[open] > .header-actions {
+      opacity: 1;
+      visibility: visible;
+      pointer-events: auto;
+      transform: translateY(0) scale(1);
+      transition-delay: 0s;
+    }
+    .header-controls-disclosure .chrome-icon-btn {
+      inline-size: 44px;
+      min-inline-size: 44px;
+      min-block-size: 44px;
+      justify-content: center;
+      padding: 0;
+    }
   }
 
   @media (prefers-reduced-motion: reduce) {

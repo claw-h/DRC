@@ -51,7 +51,7 @@ const profile = await getFacultyProfile();
         aria-controls="pane-id-preview"
       >
         <span class="tab-glyph" aria-hidden="true">🪪</span>
-        <span>02 · Live Carte de Visite</span>
+        <span>02 · Saved Carte de Visite</span>
       </button>
     </nav>
 
@@ -319,23 +319,36 @@ const profile = await getFacultyProfile();
       </section>
 
       <!-- RIGHT COLUMN: Co-Present ID Card Studio with Live Mirror -->
-      <aside class="identity-preview-pane" id="pane-id-preview" aria-label="Live Faculty Carte de Visite Mirror">
+      <aside class="identity-preview-pane" id="pane-id-preview" aria-label="Saved Faculty Carte de Visite Preview">
         <div class="preview-sticky-deck">
           <!-- Kicker & Telemetry Status -->
           <div class="preview-deck-header">
             <div class="deck-title-group">
-              <span class="preview-kicker">02 · AUTHENTIC LIVE VISITING CARD</span>
+              <span class="preview-kicker">02 · SAVED IDENTITY PREVIEW</span>
               <h3 class="preview-heading">Production Carte de Visite</h3>
             </div>
-            <span class="live-pulse-badge">
+          <span class="live-pulse-badge">
               <span class="pulse-dot"></span>
-              Live Mirror
+            Saved Profile
             </span>
           </div>
 
-          <!-- THE AUTHENTIC PRODUCTION CARD COMPONENT (Single Source of Truth) -->
-          <div class="visiting-card-stage" id="card-stage-container">
-            <FacultyVisitingCard profile={profile} isDialog={false} editablePortrait={true} />
+          <div class="device-gate-selector" role="group" aria-label="Card preview device">
+            <button type="button" class="gate-btn is-active" id="gate-btn-laptop" aria-pressed="true"><span aria-hidden="true">💻</span> Laptop Card <small>440px</small></button>
+            <button type="button" class="gate-btn" id="gate-btn-mobile" aria-pressed="false"><span aria-hidden="true">📱</span> Mobile Card <small>390px</small></button>
+          </div>
+
+          <!-- Preview is rendered from the persisted profile; form edits appear after save. -->
+          <div class="visiting-card-stage device-stage device-stage--desktop" id="card-stage-container" data-preview-mode="desktop">
+            <div class="mobile-frame-mockup" id="mobile-frame-mockup" aria-label="Mobile device preview">
+              <div class="mobile-frame-speaker" aria-hidden="true"></div>
+              <div class="mobile-frame-screen">
+                <div class="mobile-frame-status" aria-hidden="true"><span>9:41</span><span>●●●  ▰</span></div>
+                <FacultyVisitingCard profile={profile} isDialog={false} variant="desktop" />
+                <div class="mobile-frame-home" aria-hidden="true"></div>
+              </div>
+            </div>
+            <div class="laptop-preview-card"><FacultyVisitingCard profile={profile} isDialog={false} variant="desktop" /></div>
           </div>
 
           <!-- PFP Portrait Studio Toolstrip -->
@@ -345,7 +358,7 @@ const profile = await getFacultyProfile();
               <span class="ratio-pill mono">4:5 STANDARD</span>
             </div>
             <p class="pfp-hint-text">
-              Click the photo on the card above, or use the precision tools below to adjust framing, zoom, or upload a replacement.
+              Use the precision tools below to save a portrait crop. The card preview refreshes from the saved profile after saving.
             </p>
             <div class="pfp-button-row">
               <button type="button" id="btn-launch-portrait-cropper" class="study-btn study-btn--ignite study-btn--sm">
@@ -367,7 +380,7 @@ const profile = await getFacultyProfile();
 
 <script>
   // =========================================================================
-  // Identity Page Controller: Two-Way Live Mirror & PFP Cropper Integration
+  // Identity Page Controller: Saved Identity Preview & PFP Cropper Integration
   // =========================================================================
 
   const form = document.getElementById('form-faculty-identity') as HTMLFormElement | null;
@@ -377,54 +390,8 @@ const profile = await getFacultyProfile();
   const directFileInput = document.getElementById('pfp-direct-file-input') as HTMLInputElement | null;
   const cardPortraitImg = document.querySelector('[data-id-field="portrait"]') as HTMLImageElement | null;
 
-  // 1. Instantaneous Typing Sync to Live Carte de Visite
-  const bindField = (inputId: string, fieldKey: string, transform?: (val: string) => string) => {
-    const input = document.getElementById(inputId) as HTMLInputElement | HTMLTextAreaElement | null;
-    const targets = document.querySelectorAll(`[data-id-field="${fieldKey}"]`);
-    if (!input || targets.length === 0) return;
-
-    input.addEventListener('input', () => {
-      let val = input.value.trim();
-      if (!val && input.placeholder) val = input.placeholder;
-      if (transform) val = transform(val);
-      targets.forEach((t) => (t.textContent = val));
-    });
-  };
-
-  bindField('id-name', 'name');
-  bindField('id-name', 'firstName', (val) => val.split(' ')[0] || val);
-  bindField('id-title', 'title');
-  bindField('id-department', 'dept');
-  bindField('id-education', 'education');
-  bindField('id-institution', 'institution');
-  bindField('id-credentialId', 'credentialId');
-  bindField('id-officeHours', 'officeHours');
-  bindField('id-email', 'email');
-
-  // Sync Email Button Link
-  const emailInput = document.getElementById('id-email') as HTMLInputElement | null;
-  const emailBtn = document.querySelector('[data-id-field="emailBtn"]') as HTMLAnchorElement | null;
-  emailInput?.addEventListener('input', () => {
-    const email = emailInput.value.trim();
-    if (emailBtn) {
-      emailBtn.href = `mailto:${email}?subject=Academic%20Inquiry%20for%20Prof.%20Duncan%20Cordry`;
-    }
-  });
-
-  // Sync Registry links
-  const ashokaUrlInput = document.getElementById('id-ashokaProfileUrl') as HTMLInputElement | null;
-  const ashokaBtn = document.querySelector('[data-id-field="ashokaProfileUrl"]') as HTMLAnchorElement | null;
-  ashokaUrlInput?.addEventListener('input', () => {
-    if (ashokaBtn) ashokaBtn.href = ashokaUrlInput.value.trim() || '#';
-  });
-
-  const philPeopleUrlInput = document.getElementById('id-philPeopleUrl') as HTMLInputElement | null;
-  const philPeopleBtn = document.querySelector('[data-id-field="philPeopleUrl"]') as HTMLAnchorElement | null;
-  philPeopleUrlInput?.addEventListener('input', () => {
-    if (philPeopleBtn) philPeopleBtn.href = philPeopleUrlInput.value.trim() || '#';
-  });
-
-  // 2. Portrait Precision Cropper Triggering
+  // Portrait controls stage edits in the cropper; the card preview remains
+  // bound to the saved profile rendered by the server.
   const openPortraitStudio = (initialUrl?: string) => {
     const activeUrl = initialUrl || cardPortraitImg?.src || '/images/duncan-cordry-portrait.webp';
     (window as any).openMediaCropper?.({
@@ -435,11 +402,7 @@ const profile = await getFacultyProfile();
       initialImageUrl: activeUrl,
       applyLabel: 'Apply Portrait to Carte de Visite ✓',
       onApply: (res: any) => {
-        if (res?.imageUrl && cardPortraitImg) {
-          cardPortraitImg.src = `${res.imageUrl}?t=${Date.now()}`;
-        } else if (res?.dataUrl && cardPortraitImg) {
-          cardPortraitImg.src = res.dataUrl;
-        }
+        if (res?.ok) window.location.reload();
       },
     });
   };
@@ -490,17 +453,7 @@ const profile = await getFacultyProfile();
     }
   });
 
-  // Listen for global media update events (e.g. from header cameo or other triggers)
-  window.addEventListener('drc:media-updated', (e: any) => {
-    const detail = e.detail;
-    if (detail?.imageUrl && cardPortraitImg) {
-      cardPortraitImg.src = detail.imageUrl.startsWith('data:')
-        ? detail.imageUrl
-        : `${detail.imageUrl}?t=${Date.now()}`;
-    }
-  });
-
-  // 3. Save & Synchronize Entire Identity Folio
+  // Save & synchronize the identity folio.
   const saveIdentity = async () => {
     if (!form) return;
     if (saveBtn) saveBtn.disabled = true;
@@ -534,6 +487,8 @@ const profile = await getFacultyProfile();
 
       if (res?.ok) {
         (window as any).notify?.('Faculty identity folio successfully synchronized!', 'success');
+        // Re-render all preview fields from the persisted profile.
+        window.location.reload();
       } else {
         (window as any).notify?.(res?.error || 'Failed to save identity changes.', 'error');
       }
@@ -555,6 +510,42 @@ const profile = await getFacultyProfile();
   const formPane = document.getElementById('pane-id-form');
   const previewPane = document.getElementById('pane-id-preview');
   const mobileSaveBtn = document.getElementById('btn-mobile-save-identity');
+  const stage = document.getElementById('card-stage-container');
+  const gateLaptop = document.getElementById('gate-btn-laptop');
+  const gateMobile = document.getElementById('gate-btn-mobile');
+  const previewCards = stage?.querySelectorAll<HTMLElement>('.id-card-surface') || [];
+
+  const setPreviewMode = (mode: 'desktop' | 'mobile') => {
+    if (!stage) return;
+    stage.dataset.previewMode = mode;
+    gateLaptop?.classList.toggle('is-active', mode === 'desktop');
+    gateMobile?.classList.toggle('is-active', mode === 'mobile');
+    gateLaptop?.setAttribute('aria-pressed', String(mode === 'desktop'));
+    gateMobile?.setAttribute('aria-pressed', String(mode === 'mobile'));
+    previewCards.forEach((card) => { card.dataset.cardVariant = mode; });
+  };
+  gateLaptop?.addEventListener('click', () => setPreviewMode('desktop'));
+  gateMobile?.addEventListener('click', () => setPreviewMode('mobile'));
+
+  // Laptop card receives a lightweight tilt simulation in the admin stage.
+  stage?.addEventListener('pointermove', (event) => {
+    if (stage.dataset.previewMode !== 'desktop' || !window.matchMedia('(pointer: fine)').matches) return;
+    const card = stage.querySelector('.laptop-preview-card .id-card-surface') as HTMLElement | null;
+    if (!card) return;
+    const rect = card.getBoundingClientRect();
+    const x = (event.clientX - rect.left) / rect.width, y = (event.clientY - rect.top) / rect.height;
+    if (x < 0 || x > 1 || y < 0 || y > 1) return;
+    card.style.setProperty('--card-tilt-x', `${((y - .5) * -7).toFixed(2)}deg`);
+    card.style.setProperty('--card-tilt-y', `${((x - .5) * 7).toFixed(2)}deg`);
+    card.style.setProperty('--card-light-x', `${(x * 100).toFixed(1)}%`);
+    card.style.setProperty('--card-light-y', `${(y * 100).toFixed(1)}%`);
+  });
+  stage?.addEventListener('pointerleave', () => {
+    stage.querySelectorAll<HTMLElement>('.id-card-surface').forEach((card) => {
+      card.style.setProperty('--card-tilt-x', '0deg'); card.style.setProperty('--card-tilt-y', '0deg');
+      card.style.setProperty('--card-light-x', '82%'); card.style.setProperty('--card-light-y', '12%');
+    });
+  });
 
   mobileSaveBtn?.addEventListener('click', saveIdentity);
 
@@ -576,9 +567,17 @@ const profile = await getFacultyProfile();
     if (previewPane) previewPane.classList.remove('mobile-hidden');
   });
 
-  // Default initial state on small screens: preview pane starts hidden until toggled
+  // Small screens open directly to the mobile card preview.
   if (window.innerWidth <= 800 && previewPane) {
-    previewPane.classList.add('mobile-hidden');
+    setPreviewMode('mobile');
+    tabPreview?.classList.add('is-active');
+    tabPreview?.setAttribute('aria-selected', 'true');
+    tabSpecs?.classList.remove('is-active');
+    tabSpecs?.setAttribute('aria-selected', 'false');
+    formPane?.classList.add('mobile-hidden');
+    previewPane.classList.remove('mobile-hidden');
+  } else {
+    setPreviewMode('desktop');
   }
 
   // Mobile accordion state listener & initial screen layout sync
@@ -654,7 +653,7 @@ const profile = await getFacultyProfile();
   /* Workbench Split Grid */
   .identity-workbench-grid {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 420px;
+    grid-template-columns: minmax(0, 1fr) 480px;
     gap: 2.25rem;
     align-items: start;
   }
@@ -662,6 +661,13 @@ const profile = await getFacultyProfile();
   @media (max-width: 1080px) {
     .identity-workbench-grid {
       grid-template-columns: 1fr;
+    }
+  }
+
+  @media (min-width: 1081px) and (max-width: 1280px) {
+    .identity-workbench-grid {
+      grid-template-columns: minmax(0, 1fr) minmax(360px, 42%);
+      gap: 1.5rem;
     }
   }
 
@@ -684,7 +690,7 @@ const profile = await getFacultyProfile();
 
   .fieldset-legend {
     font-family: var(--font-mono, monospace);
-    font-size: 0.68rem;
+    font-size: 0.72rem;
     letter-spacing: 0.12em;
     text-transform: uppercase;
     color: var(--accent, #c9a84e);
@@ -719,13 +725,16 @@ const profile = await getFacultyProfile();
 
   .field-label {
     font-family: var(--font-mono, monospace);
-    font-size: 0.72rem;
+    font-size: 0.76rem;
     color: var(--text-secondary);
     letter-spacing: 0.04em;
   }
 
   .form-field input,
   .form-field textarea {
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
     padding: 0.55rem 0.75rem;
     border-radius: 5px;
     border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.1));
@@ -739,7 +748,15 @@ const profile = await getFacultyProfile();
 
   .form-field input.mono {
     font-family: var(--font-mono, monospace);
-    font-size: 0.82rem;
+    font-size: 0.86rem;
+  }
+
+  .identity-form-pane,
+  .identity-fieldset,
+  .form-row-2,
+  .form-row-3,
+  .form-field {
+    min-width: 0;
   }
 
   .form-field input:focus,
@@ -752,6 +769,9 @@ const profile = await getFacultyProfile();
   /* Right Sticky Preview Pane */
   .identity-preview-pane {
     position: relative;
+    z-index: 1;
+    min-width: 0;
+    overflow: visible;
   }
 
   .preview-sticky-deck {
@@ -760,19 +780,28 @@ const profile = await getFacultyProfile();
     display: flex;
     flex-direction: column;
     gap: 1.25rem;
+    max-block-size: calc(100dvh - 6.5rem);
+    overflow-y: auto;
+    overflow-x: hidden;
+    overscroll-behavior: contain;
+    scrollbar-gutter: stable;
   }
 
   .preview-deck-header {
+    position: sticky;
+    top: 0;
+    z-index: 2;
     display: flex;
     align-items: center;
     justify-content: space-between;
     padding-block-end: 0.75rem;
     border-block-end: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.08));
+    background: var(--bg-canvas, #070a16);
   }
 
   .preview-kicker {
     font-family: var(--font-mono, monospace);
-    font-size: 0.62rem;
+    font-size: 0.69rem;
     letter-spacing: 0.14em;
     color: var(--accent, #c9a84e);
     display: block;
@@ -781,7 +810,7 @@ const profile = await getFacultyProfile();
 
   .preview-heading {
     font-family: var(--font-serif, serif);
-    font-size: 1rem;
+    font-size: 1.08rem;
     font-weight: 500;
     margin: 0;
   }
@@ -791,7 +820,7 @@ const profile = await getFacultyProfile();
     align-items: center;
     gap: 0.4rem;
     font-family: var(--font-mono, monospace);
-    font-size: 0.65rem;
+    font-size: 0.7rem;
     letter-spacing: 0.06em;
     text-transform: uppercase;
     color: #4ade80;
@@ -820,6 +849,60 @@ const profile = await getFacultyProfile();
     justify-content: center;
   }
 
+  .device-gate-selector {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.45rem;
+    padding: 0.3rem;
+    border: 1px solid var(--border-subtle);
+    border-radius: 9px;
+    background: var(--bg-canvas);
+  }
+
+  .gate-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.45rem;
+    min-height: 42px;
+    padding: 0.45rem 0.6rem;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--text-secondary);
+    font: 600 0.78rem/1.15 var(--font-mono, monospace);
+    cursor: pointer;
+  }
+
+  .gate-btn small { color: var(--text-muted); font-size: 0.66rem; }
+  .gate-btn.is-active { border-color: color-mix(in srgb, var(--accent) 60%, transparent); background: color-mix(in srgb, var(--accent) 12%, var(--bg-surface)); color: var(--text-primary); }
+
+  .device-stage { position: relative; box-sizing: border-box; min-width: 0; height: 650px; min-height: 650px; align-items: flex-start; padding: 1.5rem 0.25rem; overflow: visible; }
+  .laptop-preview-card { width: 100%; min-width: 0; }
+  .mobile-frame-mockup { display: none; position: relative; box-sizing: border-box; inline-size: 390px; max-inline-size: 100%; padding: 10px; border: 2px solid #555b65; border-radius: 39px; background: linear-gradient(145deg,#252a31,#080a0d 48%,#343941); box-shadow: 0 24px 65px #0009, inset 0 0 0 2px #bfc5ce22; }
+  .mobile-frame-screen { position: relative; box-sizing: border-box; display: flex; flex-direction: column; gap: 0.7rem; width: 100%; height: 560px; min-width: 0; min-height: 0; padding: 1.5rem 0.25rem 1rem; overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; border-radius: 29px; background: radial-gradient(ellipse at 50% 0%,#273044,#090d18 60%); }
+  .mobile-frame-speaker { position: absolute; z-index: 2; inset-block-start: 12px; inset-inline-start: 50%; transform: translateX(-50%); width: 92px; height: 20px; border-radius: 0 0 14px 14px; background: #050608; box-shadow: inset 0 -1px #ffffff17; }
+  .mobile-frame-status { display: flex; justify-content: space-between; padding: 0 1.25rem; color: #f2f3f5; font: 600 0.6rem/1 var(--font-mono, monospace); }
+  .mobile-frame-home { width: 96px; height: 4px; margin: auto auto 0; flex: none; border-radius: 99px; background: #f8fafc; opacity: .82; }
+  .device-stage[data-preview-mode="desktop"] .laptop-preview-card { display: block; }
+  .device-stage[data-preview-mode="desktop"] .mobile-frame-mockup { display: none; }
+  .device-stage[data-preview-mode="mobile"] .laptop-preview-card { display: none; }
+  .device-stage[data-preview-mode="mobile"] .mobile-frame-mockup { display: block; }
+
+  :global(.id-card-surface[data-card-variant="mobile"]) { gap: 0.58rem; padding: 1.1rem 0.95rem 0.8rem; border-radius: 12px; }
+  :global(.id-card-surface[data-card-variant="mobile"] .id-card-strip) { font-size: 0.58rem; }
+  :global(.id-card-surface[data-card-variant="mobile"] .id-card-body) { grid-template-columns: 72px minmax(0,1fr); gap: 0.65rem; }
+  :global(.id-card-surface[data-card-variant="mobile"] .id-card-photo-frame) { inline-size: 72px; }
+  :global(.id-card-surface[data-card-variant="mobile"] .id-card-clearance) { font-size: 0.6rem; }
+  :global(.id-card-surface[data-card-variant="mobile"] .id-card-name) { font-size: 1.14rem; }
+  :global(.id-card-surface[data-card-variant="mobile"] .id-card-title) { font-size: 0.75rem; }
+  :global(.id-card-surface[data-card-variant="mobile"] .id-card-dept) { font-size: 0.58rem; }
+  :global(.id-card-surface[data-card-variant="mobile"] .id-card-status) { font-size: 0.57rem; }
+  :global(.id-card-surface[data-card-variant="mobile"] .id-card-telemetry dt) { font-size: 0.56rem; }
+  :global(.id-card-surface[data-card-variant="mobile"] .id-card-telemetry dd) { font-size: 0.68rem; }
+  :global(.id-card-surface[data-card-variant="mobile"] .id-card-sub-btn) { min-block-size: 44px; font-size: 0.6rem; }
+  :global(.id-card-surface[data-card-variant="mobile"] .id-card-serial) { font-size: 0.49rem; }
+
   /* PFP Toolstrip Box */
   .pfp-toolstrip-box {
     border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.08));
@@ -839,13 +922,13 @@ const profile = await getFacultyProfile();
 
   .mini-kicker {
     font-family: var(--font-mono, monospace);
-    font-size: 0.62rem;
+    font-size: 0.66rem;
     letter-spacing: 0.12em;
     color: var(--text-muted);
   }
 
   .ratio-pill {
-    font-size: 0.62rem;
+    font-size: 0.66rem;
     letter-spacing: 0.08em;
     padding: 0.15rem 0.4rem;
     border-radius: 3px;
@@ -854,7 +937,7 @@ const profile = await getFacultyProfile();
   }
 
   .pfp-hint-text {
-    font-size: 0.78rem;
+    font-size: 0.82rem;
     color: var(--text-secondary);
     line-height: 1.45;
   }
@@ -1054,16 +1137,16 @@ const profile = await getFacultyProfile();
 
     /* Mobile View Mode Tabs (Specifications ⇄ Live Carte de Visite) */
     .identity-mobile-tabs {
+      position: sticky !important;
+      top: calc(4.85rem + env(safe-area-inset-top, 0px));
+      z-index: 35;
       display: flex !important;
       gap: 0.4rem;
       padding: 0.35rem;
       background: color-mix(in srgb, var(--bg-surface) 94%, transparent);
       border: 1px solid var(--border-hairline);
       border-radius: 8px;
-      margin-bottom: 0.75rem;
-      position: sticky;
-      top: 50px;
-      z-index: 35;
+      margin-block-end: 0.75rem;
       backdrop-filter: blur(16px);
       -webkit-backdrop-filter: blur(16px);
       box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
@@ -1108,7 +1191,7 @@ const profile = await getFacultyProfile();
       gap: 0.75rem !important;
     }
 
-    .identity-form-pane {
+  .identity-form-pane {
       width: 100% !important;
       display: flex !important;
       flex-direction: column !important;
@@ -1120,7 +1203,61 @@ const profile = await getFacultyProfile();
     }
 
     .preview-sticky-deck {
-      position: static !important;
+      position: sticky !important;
+      top: calc(4.85rem + 4rem + env(safe-area-inset-top, 0px));
+      max-block-size: calc(100dvh - 13rem - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+      overflow-y: auto;
+      overflow-x: hidden;
+      overscroll-behavior: contain;
+      scrollbar-gutter: stable;
+    }
+
+    /* Keep the laptop card inside a phone-width preview without a fixed-height crop. */
+    .identity-preview-pane,
+    .preview-sticky-deck,
+    .device-stage,
+    .laptop-preview-card {
+      inline-size: 100%;
+      max-inline-size: 100%;
+      min-inline-size: 0;
+      box-sizing: border-box;
+    }
+
+    .device-stage {
+      padding: 0.75rem 0;
+      overflow: visible;
+    }
+
+    .device-stage[data-preview-mode="desktop"] {
+      height: auto;
+      min-height: 0;
+    }
+
+    .device-stage[data-preview-mode="mobile"] {
+      height: 650px;
+      min-height: 650px;
+      justify-content: center;
+    }
+
+    .device-stage[data-preview-mode="mobile"] .mobile-frame-mockup {
+      inline-size: min(390px, 100%) !important;
+      max-inline-size: 100% !important;
+      min-inline-size: 0;
+      margin-inline: auto !important;
+      align-self: center;
+      inset-inline: auto;
+      transform: none;
+    }
+
+    :global(.laptop-preview-card .id-card-surface--standalone[data-card-variant="desktop"]) {
+      inline-size: 100% !important;
+      max-inline-size: 440px;
+      min-inline-size: 0;
+      margin-inline: auto;
+    }
+
+    .preview-deck-header {
+      top: 0;
     }
 
     .form-row-2,

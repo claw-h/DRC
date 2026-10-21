@@ -1,0 +1,25 @@
+---
+export const prerender = false;
+
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import MobileOffline from '../../components/offline/MobileOffline.astro';
+import { getSystemState, getFacultyProfile } from '../../lib/system-state';
+
+const state = await getSystemState();
+const profile = await getFacultyProfile();
+
+// Return 200 OK so browsers and CDNs never suppress or discard our custom mobile offline UI
+Astro.response.status = 200;
+Astro.response.headers.set('Cache-Control', 'public, max-age=0, must-revalidate');
+Astro.response.headers.set('X-DRC-Offline-Page', 'true');
+
+const reason = Astro.url.searchParams.get('reason');
+const isMaintenance = reason === 'maintenance' || (state.offlineMode && reason !== 'offline');
+---
+
+<BaseLayout
+  title={isMaintenance ? "Observatory Closed (Mobile) · Duncan R. Cordry" : "You are offline! · Duncan R. Cordry"}
+  description="Dedicated mobile observatory offline notice for Dr. Duncan R. Cordry."
+>
+  <MobileOffline state={state} profile={profile} isMaintenance={isMaintenance} />
+</BaseLayout>

@@ -1,4 +1,6 @@
 import { createClient, type Client } from '@libsql/client';
+import fs from 'node:fs/promises';
+import path from 'node:path';
 import type { SystemState, FacultyProfile } from './system-state.ts';
 
 let cachedClient: Client | null = null;
@@ -23,6 +25,26 @@ export function getTursoClient(): Client | null {
     console.error('[Turso Client Init Error]', err);
     return null;
   }
+}
+
+// -------------------------------------------------------------
+// In-Memory Workspace Cache (TTL + Instant Invalidation)
+// -------------------------------------------------------------
+export interface ObservatoryWorkspacePayload {
+  systemState: SystemState;
+  profile: FacultyProfile;
+  publications: any[];
+  books: any[];
+  classes: any[];
+}
+
+let cachedWorkspaceData: ObservatoryWorkspacePayload | null = null;
+let workspaceCachedAt = 0;
+const WORKSPACE_CACHE_TTL = 30_000; // 30 seconds
+
+export function invalidateTursoCache(): void {
+  cachedWorkspaceData = null;
+  workspaceCachedAt = 0;
 }
 
 // -------------------------------------------------------------
@@ -58,6 +80,7 @@ export async function persistSystemStateToDb(state: SystemState): Promise<boolea
             VALUES ('current', ?, ?, ?)`,
       args: [state.offlineMode ? 1 : 0, state.featuredConstellationId, state.updatedAt],
     });
+    invalidateTursoCache();
     return true;
   } catch (err) {
     console.error('[Turso] persistSystemStateToDb error:', err);
@@ -136,6 +159,7 @@ export async function persistFacultyProfileToDb(profile: FacultyProfile): Promis
         new Date().toISOString(),
       ],
     });
+    invalidateTursoCache();
     return true;
   } catch (err) {
     console.error('[Turso] persistFacultyProfileToDb error:', err);
@@ -173,6 +197,7 @@ export async function persistPublicationToDb(item: any): Promise<boolean> {
         new Date().toISOString(),
       ],
     });
+    invalidateTursoCache();
     return true;
   } catch (err) {
     console.error('[Turso] persistPublicationToDb error:', err);
@@ -189,6 +214,7 @@ export async function deletePublicationFromDb(id: string): Promise<boolean> {
       sql: 'DELETE FROM publications WHERE id = ?',
       args: [id],
     });
+    invalidateTursoCache();
     return true;
   } catch (err) {
     console.error('[Turso] deletePublicationFromDb error:', err);
@@ -225,6 +251,7 @@ export async function persistBookToDb(item: any): Promise<boolean> {
         new Date().toISOString(),
       ],
     });
+    invalidateTursoCache();
     return true;
   } catch (err) {
     console.error('[Turso] persistBookToDb error:', err);
@@ -241,6 +268,7 @@ export async function deleteBookFromDb(id: string): Promise<boolean> {
       sql: 'DELETE FROM books WHERE id = ?',
       args: [id],
     });
+    invalidateTursoCache();
     return true;
   } catch (err) {
     console.error('[Turso] deleteBookFromDb error:', err);
@@ -276,6 +304,7 @@ export async function persistClassToDb(item: any): Promise<boolean> {
         new Date().toISOString(),
       ],
     });
+    invalidateTursoCache();
     return true;
   } catch (err) {
     console.error('[Turso] persistClassToDb error:', err);
@@ -292,6 +321,7 @@ export async function deleteClassFromDb(id: string): Promise<boolean> {
       sql: 'DELETE FROM classes WHERE id = ?',
       args: [id],
     });
+    invalidateTursoCache();
     return true;
   } catch (err) {
     console.error('[Turso] deleteClassFromDb error:', err);
@@ -401,105 +431,10 @@ export async function exportAllDataForBackup() {
 }
 
 // -------------------------------------------------------------
-// Live Database Collection Fetchers
-// -------------------------------------------------------------
-export async function fetchPublicationsFromDb(): Promise<Array<{ id: string; data: any }> | null> {
-  const db = getTursoClient();
-  if (!db) return null;
-
-  try {
-    const rs = await db.execute('SELECT * FROM publications ORDER BY year DESC');
-    if (!rs.rows.length) return null;
-
-    return rs.rows.map((row) => ({
-      id: String(row.id),
-      data: {
-        id: String(row.id),
-        title: String(row.title),
-        subtitle: (row.subtitle as string) || undefined,
-        year: Number(row.year),
-        venue: String(row.venue),
-        volumeIssue: (row.volume_issue as string) || undefined,
-        coAuthors: row.co_authors ? JSON.parse(String(row.co_authors)) : [],
-        abstract: String(row.abstract || ''),
-        doi: (row.doi as string) || undefined,
-        pdfUrl: (row.pdf_url as string) || undefined,
-        citationBibtex: String(row.citation_bibtex || ''),
-        sections: row.sections ? JSON.parse(String(row.sections)) : [],
-        references: row.references_data ? JSON.parse(String(row.references_data)) : [],
-      },
-    }));
-  } catch (err) {
-    console.error('[Turso] fetchPublicationsFromDb error:', err);
-    return null;
-  }
-}
-
-export async function fetchBooksFromDb(): Promise<Array<{ id: string; data: any }> | null> {
-  const db = getTursoClient();
-  if (!db) return null;
-
-  try {
-    const rs = await db.execute('SELECT * FROM books ORDER BY year DESC');
-    if (!rs.rows.length) return null;
-
-    return rs.rows.map((row) => ({
-      id: String(row.id),
-      data: {
-        id: String(row.id),
-        title: String(row.title),
-        subtitle: (row.subtitle as string) || undefined,
-        year: Number(row.year),
-        publisher: String(row.publisher),
-        isbn: String(row.isbn),
-        pages: Number(row.pages),
-        coverImage: String(row.cover_image),
-        synopsis: String(row.synopsis || ''),
-        endorsements: row.endorsements ? JSON.parse(String(row.endorsements)) : [],
-        chapters: row.chapters ? JSON.parse(String(row.chapters)) : [],
-        purchaseLinks: row.purchase_links ? JSON.parse(String(row.purchase_links)) : [],
-      },
-    }));
-  } catch (err) {
-    console.error('[Turso] fetchBooksFromDb error:', err);
-    return null;
-  }
-}
-
-export async function fetchClassesFromDb(): Promise<Array<{ id: string; data: any }> | null> {
-  const db = getTursoClient();
-  if (!db) return null;
-
-  try {
-    const rs = await db.execute('SELECT * FROM classes');
-    if (!rs.rows.length) return null;
-
-    return rs.rows.map((row) => ({
-      id: String(row.id),
-      data: {
-        id: String(row.id),
-        courseCode: String(row.course_code),
-        title: String(row.title),
-        academicYear: String(row.academic_year),
-        term: String(row.term),
-        level: String(row.level),
-        schedule: String(row.schedule),
-        syllabusPdf: (row.syllabus_pdf as string) || undefined,
-        summary: String(row.summary || ''),
-        weeks: row.weeks ? JSON.parse(String(row.weeks)) : [],
-        reviews: row.reviews ? JSON.parse(String(row.reviews)) : [],
-      },
-    }));
-  } catch (err) {
-    console.error('[Turso] fetchClassesFromDb error:', err);
-    return null;
-  }
-}
-
+// Static Fallback Helpers
 // -------------------------------------------------------------
 async function loadStaticFallback(collectionName: 'publications' | 'books' | 'classes') {
   try {
-    // Dynamic import to prevent crash in non-Astro Node environments
     const { getCollection } = await import('astro:content');
     return await getCollection(collectionName);
   } catch {
@@ -507,46 +442,193 @@ async function loadStaticFallback(collectionName: 'publications' | 'books' | 'cl
   }
 }
 
+async function getFallbackSystemState(): Promise<SystemState> {
+  try {
+    const raw = await fs.readFile(path.resolve(process.cwd(), 'src/data/system-state.json'), 'utf8');
+    return JSON.parse(raw);
+  } catch {
+    return {
+      offlineMode: false,
+      featuredConstellationId: null,
+      updatedAt: new Date().toISOString(),
+    };
+  }
+}
+
+async function getFallbackFacultyProfile(): Promise<FacultyProfile> {
+  try {
+    const raw = await fs.readFile(path.resolve(process.cwd(), 'src/data/profile.json'), 'utf8');
+    return JSON.parse(raw);
+  } catch {
+    return {
+      name: 'Duncan R. Cordry',
+      monogram: 'DRC',
+      credentialId: 'ASHOKA-PHIL-DRC',
+      title: 'Visiting Faculty of Philosophy',
+      department: 'Department of Philosophy',
+      education: 'Ph.D. in Philosophy, Purdue University',
+      office: 'Faculty Block · Rajiv Gandhi Education City, Sonipat',
+      officeHours: 'By Appointment · Semesters I & II',
+      phone: '+91 (0130) 230-0000',
+      email: 'duncan.cordry@ashoka.edu.in',
+      portraitUrl: '/images/duncan-cordry-portrait.webp',
+      institution: 'Ashoka University',
+      bio: 'Duncan Cordry specializes in continental philosophy and the philosophy of technology.',
+      aos: ['Continental Philosophy', 'Social & Political Philosophy', 'Philosophy of Technology'],
+      aoc: ['Phenomenology', 'Insurrectionist Ethics', 'American Pragmatism', 'Philosophies of Liberation'],
+      awards: [
+        'Claudia Jones Award for Best Graduate Paper, Caribbean Philosophical Association',
+        'Ross-Lynn Research Fellowship, Purdue University',
+      ],
+      ashokaProfileUrl: 'https://www.ashoka.edu.in/profile/duncan-cordry/',
+      philPeopleUrl: 'https://philpeople.org/profiles/duncan-r-cordry',
+    };
+  }
+}
+
 // -------------------------------------------------------------
-// Unified Getters (Live Turso DB First -> Local Collections Fallback)
+// Unified Instant Loader (Single Batched HTTP Roundtrip + In-Memory Micro-Cache)
+// -------------------------------------------------------------
+export async function loadObservatoryWorkspaceData(forceFresh = false): Promise<ObservatoryWorkspacePayload> {
+  const now = Date.now();
+  if (!forceFresh && cachedWorkspaceData && (now - workspaceCachedAt) < WORKSPACE_CACHE_TTL) {
+    return cachedWorkspaceData;
+  }
+
+  const db = getTursoClient();
+  if (db) {
+    try {
+      const [sysRs, profRs, pubRs, bookRs, clsRs] = await db.batch([
+        "SELECT offline_mode, featured_constellation_id, updated_at FROM system_state WHERE id = 'current' LIMIT 1",
+        "SELECT * FROM faculty_profile WHERE id = 'current' LIMIT 1",
+        "SELECT * FROM publications ORDER BY year DESC",
+        "SELECT * FROM books ORDER BY year DESC",
+        "SELECT * FROM classes"
+      ]);
+
+      const systemState: SystemState = sysRs.rows.length ? {
+        offlineMode: Boolean(sysRs.rows[0].offline_mode),
+        featuredConstellationId: (sysRs.rows[0].featured_constellation_id as string) || null,
+        updatedAt: (sysRs.rows[0].updated_at as string) || new Date().toISOString(),
+      } : await getFallbackSystemState();
+
+      const profRow = profRs.rows[0];
+      const profile: FacultyProfile = profRow ? {
+        name: String(profRow.name || ''),
+        monogram: String(profRow.monogram || 'DRC'),
+        credentialId: String(profRow.credential_id || 'ASHOKA-PHIL-DRC'),
+        title: String(profRow.title || ''),
+        department: String(profRow.department || ''),
+        education: (profRow.education as string) || undefined,
+        office: String(profRow.office || ''),
+        officeHours: String(profRow.office_hours || ''),
+        phone: String(profRow.phone || ''),
+        email: String(profRow.email || ''),
+        portraitUrl: String(profRow.portrait_url || '/images/duncan-cordry-portrait.webp'),
+        institution: String(profRow.institution || 'Ashoka University'),
+        bio: (profRow.bio as string) || undefined,
+        aos: profRow.aos ? JSON.parse(String(profRow.aos)) : [],
+        aoc: profRow.aoc ? JSON.parse(String(profRow.aoc)) : [],
+        awards: profRow.awards ? JSON.parse(String(profRow.awards)) : [],
+        ashokaProfileUrl: (profRow.ashoka_profile_url as string) || undefined,
+        philPeopleUrl: (profRow.phil_people_url as string) || undefined,
+      } : await getFallbackFacultyProfile();
+
+      const publications = pubRs.rows.map((row) => ({
+        id: String(row.id),
+        data: {
+          id: String(row.id),
+          title: String(row.title),
+          subtitle: (row.subtitle as string) || undefined,
+          year: Number(row.year),
+          venue: String(row.venue),
+          volumeIssue: (row.volume_issue as string) || undefined,
+          coAuthors: row.co_authors ? JSON.parse(String(row.co_authors)) : [],
+          abstract: String(row.abstract || ''),
+          doi: (row.doi as string) || undefined,
+          pdfUrl: (row.pdf_url as string) || undefined,
+          citationBibtex: String(row.citation_bibtex || ''),
+          sections: row.sections ? JSON.parse(String(row.sections)) : [],
+          references: row.references_data ? JSON.parse(String(row.references_data)) : [],
+        },
+      }));
+
+      const books = bookRs.rows.map((row) => ({
+        id: String(row.id),
+        data: {
+          id: String(row.id),
+          title: String(row.title),
+          subtitle: (row.subtitle as string) || undefined,
+          year: Number(row.year),
+          publisher: String(row.publisher),
+          isbn: String(row.isbn),
+          pages: Number(row.pages),
+          coverImage: String(row.cover_image),
+          synopsis: String(row.synopsis || ''),
+          endorsements: row.endorsements ? JSON.parse(String(row.endorsements)) : [],
+          chapters: row.chapters ? JSON.parse(String(row.chapters)) : [],
+          purchaseLinks: row.purchase_links ? JSON.parse(String(row.purchase_links)) : [],
+        },
+      }));
+
+      const classes = clsRs.rows.map((row) => ({
+        id: String(row.id),
+        data: {
+          id: String(row.id),
+          courseCode: String(row.course_code),
+          title: String(row.title),
+          academicYear: String(row.academic_year),
+          term: String(row.term),
+          level: String(row.level),
+          schedule: String(row.schedule),
+          syllabusPdf: (row.syllabus_pdf as string) || undefined,
+          summary: String(row.summary || ''),
+          weeks: row.weeks ? JSON.parse(String(row.weeks)) : [],
+          reviews: row.reviews ? JSON.parse(String(row.reviews)) : [],
+        },
+      }));
+
+      const payload: ObservatoryWorkspacePayload = {
+        systemState,
+        profile,
+        publications: publications.length ? publications : await loadStaticFallback('publications'),
+        books: books.length ? books : await loadStaticFallback('books'),
+        classes: classes.length ? classes : await loadStaticFallback('classes'),
+      };
+
+      cachedWorkspaceData = payload;
+      workspaceCachedAt = now;
+      return payload;
+    } catch (err) {
+      console.warn('[Turso] loadObservatoryWorkspaceData batch error, using fallback:', err);
+    }
+  }
+
+  // Fallback if Turso is unreachable
+  const fallbackPayload: ObservatoryWorkspacePayload = {
+    systemState: await getFallbackSystemState(),
+    profile: await getFallbackFacultyProfile(),
+    publications: await loadStaticFallback('publications'),
+    books: await loadStaticFallback('books'),
+    classes: await loadStaticFallback('classes'),
+  };
+  return fallbackPayload;
+}
+
+// -------------------------------------------------------------
+// Unified Getters (Leverage Batched Loader)
 // -------------------------------------------------------------
 export async function getPublicationsList(): Promise<any[]> {
-  try {
-    const fromDb = await fetchPublicationsFromDb();
-    if (fromDb && fromDb.length > 0) return fromDb;
-  } catch {}
-  try {
-    const fromStatic = await loadStaticFallback('publications');
-    return fromStatic.sort((a: any, b: any) => b.data.year - a.data.year);
-  } catch {
-    return [];
-  }
+  const data = await loadObservatoryWorkspaceData();
+  return data.publications;
 }
 
 export async function getBooksList(): Promise<any[]> {
-  try {
-    const fromDb = await fetchBooksFromDb();
-    if (fromDb && fromDb.length > 0) return fromDb;
-  } catch {}
-  try {
-    const fromStatic = await loadStaticFallback('books');
-    return fromStatic.sort((a: any, b: any) => b.data.year - a.data.year);
-  } catch {
-    return [];
-  }
+  const data = await loadObservatoryWorkspaceData();
+  return data.books;
 }
 
 export async function getClassesList(): Promise<any[]> {
-  try {
-    const fromDb = await fetchClassesFromDb();
-    if (fromDb && fromDb.length > 0) return fromDb;
-  } catch {}
-  try {
-    return await loadStaticFallback('classes');
-  } catch {
-    return [];
-  }
+  const data = await loadObservatoryWorkspaceData();
+  return data.classes;
 }
-
-
-

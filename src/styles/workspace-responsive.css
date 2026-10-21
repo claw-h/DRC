@@ -588,6 +588,11 @@
     }
   }
 
+  @media (max-width: 767px) {
+    [popover].cite-hovercard { display: none !important; }
+    .cite-trigger { min-block-size: 28px; display: inline-flex; align-items: center; }
+  }
+
   /* BOOKS Catalog Subgrid + Container Queries */
   .book-catalog-grid {
     display: grid;
@@ -948,6 +953,24 @@
 
   /* MOBILE (< 768px): Native Horizontal Stack Drill-Down */
   @media (max-width: 767px) {
+    :root { --public-mobile-bar-size: calc(60px + env(safe-area-inset-bottom, 0px)); }
+
+    .academic-shell {
+      block-size: calc(100dvh - var(--public-mobile-bar-size));
+      max-block-size: calc(100dvh - var(--public-mobile-bar-size));
+    }
+
+    .academic-shell > .spa-view {
+      block-size: calc(100dvh - var(--chrome-height) - var(--public-mobile-bar-size));
+      max-block-size: calc(100dvh - var(--chrome-height) - var(--public-mobile-bar-size));
+    }
+
+    .artefact-modal { display: none !important; }
+    .btn-open-pub-codex,
+    .btn-open-book-tome,
+    .btn-open-class-ledger,
+    .btn-toggle-review-form { display: none !important; }
+
     .mobile-back-bar {
       display: flex;
       align-items: center;
@@ -960,7 +983,11 @@
       z-index: 10;
     }
 
+    .btn-mobile-back { min-block-size: 44px; }
+
     .workspace-split {
+      block-size: 100%;
+      max-block-size: 100%;
       display: grid;
       grid-template-columns: none;
       grid-auto-flow: column;
@@ -989,6 +1016,8 @@
       scroll-snap-stop: always;
       border-inline-end: none;
     }
+
+    .pane-inner-scroll { scroll-behavior: auto; }
 
     @supports (animation-timeline: view()) {
       .workspace-pane-left .pane-inner-scroll {

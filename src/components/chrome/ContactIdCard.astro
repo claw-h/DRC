@@ -2,132 +2,140 @@
 import type { FacultyProfile } from '../../lib/system-state';
 import FacultyVisitingCard from './FacultyVisitingCard.astro';
 
-interface Props {
-  profile: FacultyProfile;
-}
-
+interface Props { profile: FacultyProfile; }
 const { profile } = Astro.props;
 ---
 
-<dialog id="contact-id-card" class="id-card-dialog bookplate-card" closedby="any" aria-labelledby="id-card-name">
+<dialog id="contact-id-card" class="id-card-dialog bookplate-card" style="position: fixed !important; inset: auto !important; inset-block-start: 4.25rem !important; inset-inline-end: 1rem !important; margin: 0 !important;" aria-labelledby="id-card-name">
   <FacultyVisitingCard profile={profile} isDialog={true} />
 </dialog>
 
 <script>
-  const triggerBtn = document.getElementById('contact-trigger-btn');
+  const triggerBtn = document.getElementById('contact-trigger-btn') as HTMLButtonElement | null;
   const dialog = document.getElementById('contact-id-card') as HTMLDialogElement | null;
-  const copyBtn = document.getElementById('btn-copy-faculty-email') as HTMLButtonElement | null;
+  const copyBtn = dialog?.querySelector('[data-email]') as HTMLButtonElement | null;
   const closeBtn = document.getElementById('id-card-close-btn');
 
-  let supportsDisplayTransition: boolean | undefined;
-  function canTransitionDisplay(): boolean {
-    if (supportsDisplayTransition !== undefined) return supportsDisplayTransition;
-    if (!window.CSS?.supports?.('transition-behavior', 'allow-discrete') || !document.body) {
-      return false;
-    }
-    const probe = document.createElement('div');
-    probe.style.cssText = 'transition: display 1s allow-discrete !important; display: block;';
-    document.body.appendChild(probe);
-    getComputedStyle(probe).display;
-    probe.style.display = 'none';
-    supportsDisplayTransition = getComputedStyle(probe).display === 'block';
-    probe.remove();
-    return supportsDisplayTransition;
+  function supportsTopLayerExit(): boolean {
+    return Boolean(window.CSS?.supports?.('overlay', 'auto') && window.CSS?.supports?.('transition-behavior', 'allow-discrete'));
   }
 
-  function supportsTopLayerExit(): boolean {
-    return Boolean(window.CSS?.supports?.('overlay', 'auto') && canTransitionDisplay());
+  function positionDesktopCard() {
+    if (!dialog) return;
+    if (window.innerWidth < 768) {
+      dialog.style.setProperty('position', 'fixed', 'important');
+      dialog.style.setProperty('inset', 'auto', 'important');
+      dialog.style.setProperty('top', 'auto', 'important');
+      dialog.style.setProperty('right', '.75rem', 'important');
+      dialog.style.setProperty('bottom', 'calc(env(safe-area-inset-bottom, 12px) + .75rem)', 'important');
+      dialog.style.setProperty('left', '.75rem', 'important');
+      dialog.style.setProperty('width', 'min(420px, calc(100dvw - 1.5rem))', 'important');
+      dialog.style.setProperty('max-height', 'calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 12px) - 1.5rem)', 'important');
+      dialog.style.setProperty('overflow', 'auto', 'important');
+      dialog.style.setProperty('overscroll-behavior', 'contain', 'important');
+      dialog.style.setProperty('margin', '0 auto', 'important');
+      return;
+    }
+    if (!triggerBtn) return;
+    const triggerRect = triggerBtn.getBoundingClientRect();
+    const cardRect = dialog.getBoundingClientRect();
+    const top = Math.max(12, Math.min(triggerRect.bottom + 10, window.innerHeight - cardRect.height - 12));
+    const right = Math.max(12, window.innerWidth - triggerRect.right);
+    dialog.style.setProperty('position', 'fixed', 'important');
+    dialog.style.setProperty('top', `${Math.round(top)}px`, 'important');
+    dialog.style.setProperty('right', `${Math.round(right)}px`, 'important');
+    dialog.style.setProperty('bottom', 'auto', 'important');
+    dialog.style.setProperty('left', 'auto', 'important');
+    dialog.style.setProperty('margin', '0', 'important');
   }
 
   async function closeIdCard() {
-    if (!dialog) return;
+    if (!dialog?.open) return;
     if (!supportsTopLayerExit()) {
       dialog.setAttribute('data-closing', '');
       const animations = dialog.getAnimations({ subtree: true });
-      if (animations.length > 0) {
-        await Promise.race([
-          Promise.allSettled(animations.map((a) => a.finished)),
-          new Promise((r) => setTimeout(r, 400)),
-        ]);
-      }
+      if (animations.length) await Promise.race([Promise.allSettled(animations.map((a) => a.finished)), new Promise((r) => setTimeout(r, 400))]);
       if (!dialog.hasAttribute('data-closing')) return;
       dialog.removeAttribute('data-closing');
     }
     dialog.close();
   }
 
-  closeBtn?.addEventListener('click', () => {
-    closeIdCard();
-  });
-
-  triggerBtn?.addEventListener('click', (e) => {
-    e.preventDefault();
+  const toggleCard = (event?: Event) => {
+    event?.preventDefault();
     if (!dialog) return;
-    if (dialog.open) {
-      closeIdCard();
-    } else {
-      dialog.showModal();
+    if (dialog.open) closeIdCard();
+    else {
+      if (typeof dialog.showModal === 'function') dialog.showModal();
+      else dialog.setAttribute('open', '');
+      requestAnimationFrame(positionDesktopCard);
     }
-  });
+  };
 
-  dialog?.addEventListener('cancel', (event) => {
-    event.preventDefault();
-    closeIdCard();
-  });
-
+  triggerBtn?.addEventListener('click', toggleCard);
+  window.addEventListener('resize', () => { if (dialog?.open) positionDesktopCard(); });
+  if (dialog && typeof MutationObserver !== 'undefined') {
+    const openObserver = new MutationObserver(() => { if (dialog.open) requestAnimationFrame(positionDesktopCard); });
+    openObserver.observe(dialog, { attributes: true, attributeFilter: ['open'] });
+  }
+  closeBtn?.addEventListener('click', () => closeIdCard());
+  dialog?.addEventListener('cancel', (event) => { event.preventDefault(); closeIdCard(); });
+  dialog?.addEventListener('toggle', () => { if (dialog.open) requestAnimationFrame(positionDesktopCard); });
   dialog?.addEventListener('click', (event) => {
     if (event.target !== dialog) return;
     const rect = dialog.getBoundingClientRect();
-    const isInside =
-      rect.top <= event.clientY &&
-      event.clientY <= rect.top + rect.height &&
-      rect.left <= event.clientX &&
-      event.clientX <= rect.left + rect.width;
-
-    if (!isInside) {
-      closeIdCard();
-    }
+    if (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom) closeIdCard();
   });
 
-  copyBtn?.addEventListener('click', () => {
+  copyBtn?.addEventListener('click', async () => {
     const email = copyBtn.dataset.email || '';
-    navigator.clipboard?.writeText(email);
-    const orig = copyBtn.textContent;
-    copyBtn.textContent = '✓ Copied';
-    setTimeout(() => (copyBtn.textContent = orig), 1600);
+    try {
+      if (navigator.clipboard?.writeText) await navigator.clipboard.writeText(email);
+      else {
+        const input = document.createElement('textarea'); input.value = email; input.style.position = 'fixed'; input.style.opacity = '0';
+        document.body.append(input); input.select(); document.execCommand('copy'); input.remove();
+      }
+      const original = copyBtn.textContent;
+      copyBtn.textContent = '✓ Copied';
+      copyBtn.setAttribute('aria-live', 'polite');
+      window.setTimeout(() => { copyBtn.textContent = original; }, 1600);
+    } catch { (window as any).notify?.('Could not copy the email address.', 'error'); }
   });
 
-  // 3D Pointer-Tracking Tilt and Specular Highlight for Visiting Card
-  const surface = dialog?.querySelector('.id-card-surface') as HTMLElement | null;
+  // A downward touch gesture on the sheet dismisses it; short scrolls remain native.
+  let touchStartY: number | null = null;
+  const cardSurface = dialog?.querySelector('.id-card-surface');
+  cardSurface?.addEventListener('pointerdown', (event) => {
+    if (event.pointerType === 'touch') touchStartY = event.clientY;
+  });
+  cardSurface?.addEventListener('pointerup', (event) => {
+    if (touchStartY !== null && event.pointerType === 'touch' && event.clientY - touchStartY > 84) closeIdCard();
+    touchStartY = null;
+  });
+  cardSurface?.addEventListener('pointercancel', () => { touchStartY = null; });
+
+  // Pointer tilt is reserved for wide, fine-pointer desktop surfaces.
+  const surface = cardSurface as HTMLElement | null;
   const isReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-
-  if (dialog && surface && !isReducedMotion && window.matchMedia('(min-width: 768px)').matches) {
+  if (dialog && surface && !isReducedMotion && window.matchMedia('(min-width: 768px) and (pointer: fine)').matches) {
     let tiltRaf: number | null = null;
-
     dialog.addEventListener('pointermove', (event) => {
       if (tiltRaf) cancelAnimationFrame(tiltRaf);
       tiltRaf = requestAnimationFrame(() => {
         const rect = surface.getBoundingClientRect();
-        const px = (event.clientX - rect.left) / rect.width;
-        const py = (event.clientY - rect.top) / rect.height;
-
+        const px = (event.clientX - rect.left) / rect.width, py = (event.clientY - rect.top) / rect.height;
         if (px >= 0 && px <= 1 && py >= 0 && py <= 1) {
-          const tiltX = (py - 0.5) * -12;
-          const tiltY = (px - 0.5) * 12;
-          surface.style.setProperty('--card-tilt-x', `${tiltX.toFixed(2)}deg`);
-          surface.style.setProperty('--card-tilt-y', `${tiltY.toFixed(2)}deg`);
+          surface.style.setProperty('--card-tilt-x', `${((py - .5) * -8).toFixed(2)}deg`);
+          surface.style.setProperty('--card-tilt-y', `${((px - .5) * 8).toFixed(2)}deg`);
           surface.style.setProperty('--card-light-x', `${(px * 100).toFixed(1)}%`);
           surface.style.setProperty('--card-light-y', `${(py * 100).toFixed(1)}%`);
         }
       });
     });
-
     dialog.addEventListener('pointerleave', () => {
       if (tiltRaf) cancelAnimationFrame(tiltRaf);
-      surface.style.setProperty('--card-tilt-x', '0deg');
-      surface.style.setProperty('--card-tilt-y', '0deg');
-      surface.style.setProperty('--card-light-x', '85%');
-      surface.style.setProperty('--card-light-y', '15%');
+      surface.style.setProperty('--card-tilt-x', '0deg'); surface.style.setProperty('--card-tilt-y', '0deg');
+      surface.style.setProperty('--card-light-x', '82%'); surface.style.setProperty('--card-light-y', '12%');
     });
   }
 </script>

@@ -779,6 +779,9 @@ const sortedBooks = [...books].sort((a, b) => b.data.year - a.data.year);
         resetReaderScroll(splitContainer);
         if (!splitContainer) return;
         if (window.matchMedia('(max-width: 767px)').matches) {
+          if (!history.state?.drcMobileDetail) {
+            history.pushState({ ...(history.state || {}), drcMobileDetail: true }, '', location.href);
+          }
           splitContainer.scrollBy({ left: splitContainer.clientWidth, behavior: 'auto' });
         }
       };
@@ -892,13 +895,19 @@ const sortedBooks = [...books].sort((a, b) => b.data.year - a.data.year);
       this.querySelectorAll<HTMLButtonElement>('[data-stack-back]').forEach((backBtn) => {
         backBtn.addEventListener('click', () => {
           const split = backBtn.closest<HTMLElement>('.workspace-split');
-          split?.scrollTo({ left: 0, behavior: 'auto' });
+          if (history.state?.drcMobileDetail) history.back();
+          else split?.scrollTo({ left: 0, behavior: 'auto' });
         });
       });
 
       const isMobile = () => window.matchMedia('(max-width: 767px)').matches;
 
       this.querySelectorAll<HTMLElement>('.workspace-split').forEach((stack) => {
+        stack.addEventListener('scrollend', () => {
+          if (isMobile() && stack.scrollLeft < stack.clientWidth * 0.25 && history.state?.drcMobileDetail) {
+            history.back();
+          }
+        });
         const syncMobileInert = (activePane: Element | null) => {
           if (!isMobile() || !activePane) {
             stack.querySelectorAll('.workspace-pane-left, .workspace-pane-right').forEach((p) =>
@@ -928,6 +937,13 @@ const sortedBooks = [...books].sort((a, b) => b.data.year - a.data.year);
           );
           stack.querySelectorAll('.workspace-pane-left, .workspace-pane-right').forEach((p) => obs.observe(p));
         }
+      });
+
+      window.addEventListener('popstate', () => {
+        if (history.state?.drcMobileDetail) return;
+        this.querySelectorAll<HTMLElement>('.workspace-split').forEach((stack) => {
+          if (isMobile()) stack.scrollTo({ left: 0, behavior: 'auto' });
+        });
       });
     }
 
@@ -1527,12 +1543,22 @@ const sortedBooks = [...books].sort((a, b) => b.data.year - a.data.year);
         const target = event.target as HTMLElement | null;
         if (!target) return;
 
+        const showInlineOnMobile = (kind: 'pub' | 'book' | 'class', id: string) => {
+          if (!window.matchMedia('(max-width: 767px)').matches) return false;
+          const selector = kind === 'pub' ? `[data-pub-select="${CSS.escape(id)}"]`
+            : kind === 'book' ? `[data-book-select="${CSS.escape(id)}"]`
+              : `[data-class-select="${CSS.escape(id)}"]`;
+          const selectButton = this.querySelector<HTMLButtonElement>(selector);
+          selectButton?.click();
+          return true;
+        };
+
         // Button 2: Publications Codex
         const pubBtn = target.closest<HTMLElement>('[data-open-pub-codex]');
         if (pubBtn) {
           event.preventDefault();
           const id = pubBtn.dataset.openPubCodex;
-          if (id) openCodex(id);
+          if (id && !showInlineOnMobile('pub', id)) openCodex(id);
           return;
         }
 
@@ -1541,7 +1567,7 @@ const sortedBooks = [...books].sort((a, b) => b.data.year - a.data.year);
         if (bookBtn) {
           event.preventDefault();
           const id = bookBtn.dataset.openBookTome;
-          if (id) openTome(id);
+          if (id && !showInlineOnMobile('book', id)) openTome(id);
           return;
         }
 
@@ -1550,7 +1576,7 @@ const sortedBooks = [...books].sort((a, b) => b.data.year - a.data.year);
         if (classBtn) {
           event.preventDefault();
           const id = classBtn.dataset.openClassLedger;
-          if (id) openLedger(id, 'curr');
+          if (id && !showInlineOnMobile('class', id)) openLedger(id, 'curr');
           return;
         }
 
@@ -1559,7 +1585,7 @@ const sortedBooks = [...books].sort((a, b) => b.data.year - a.data.year);
         if (reviewBtn) {
           event.preventDefault();
           const id = reviewBtn.dataset.toggleReviewForm;
-          if (id) openLedger(id, 'eval');
+          if (id && !showInlineOnMobile('class', id)) openLedger(id, 'eval');
           return;
         }
       });

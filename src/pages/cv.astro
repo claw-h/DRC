@@ -2,13 +2,12 @@
 export const prerender = false;
 
 import BaseLayout from '../layouts/BaseLayout.astro';
-import { getFacultyProfile } from '../lib/system-state';
-import { getPublicationsList, getBooksList, getClassesList } from '../lib/turso';
+import { loadObservatoryWorkspaceData } from '../lib/turso';
 
-const publications = await getPublicationsList();
-const books = await getBooksList();
-const classes = await getClassesList();
-const profile = await getFacultyProfile();
+// Edge CDN Caching: Vercel Edge serves cached HTML in ~15ms and revalidates in the background
+Astro.response.headers.set('Cache-Control', 'public, s-maxage=30, stale-while-revalidate=86400');
+
+const { publications, books, classes, profile } = await loadObservatoryWorkspaceData();
 ---
 
 <BaseLayout
@@ -155,6 +154,10 @@ const profile = await getFacultyProfile();
 </BaseLayout>
 
 <style>
+  @media (max-width: 767px) {
+    .cv-document { padding-block-end: calc(6rem + env(safe-area-inset-bottom, 0px)); }
+  }
+
   @page {
     size: A4;
     margin: 18mm 16mm;

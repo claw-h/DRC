@@ -43,7 +43,11 @@ const { profile, pubCount, bookCount, classCount } = Astro.props;
     </a>
 
     <!-- Right-Docked Study Controls -->
-    <div class="header-actions">
+    <details class="header-controls-disclosure">
+      <summary class="header-controls-trigger" aria-label="Site controls" title="Site controls">
+        <svg aria-hidden="true" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16" /></svg>
+      </summary>
+      <div class="header-actions" id="header-controls-tray">
       <!-- Tiny Metallic Minecraft Block with Inscribed PCB Orthodox Cross Emblem -->
       <div
         class="mc-metallic-block-bar mc-emblem-block"
@@ -104,7 +108,8 @@ const { profile, pubCount, bookCount, classCount } = Astro.props;
 
       <!-- Day / Night Study Mode Toggle -->
       <ThemeToggle />
-    </div>
+      </div>
+    </details>
 
     <!-- First-visit Top Bar Controls Tour -->
     <SiteIntroGuide />
@@ -119,6 +124,29 @@ const { profile, pubCount, bookCount, classCount } = Astro.props;
   const centerStation = document.getElementById('header-brand-center');
   const leftStation = document.getElementById('header-brand-left');
   const metallicBlock = document.getElementById('mc-metallic-bar');
+  const controlsDisclosure = document.querySelector<HTMLDetailsElement>('.header-controls-disclosure');
+  const controlsTray = document.getElementById('header-controls-tray') as (HTMLElement & { showPopover?: () => void; hidePopover?: () => void; matches: (selector: string) => boolean }) | null;
+  const mobileControlsQuery = window.matchMedia('(max-width: 767px)');
+  if (mobileControlsQuery.matches) controlsTray?.setAttribute('popover', 'manual');
+
+  controlsDisclosure?.addEventListener('toggle', () => {
+    if (!controlsTray?.hasAttribute('popover') || !controlsTray.showPopover || !controlsTray.hidePopover) return;
+    try {
+      if (controlsDisclosure.open && !controlsTray.matches(':popover-open')) controlsTray.showPopover();
+      else if (!controlsDisclosure.open && controlsTray.matches(':popover-open')) controlsTray.hidePopover();
+    } catch {
+      // Keep the disclosure usable on browsers without a working Popover API.
+    }
+  });
+  mobileControlsQuery.addEventListener('change', (event) => {
+    if (!controlsTray) return;
+    if (event.matches) controlsTray.setAttribute('popover', 'manual');
+    else {
+      if (controlsTray.hidePopover && controlsTray.matches(':popover-open')) controlsTray.hidePopover();
+      if (controlsDisclosure) controlsDisclosure.open = false;
+      controlsTray.removeAttribute('popover');
+    }
+  });
 
   const updateStationA11y = (stage?: string) => {
     const isStage1 = !stage || stage === 'stage-1';

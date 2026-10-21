@@ -118,7 +118,7 @@ const { featuredConstellationId = null } = Astro.props;
     </div>
 
     <!-- Right: Folio Navigation & Export Actions -->
-    <div class="sky-hud-bottom-right">
+    <div class="sky-hud-bottom-right" role="toolbar" aria-label="Celestial chart actions">
       <button
         type="button"
         class="sky-hud-btn scholarly-caps"
@@ -128,6 +128,7 @@ const { featuredConstellationId = null } = Astro.props;
       >
         ⌕ Loupe 3.6×
       </button>
+      <div class="sky-actions-triplet" role="group" aria-label="Constellation actions">
       <button
         type="button"
         class="sky-hud-btn scholarly-caps"
@@ -152,6 +153,7 @@ const { featuredConstellationId = null } = Astro.props;
       >
         ↓ Export Plate
       </button>
+      </div>
       <a href="#stage-2" class="sky-scroll-cue scholarly-caps" aria-label="Scroll down to academic archive">
         SCROLL TO ENTER FOLIO ↓
       </a>
@@ -373,8 +375,15 @@ const { featuredConstellationId = null } = Astro.props;
     pointer-events: auto;
     display: flex;
     flex-direction: column;
-    align-items: flex-end;
+    align-items: center;
     gap: 0.65rem;
+  }
+
+  .sky-actions-triplet {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
   }
 
   .sky-hud-btn {
@@ -561,8 +570,12 @@ const { featuredConstellationId = null } = Astro.props;
   }
 
   @media (max-width: 768px) {
+    .sky-interactive-canvas { touch-action: none; }
+    .star-inset-popup,
+    .atlas-cartouche { display: none !important; }
     .stage-sky-hud {
       padding: 1rem;
+      padding-block-end: calc(5rem + env(safe-area-inset-bottom, 0px));
     }
     .sky-hud-bottom-row {
       flex-direction: column;
@@ -586,8 +599,25 @@ const { featuredConstellationId = null } = Astro.props;
     .sky-hud-bottom-right {
       flex-direction: row;
       flex-wrap: wrap;
-      justify-content: space-between;
+      justify-content: center;
       align-items: center;
+      gap: 0.5rem;
+    }
+    .sky-actions-triplet {
+      inline-size: 100%;
+      justify-content: center;
+      flex-wrap: nowrap;
+      gap: 0.4rem;
+    }
+    .sky-hud-btn {
+      min-block-size: 44px;
+      padding-inline: 0.75rem;
+      white-space: nowrap;
+      text-align: center;
+    }
+    .sky-actions-triplet .sky-hud-btn { flex: 1 1 0; min-inline-size: 0; padding-inline: 0.35rem; font-size: 0.65rem; }
+    #btn-toggle-loupe {
+      display: none !important;
     }
   }
 </style>
@@ -641,6 +671,12 @@ const { featuredConstellationId = null } = Astro.props;
     private parallax = { x: 0, y: 0, targetX: 0, targetY: 0 };
     private canvasRect: DOMRect | null = null;
 
+    // Mobile chart viewport: gestures transform the chart without changing its projection.
+    private mobileView = { zoom: 1, x: 0, y: 0 };
+    private activePointers = new Map<number, { x: number; y: number }>();
+    private lastGestureCenter: { x: number; y: number } | null = null;
+    private lastGestureDistance = 0;
+
     // Dense Diamond Dust Background Stars
     private denseFieldStars: any[] = [];
 
@@ -658,6 +694,9 @@ const { featuredConstellationId = null } = Astro.props;
 
     // Universal Cosmological Background Deep Field Galaxies (20–45 distant micro-galaxies)
     private universalFieldGalaxies: any[] = [];
+
+    // Offline constellation snapshot persistence
+    private snapshotCooldown: number = 0;
 
     // Cosmic Transients Engine (Sporadic Meteor Bolides & Ionized Wakes)
     private meteorState = {
@@ -869,6 +908,12 @@ const { featuredConstellationId = null } = Astro.props;
       const w = window.innerWidth;
       const h = window.innerHeight;
 
+      if (this.isMobileViewport()) {
+        this.selectedStar = null;
+        this.hoveredStar = null;
+        document.getElementById('star-inset-popup')?.setAttribute('hidden', '');
+      }
+
       this.canvas.width = Math.floor(w * dpr);
       this.canvas.height = Math.floor(h * dpr);
       this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -962,6 +1007,10 @@ const { featuredConstellationId = null } = Astro.props;
 
       this.previousConstellation = this.currentConstellation;
       this.currentConstellation = target;
+      this.mobileView.zoom = 1;
+      this.mobileView.x = 0;
+      this.mobileView.y = 0;
+      this.snapshotCooldown = 0;
       this.plateSessionCounter++;
       this.galaxyGenomes.clear();
       this.nebulaGenomes.clear();
@@ -1136,6 +1185,12 @@ const { featuredConstellationId = null } = Astro.props;
       // 1. Refractor Lens Dome Vignette on outer margin
       this.drawDomeVignette(w, h, isDark);
 
+      if (this.isMobileViewport()) {
+        this.ctx.translate(w / 2 + this.mobileView.x, h / 2 + this.mobileView.y);
+        this.ctx.scale(this.mobileView.zoom, this.mobileView.zoom);
+        this.ctx.translate(-w / 2, -h / 2);
+      }
+
       // 2. Volumetric Floating Colors & Interstellar Dust Veils (Randomized & Hue-Rotated)
       if (this.previousConstellation && oldConstellationAlpha > 0.01) {
         this.drawNebularVeils(w, h, isDark, now, oldConstellationAlpha, this.previousConstellation, Math.max(0, this.plateSessionCounter - 1));
@@ -1187,10 +1242,45 @@ const { featuredConstellationId = null } = Astro.props;
       this.ctx.restore();
 
       // 12. Antique Brass Inspection Loupe (2.5x Magnifier, Vintage Fisheye & Materialization Engine)
-      this.updateLoupeAnim(now);
+      if (this.isMobileViewport()) {
+        this.loupeAnim.active = false;
+        this.loupeAnim.scale = 0;
+        this.loupeAnim.opacity = 0;
+      } else {
+        this.updateLoupeAnim(now);
+      }
       if (this.loupeAnim.scale > 0.001) {
         this.drawLoupe(w, h, isDark, now);
       }
+
+      // Preserve active constellation snapshot for offline backdrop
+      this.captureConstellationSnapshot(now);
+    }
+
+    private captureConstellationSnapshot(now: number) {
+      if (this.camera.isSlewing) return;
+      if (now - this.drawStartTime < 1600) return;
+      if (now < this.snapshotCooldown) return;
+      if (!this.canvas || !this.currentConstellation) return;
+
+      try {
+        const snapCanvas = document.createElement('canvas');
+        const targetW = Math.min(1280, Math.max(640, window.innerWidth));
+        const targetH = Math.round(targetW * (window.innerHeight / window.innerWidth));
+        snapCanvas.width = targetW;
+        snapCanvas.height = targetH;
+        const snapCtx = snapCanvas.getContext('2d');
+        if (snapCtx) {
+          snapCtx.drawImage(this.canvas, 0, 0, targetW, targetH);
+          const dataUrl = snapCanvas.toDataURL('image/jpeg', 0.82);
+          try {
+            localStorage.setItem('drc-constellation-snapshot', dataUrl);
+            localStorage.setItem('drc-constellation-name', this.currentConstellation.name || 'Orion');
+            localStorage.setItem('drc-constellation-plate', this.currentConstellation.plateNumber || 'Plate XXXIV');
+          } catch (e) {}
+        }
+        this.snapshotCooldown = now + 12000;
+      } catch (err) {}
     }
 
     private drawAirglowFloor(w: number, h: number, isDark: boolean) {
@@ -4855,12 +4945,14 @@ const { featuredConstellationId = null } = Astro.props;
       // 0. Astronomical Inspection Loupe toggle (L key & button)
       const loupeBtn = document.getElementById('btn-toggle-loupe');
       loupeBtn?.addEventListener('click', () => {
+        if (this.isMobileViewport()) return;
         this.toggleLoupe();
       });
 
       window.addEventListener('keydown', (e) => {
         if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
         if (e.key === 'l' || e.key === 'L') {
+          if (this.isMobileViewport()) return;
           this.toggleLoupe();
         }
       });
@@ -4898,7 +4990,9 @@ const { featuredConstellationId = null } = Astro.props;
       exportBtn?.addEventListener('click', () => this.exportPlatePng());
 
       // 4. Interactive pointer hover & click on stars
-      this.canvas.addEventListener('mousemove', (e) => this.handlePointerMove(e));
+      this.canvas.addEventListener('mousemove', (e) => {
+        if (!this.isMobileViewport()) this.handlePointerMove(e);
+      });
       this.canvas.addEventListener('mouseenter', () => {
         if (this.loupeAnim.active) {
           this.canvas.classList.add('loupe-engaged');
@@ -4912,7 +5006,13 @@ const { featuredConstellationId = null } = Astro.props;
         this.isInteracting = false;
         this.canvas.style.cursor = 'default';
       });
-      this.canvas.addEventListener('click', (e) => this.handlePointerClick(e));
+      this.canvas.addEventListener('click', (e) => {
+        if (!this.isMobileViewport()) this.handlePointerClick(e);
+      });
+      this.canvas.addEventListener('pointerdown', (e) => this.handleMobilePointerDown(e));
+      this.canvas.addEventListener('pointermove', (e) => this.handleMobilePointerMove(e));
+      this.canvas.addEventListener('pointerup', (e) => this.handleMobilePointerEnd(e));
+      this.canvas.addEventListener('pointercancel', (e) => this.handleMobilePointerEnd(e));
 
       // Close popup button
       document.getElementById('inset-close-btn')?.addEventListener('click', () => {
@@ -4922,7 +5022,7 @@ const { featuredConstellationId = null } = Astro.props;
 
       // 5. Interactive Cartouche click/touch & keyboard controls
       const cartouche = document.getElementById('sky-cartouche');
-      if (cartouche) {
+      if (cartouche && !this.isMobileViewport()) {
         cartouche.addEventListener('click', (e) => {
           cartouche.classList.toggle('is-expanded');
           e.stopPropagation();
@@ -4962,7 +5062,67 @@ const { featuredConstellationId = null } = Astro.props;
       });
     }
 
+    private isMobileViewport() {
+      return window.matchMedia('(max-width: 767px)').matches;
+    }
+
+    private pointerCenter() {
+      const points = [...this.activePointers.values()];
+      if (!points.length) return null;
+      return points.reduce((center, point) => ({ x: center.x + point.x / points.length, y: center.y + point.y / points.length }), { x: 0, y: 0 });
+    }
+
+    private pointerDistance() {
+      const points = [...this.activePointers.values()];
+      if (points.length < 2) return 0;
+      return Math.hypot(points[0].x - points[1].x, points[0].y - points[1].y);
+    }
+
+    private handleMobilePointerDown(event: PointerEvent) {
+      if (!this.isMobileViewport() || event.pointerType === 'mouse') return;
+      event.preventDefault();
+      this.canvas.setPointerCapture(event.pointerId);
+      this.activePointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+      this.lastGestureCenter = this.pointerCenter();
+      this.lastGestureDistance = this.pointerDistance();
+      this.camera.isSlewing = false;
+    }
+
+    private handleMobilePointerMove(event: PointerEvent) {
+      if (!this.isMobileViewport() || !this.activePointers.has(event.pointerId)) return;
+      event.preventDefault();
+      this.activePointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+      const center = this.pointerCenter();
+      if (center && this.lastGestureCenter) {
+        this.mobileView.x += center.x - this.lastGestureCenter.x;
+        this.mobileView.y += center.y - this.lastGestureCenter.y;
+      }
+      const distance = this.pointerDistance();
+      if (distance > 0 && this.lastGestureDistance > 0) {
+        this.mobileView.zoom = Math.min(8, Math.max(1, this.mobileView.zoom * distance / this.lastGestureDistance));
+      }
+      const maxPanX = window.innerWidth * (this.mobileView.zoom - 1) / 2;
+      const maxPanY = window.innerHeight * (this.mobileView.zoom - 1) / 2;
+      this.mobileView.x = Math.min(maxPanX, Math.max(-maxPanX, this.mobileView.x));
+      this.mobileView.y = Math.min(maxPanY, Math.max(-maxPanY, this.mobileView.y));
+      this.lastGestureCenter = center;
+      this.lastGestureDistance = distance;
+      this.renderSingleFrame(performance.now());
+    }
+
+    private handleMobilePointerEnd(event: PointerEvent) {
+      if (!this.activePointers.has(event.pointerId)) return;
+      this.activePointers.delete(event.pointerId);
+      this.lastGestureCenter = this.pointerCenter();
+      this.lastGestureDistance = this.pointerDistance();
+      if (!this.activePointers.size) {
+        this.lastGestureCenter = null;
+        this.lastGestureDistance = 0;
+      }
+    }
+
     private toggleLoupe() {
+      if (this.isMobileViewport()) return;
       const now = performance.now();
       const willBeActive = !this.loupeAnim.active;
       this.loupeAnim.active = willBeActive;

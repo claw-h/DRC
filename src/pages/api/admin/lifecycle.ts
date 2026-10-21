@@ -74,7 +74,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     );
   }
 
-  // Level 1: Soft Maintenance Shutter (HTTP 503 toggle)
+  // Level 1: Soft Offline Shutter (Public Access toggle)
   if (action === 'toggle-offline') {
     const offlineMode = Boolean(body.offline);
     const updated = await updateSystemState({ offlineMode });
@@ -83,8 +83,8 @@ export const POST: APIRoute = async ({ request, cookies }) => {
         ok: true,
         state: updated,
         message: offlineMode
-          ? 'Observatory shutter engaged (HTTP 503 active for public visitors).'
-          : 'Observatory shutter opened (Public traffic restored).',
+          ? 'Observatory shutter engaged (Public site is now offline).'
+          : 'Observatory shutter opened (Public site access restored).',
       }),
       { status: 200, headers: { 'Content-Type': 'application/json' } }
     );
