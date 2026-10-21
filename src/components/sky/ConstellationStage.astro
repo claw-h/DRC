@@ -124,9 +124,10 @@ const { featuredConstellationId = null } = Astro.props;
         class="sky-hud-btn scholarly-caps"
         id="btn-toggle-loupe"
         title="Toggle Astronomical Inspection Loupe (L)"
+        aria-keyshortcuts="L"
         aria-pressed="false"
       >
-        ⌕ Loupe 3.6×
+        ⌕ Loupe 3.6× <span class="loupe-keyhint" aria-hidden="true" title="Hot-key: L">L</span>
       </button>
       <div class="sky-actions-triplet" role="group" aria-label="Constellation actions">
       <button
@@ -375,7 +376,7 @@ const { featuredConstellationId = null } = Astro.props;
     pointer-events: auto;
     display: flex;
     flex-direction: column;
-    align-items: center;
+    align-items: flex-end;
     gap: 0.65rem;
   }
 
@@ -412,6 +413,36 @@ const { featuredConstellationId = null } = Astro.props;
     border-color: var(--accent);
     color: var(--accent);
     box-shadow: 0 0 12px color-mix(in oklch, var(--accent) 30%, transparent);
+  }
+
+  #btn-toggle-loupe {
+    padding: 0.38rem 0.8rem;
+    border-color: color-mix(in oklch, var(--border-subtle) 72%, transparent);
+    background: color-mix(in oklch, var(--bg-surface) 78%, transparent);
+    color: var(--text-muted);
+    font-size: 0.7rem;
+    letter-spacing: 0.055em;
+  }
+
+  #btn-toggle-loupe.is-active {
+    color: var(--accent);
+    background: color-mix(in oklch, var(--accent) 12%, var(--bg-surface));
+    box-shadow: 0 0 7px color-mix(in oklch, var(--accent) 18%, transparent);
+  }
+
+  .loupe-keyhint {
+    display: inline-block;
+    margin-inline-start: 0.25rem;
+    padding: 0.05rem 0.28rem;
+    border: 1px solid var(--border-subtle);
+    border-radius: 2px;
+    background: color-mix(in oklch, var(--text-primary) 6%, transparent);
+    color: var(--text-muted);
+    font-family: var(--font-mono);
+    font-size: 0.55rem;
+    line-height: 1;
+    opacity: 0.65;
+    vertical-align: 0.08em;
   }
 
   .sky-scroll-cue {
@@ -4951,8 +4982,12 @@ const { featuredConstellationId = null } = Astro.props;
       });
 
       window.addEventListener('keydown', (e) => {
-        if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
-        if (e.key === 'l' || e.key === 'L') {
+        const target = e.target;
+        const isTyping = target instanceof HTMLInputElement
+          || target instanceof HTMLTextAreaElement
+          || (target instanceof HTMLElement && target.isContentEditable);
+        if (isTyping || e.altKey || e.ctrlKey || e.metaKey || e.repeat) return;
+        if (e.key.toLowerCase() === 'l') {
           if (this.isMobileViewport()) return;
           this.toggleLoupe();
         }

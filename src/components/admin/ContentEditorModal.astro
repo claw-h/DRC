@@ -4106,7 +4106,9 @@
      ======================================================== */
   .stage-mirror-pane {
     block-size: 100%;
-    overflow-y: auto;
+    min-block-size: 0;
+    min-inline-size: 0;
+    overflow: hidden;
     background: var(--bg-canvas);
     display: flex;
     flex-direction: column;
@@ -4153,13 +4155,18 @@
   }
 
   .mirror-viewport-scroll {
-    flex: 1;
+    flex: 1 1 auto;
+    min-block-size: 0;
+    min-inline-size: 0;
     overflow-y: auto;
+    overflow-x: hidden;
     padding: 2rem 2.25rem 4rem;
   }
 
   /* Public Preview Cards: EXACT PUBLIC ARTICLE FORMAT */
   .public-preview-card {
+    min-inline-size: 0;
+    max-inline-size: 100%;
     background: var(--bg-surface);
     border: 1px solid var(--border-subtle);
     border-radius: var(--radius-md, 12px);
@@ -4168,6 +4175,25 @@
     flex-direction: column;
     gap: 1.5rem;
     box-shadow: 0 14px 38px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  }
+
+  /* User-authored titles and syllabus text can contain long or unbroken strings. */
+  .public-preview-card :is(
+    .reader-main-title,
+    .reader-subtitle,
+    .reader-authors,
+    .reader-venue,
+    .abstract-kicker,
+    .abstract-body-real,
+    .pv-ch-title,
+    .pv-ch-desc,
+    .pv-wk-topic,
+    .pv-wk-readings li,
+    .colophon-specs-grid dd
+  ) {
+    min-inline-size: 0;
+    max-inline-size: 100%;
+    overflow-wrap: anywhere;
   }
 
   .public-preview-card.is-active {
@@ -4471,6 +4497,7 @@
   :global(.pv-ch-body) {
     flex: 1 1 auto;
     min-width: 0;
+    overflow-wrap: anywhere;
     display: flex;
     flex-direction: column;
     gap: 0.3rem;
@@ -4514,6 +4541,7 @@
     display: flex;
     gap: 0.75rem;
     align-items: center;
+    min-width: 0;
   }
 
   :global(.pv-wk-num) {
@@ -4533,6 +4561,8 @@
   }
 
   :global(.pv-wk-topic) {
+    min-width: 0;
+    overflow-wrap: anywhere;
     font-family: var(--font-serif, Georgia, serif);
     font-size: 0.98rem;
     font-weight: 600;
