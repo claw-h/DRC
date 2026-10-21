@@ -70,6 +70,7 @@ const classes = defineCollection({
     schedule: z.string(),
     syllabusPdf: z.string().optional(),
     summary: z.string(),
+    acceptingReviews: z.boolean().default(false),
     weeks: z.array(z.object({
       weekNumber: z.string(),
       topic: z.string(),

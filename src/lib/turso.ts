@@ -4,6 +4,7 @@ import path from 'node:path';
 import type { SystemState, FacultyProfile } from './system-state.ts';
 
 let cachedClient: Client | null = null;
+let reviewSchemaReady: Promise<void> | null = null;
 
 export function getTursoClient(): Client | null {
   if (cachedClient) return cachedClient;
@@ -45,6 +46,78 @@ const WORKSPACE_CACHE_TTL = 30_000; // 30 seconds
 export function invalidateTursoCache(): void {
   cachedWorkspaceData = null;
   workspaceCachedAt = 0;
+}
+
+async function ensureReviewSchema(db: Client): Promise<void> {
+  if (!reviewSchemaReady) {
+    reviewSchemaReady = (async () => {
+      // Older deployments have a classes table without the review switch.
+      await db.execute(`CREATE TABLE IF NOT EXISTS class_reviews (
+        id TEXT PRIMARY KEY, class_id TEXT NOT NULL, author TEXT NOT NULL,
+        role TEXT NOT NULL, term TEXT NOT NULL, rating INTEGER NOT NULL,
+        highlight TEXT NOT NULL DEFAULT '', quote TEXT NOT NULL,
+        status TEXT NOT NULL DEFAULT 'pending', created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      )`);
+      await db.execute('CREATE INDEX IF NOT EXISTS class_reviews_by_class_status_date ON class_reviews (class_id, status, created_at)');
+      try { await db.execute('ALTER TABLE classes ADD COLUMN accepting_reviews INTEGER NOT NULL DEFAULT 0'); }
+      catch (error: any) {
+        if (!String(error?.message || error).toLowerCase().includes('duplicate column')) throw error;
+      }
+    })().catch((error) => { reviewSchemaReady = null; throw error; });
+  }
+  await reviewSchemaReady;
+}
+
+export async function setClassReviewsEnabled(classId: string, enabled: boolean): Promise<boolean> {
+  const db = getTursoClient();
+  if (!db) { invalidateTursoCache(); return false; }
+  try {
+    await ensureReviewSchema(db);
+    await db.execute({ sql: 'UPDATE classes SET accepting_reviews = ?, updated_at = ? WHERE id = ?', args: [enabled ? 1 : 0, new Date().toISOString(), classId] });
+    invalidateTursoCache();
+    return true;
+  } catch (error) { console.error('[Turso] setClassReviewsEnabled error:', error); return false; }
+}
+
+export async function listClassReviews(classId: string, status?: string): Promise<any[]> {
+  const db = getTursoClient();
+  if (!db) return [];
+  try {
+    await ensureReviewSchema(db);
+    const result = status && ['pending', 'approved', 'rejected'].includes(status)
+      ? await db.execute({ sql: 'SELECT * FROM class_reviews WHERE class_id = ? AND status = ? ORDER BY created_at DESC', args: [classId, status] })
+      : await db.execute({ sql: 'SELECT * FROM class_reviews WHERE class_id = ? ORDER BY created_at DESC', args: [classId] });
+    return result.rows.map((row: any) => ({
+      id: String(row.id), classId: String(row.class_id), author: String(row.author), role: String(row.role), term: String(row.term),
+      rating: Number(row.rating), highlight: String(row.highlight || ''), quote: String(row.quote), status: String(row.status), createdAt: String(row.created_at),
+    }));
+  } catch (error) { console.error('[Turso] listClassReviews error:', error); return []; }
+}
+
+export async function createClassReview(classId: string, review: any): Promise<boolean> {
+  const db = getTursoClient();
+  if (!db) return false;
+  try {
+    await ensureReviewSchema(db);
+    const now = new Date().toISOString();
+    await db.execute({ sql: `INSERT INTO class_reviews (id,class_id,author,role,term,rating,highlight,quote,status,created_at,updated_at)
+      VALUES (?,?,?,?,?,?,?,?,'pending',?,?)`, args: [review.id, classId, review.author, review.role, review.term, review.rating, review.highlight, review.quote, now, now] });
+    invalidateTursoCache();
+    return true;
+  } catch (error) { console.error('[Turso] createClassReview error:', error); return false; }
+}
+
+export async function moderateClassReview(reviewId: string, status: 'approved' | 'rejected' | 'removed'): Promise<boolean> {
+  const db = getTursoClient();
+  if (!db) return false;
+  try {
+    await ensureReviewSchema(db);
+    if (status === 'removed') await db.execute({ sql: 'DELETE FROM class_reviews WHERE id = ?', args: [reviewId] });
+    else await db.execute({ sql: 'UPDATE class_reviews SET status = ?, updated_at = ? WHERE id = ?', args: [status, new Date().toISOString(), reviewId] });
+    invalidateTursoCache();
+    return true;
+  } catch (error) { console.error('[Turso] moderateClassReview error:', error); return false; }
 }
 
 // -------------------------------------------------------------
@@ -284,11 +357,12 @@ export async function persistClassToDb(item: any): Promise<boolean> {
   if (!db) return false;
 
   try {
+    await ensureReviewSchema(db);
     await db.execute({
       sql: `INSERT OR REPLACE INTO classes (
               id, course_code, title, academic_year, term, level, schedule,
-              syllabus_pdf, summary, weeks, reviews, updated_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+              syllabus_pdf, summary, weeks, reviews, accepting_reviews, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       args: [
         item.id,
         item.courseCode,
@@ -301,6 +375,7 @@ export async function persistClassToDb(item: any): Promise<boolean> {
         item.summary || '',
         JSON.stringify(item.weeks || []),
         JSON.stringify(item.reviews || []),
+        item.acceptingReviews ? 1 : 0,
         new Date().toISOString(),
       ],
     });
@@ -317,10 +392,11 @@ export async function deleteClassFromDb(id: string): Promise<boolean> {
   if (!db) return false;
 
   try {
-    await db.execute({
-      sql: 'DELETE FROM classes WHERE id = ?',
-      args: [id],
-    });
+    await ensureReviewSchema(db);
+    await db.batch([
+      { sql: 'DELETE FROM class_reviews WHERE class_id = ?', args: [id] },
+      { sql: 'DELETE FROM classes WHERE id = ?', args: [id] },
+    ], 'write');
     invalidateTursoCache();
     return true;
   } catch (err) {
@@ -391,6 +467,7 @@ export async function fetchContentRecordFromDb(type: 'publications' | 'books' | 
         summary: String(row.summary || ''),
         weeks: row.weeks ? JSON.parse(String(row.weeks)) : [],
         reviews: row.reviews ? JSON.parse(String(row.reviews)) : [],
+        acceptingReviews: Boolean(row.accepting_reviews),
       };
       return { data, body: String(row.summary || '') };
     }
@@ -409,12 +486,14 @@ export async function exportAllDataForBackup() {
   if (!db) return null;
 
   try {
-    const [sysRes, profRes, pubRes, bookRes, classRes] = await Promise.all([
+    await ensureReviewSchema(db);
+    const [sysRes, profRes, pubRes, bookRes, classRes, reviewRes] = await Promise.all([
       db.execute("SELECT * FROM system_state"),
       db.execute("SELECT * FROM faculty_profile"),
       db.execute("SELECT * FROM publications"),
       db.execute("SELECT * FROM books"),
       db.execute("SELECT * FROM classes"),
+      db.execute("SELECT * FROM class_reviews"),
     ]);
 
     return {
@@ -423,6 +502,7 @@ export async function exportAllDataForBackup() {
       publications: pubRes.rows,
       books: bookRes.rows,
       classes: classRes.rows,
+      class_reviews: reviewRes.rows,
     };
   } catch (err) {
     console.error('[Turso] exportAllDataForBackup error:', err);
@@ -498,6 +578,7 @@ export async function loadObservatoryWorkspaceData(forceFresh = false): Promise<
   const db = getTursoClient();
   if (db) {
     try {
+      await ensureReviewSchema(db);
       const [sysRs, profRs, pubRs, bookRs, clsRs] = await db.batch([
         "SELECT offline_mode, featured_constellation_id, updated_at FROM system_state WHERE id = 'current' LIMIT 1",
         "SELECT * FROM faculty_profile WHERE id = 'current' LIMIT 1",
@@ -585,6 +666,7 @@ export async function loadObservatoryWorkspaceData(forceFresh = false): Promise<
           summary: String(row.summary || ''),
           weeks: row.weeks ? JSON.parse(String(row.weeks)) : [],
           reviews: row.reviews ? JSON.parse(String(row.reviews)) : [],
+          acceptingReviews: Boolean(row.accepting_reviews),
         },
       }));
 

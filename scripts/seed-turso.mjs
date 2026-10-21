@@ -118,9 +118,21 @@ async function migrateAndSeed() {
       summary TEXT NOT NULL,
       weeks TEXT NOT NULL,
       reviews TEXT NOT NULL,
+      accepting_reviews INTEGER NOT NULL DEFAULT 0,
       updated_at TEXT NOT NULL
     );
   `);
+
+  try { await db.execute('ALTER TABLE classes ADD COLUMN accepting_reviews INTEGER NOT NULL DEFAULT 0'); }
+  catch (error) { if (!String(error?.message || error).toLowerCase().includes('duplicate column')) throw error; }
+  await db.execute(`CREATE TABLE IF NOT EXISTS class_reviews (
+    id TEXT PRIMARY KEY, class_id TEXT NOT NULL, author TEXT NOT NULL,
+    role TEXT NOT NULL, term TEXT NOT NULL, rating INTEGER NOT NULL,
+    highlight TEXT NOT NULL DEFAULT '', quote TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'pending', created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+  )`);
+  await db.execute('CREATE INDEX IF NOT EXISTS class_reviews_by_class_status_date ON class_reviews (class_id, status, created_at)');
 
   console.log('✓ Tables created / verified.');
 
@@ -257,8 +269,8 @@ async function migrateAndSeed() {
       await db.execute({
         sql: `INSERT OR REPLACE INTO classes (
                 id, course_code, title, academic_year, term, level, schedule,
-                syllabus_pdf, summary, weeks, reviews, updated_at
-              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+              syllabus_pdf, summary, weeks, reviews, accepting_reviews, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         args: [
           d.id || path.basename(f, '.md'),
           d.courseCode || 'PHIL',
@@ -271,6 +283,7 @@ async function migrateAndSeed() {
           d.summary || parsed.content || '',
           JSON.stringify(d.weeks || []),
           JSON.stringify(d.reviews || []),
+          d.acceptingReviews ? 1 : 0,
           new Date().toISOString(),
         ],
       });

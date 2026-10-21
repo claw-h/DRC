@@ -4923,18 +4923,19 @@ const { featuredConstellationId = null } = Astro.props;
           this.ctx.fill();
         }
 
-        // Bayer Greek designation label (e.g. α, β, γ)
-        if (bayer) {
-          this.ctx.fillStyle = isDark ? 'rgba(230, 220, 205, 0.82)' : 'rgba(45, 40, 36, 0.85)';
-          this.ctx.font = 'italic 12px Newsreader, serif';
-          this.ctx.fillText(bayer, px + r + 5, py - r);
-        }
+        // Keep the mobile chart visually clean: no Bayer, Latin, or proper-name labels.
+        if (!this.isMobileViewport()) {
+          if (bayer) {
+            this.ctx.fillStyle = isDark ? 'rgba(230, 220, 205, 0.82)' : 'rgba(45, 40, 36, 0.85)';
+            this.ctx.font = 'italic 12px Newsreader, serif';
+            this.ctx.fillText(bayer, px + r + 5, py - r);
+          }
 
-        // If named and bright, draw proper name
-        if (properName && (mag <= 2.2 || isHovered || isSelected)) {
-          this.ctx.fillStyle = isDark ? 'rgba(215, 205, 190, 0.65)' : 'rgba(75, 68, 60, 0.72)';
-          this.ctx.font = 'normal 10px Newsreader, serif';
-          this.ctx.fillText(properName, px + r + 5, py + r + 10);
+          if (properName && (mag <= 2.2 || isHovered || isSelected)) {
+            this.ctx.fillStyle = isDark ? 'rgba(215, 205, 190, 0.65)' : 'rgba(75, 68, 60, 0.72)';
+            this.ctx.font = 'normal 10px Newsreader, serif';
+            this.ctx.fillText(properName, px + r + 5, py + r + 10);
+          }
         }
 
         this.ctx.globalAlpha = 1.0;

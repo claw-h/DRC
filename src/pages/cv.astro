@@ -8,18 +8,26 @@ import { loadObservatoryWorkspaceData } from '../lib/turso';
 Astro.response.headers.set('Cache-Control', 'public, s-maxage=30, stale-while-revalidate=86400');
 
 const { publications, books, classes, profile } = await loadObservatoryWorkspaceData();
+const sortedPublications = [...publications].sort((a, b) => b.data.year - a.data.year);
+const sortedBooks = [...books].sort((a, b) => b.data.year - a.data.year);
+const sortedClasses = [...classes].sort((a, b) => String(b.data.academicYear).localeCompare(String(a.data.academicYear)));
 ---
 
 <BaseLayout
   title={`Curriculum Vitae — ${profile.name}`}
   description={`Academic Curriculum Vitae of ${profile.name}, ${profile.title} at ${profile.institution}.`}
 >
-  <main class="cv-document">
+  <main class="cv-document" data-cv-mode="short">
     <div class="cv-toolbar no-print">
       <a href="/" class="cv-back">← Back to Observatory</a>
-      <button type="button" class="cv-print-btn" id="cv-print-trigger">
-        Print / Export LaTeX-Grade PDF (⌘P)
-      </button>
+      <div class="cv-actions">
+        <div class="cv-template-switch" role="group" aria-label="CV length">
+          <button type="button" class="cv-template-btn is-active" data-cv-mode="short" aria-pressed="true">Short</button>
+          <button type="button" class="cv-template-btn" data-cv-mode="long" aria-pressed="false">Full CV</button>
+        </div>
+        <a class="cv-latex-btn" id="cv-latex-download" href="/api/cv-latex?mode=short">Download .tex</a>
+        <button type="button" class="cv-print-btn" id="cv-print-trigger">Save as PDF</button>
+      </div>
     </div>
 
     <header class="cv-header">
@@ -53,7 +61,13 @@ const { publications, books, classes, profile } = await loadObservatoryWorkspace
       </dl>
     </header>
 
-    <section class="cv-section">
+    <section class="cv-section cv-short-only">
+      <h2>Academic profile</h2>
+      <p class="cv-bio-paragraph">{profile.bio}</p>
+      <p class="cv-areas"><strong>Research areas</strong> {(profile.aos || []).join(' · ')}</p>
+    </section>
+
+    <section class="cv-section cv-long-only">
       <h2>I. Academic Appointments &amp; Education</h2>
       <ul class="cv-list">
         <li>
@@ -70,7 +84,7 @@ const { publications, books, classes, profile } = await loadObservatoryWorkspace
       </ul>
     </section>
 
-    <section class="cv-section">
+    <section class="cv-section cv-long-only">
       <h2>II. Research Profile &amp; Specializations</h2>
       <p class="cv-bio-paragraph">
         {profile.bio}
@@ -88,7 +102,7 @@ const { publications, books, classes, profile } = await loadObservatoryWorkspace
     </section>
 
     {profile.awards && profile.awards.length > 0 && (
-      <section class="cv-section">
+      <section class="cv-section cv-long-only">
         <h2>III. Honors, Fellowships &amp; Distinctions</h2>
         <ul class="cv-list">
           {profile.awards.map((award) => (
@@ -99,9 +113,9 @@ const { publications, books, classes, profile } = await loadObservatoryWorkspace
     )}
 
     <section class="cv-section">
-      <h2>IV. Doctoral Monograph &amp; Book Projects</h2>
+      <h2>Books &amp; monographs</h2>
       <ol class="cv-list">
-        {books.map((book) => (
+        {(sortedBooks).slice(0, 2).map((book) => (
           <li>
             <strong>{book.data.title}</strong>
             {book.data.subtitle ? `: ${book.data.subtitle}` : ''}.{' '}
@@ -109,14 +123,17 @@ const { publications, books, classes, profile } = await loadObservatoryWorkspace
             <span class="cv-mono">Ref: {book.data.isbn} ({book.data.pages} pp.)</span>
           </li>
         ))}
+        {sortedBooks.slice(2).map((book) => (
+          <li class="cv-long-only"><strong>{book.data.title}</strong>{book.data.subtitle ? `: ${book.data.subtitle}` : ''}. <span>{book.data.publisher}, {book.data.year}.</span> <span class="cv-mono">Ref: {book.data.isbn} ({book.data.pages} pp.)</span></li>
+        ))}
       </ol>
     </section>
 
     <section class="cv-section">
-      <h2>V. Publications, Critical Essays &amp; Award Papers</h2>
+      <h2>Selected publications</h2>
       <ol class="cv-list">
-        {publications.map((pub) => (
-          <li>
+        {sortedPublications.map((pub, index) => (
+          <li class={index >= 3 ? 'cv-long-only' : undefined}>
             <span class="cv-authors">
               {[profile.name, ...pub.data.coAuthors].join(', ')}
             </span>{' '}
@@ -133,10 +150,10 @@ const { publications, books, classes, profile } = await loadObservatoryWorkspace
     </section>
 
     <section class="cv-section">
-      <h2>VI. University Seminars &amp; Instruction (Ashoka University)</h2>
+      <h2>Teaching</h2>
       <ul class="cv-list">
-        {classes.map((cls) => (
-          <li>
+        {sortedClasses.map((cls, index) => (
+          <li class={index >= 3 ? 'cv-long-only' : undefined}>
             <strong class="cv-mono">{cls.data.courseCode}</strong> —{' '}
             <strong>{cls.data.title}</strong> ({cls.data.term} {cls.data.academicYear},{' '}
             {cls.data.level}). <span class="cv-muted">{cls.data.schedule}</span>
@@ -147,6 +164,19 @@ const { publications, books, classes, profile } = await loadObservatoryWorkspace
   </main>
 
   <script>
+    const cvDocument = document.querySelector('.cv-document');
+    const templateButtons = document.querySelectorAll<HTMLButtonElement>('button[data-cv-mode]');
+    const latexDownload = document.getElementById('cv-latex-download') as HTMLAnchorElement | null;
+    const setCvMode = (mode: string) => {
+      cvDocument?.setAttribute('data-cv-mode', mode);
+      if (latexDownload) latexDownload.href = `/api/cv-latex?mode=${mode}`;
+      templateButtons.forEach((button) => {
+        const active = button.dataset.cvMode === mode;
+        button.classList.toggle('is-active', active);
+        button.setAttribute('aria-pressed', String(active));
+      });
+    };
+    templateButtons.forEach((button) => button.addEventListener('click', () => setCvMode(button.dataset.cvMode || 'short')));
     document.getElementById('cv-print-trigger')?.addEventListener('click', () => {
       window.print();
     });
@@ -181,6 +211,12 @@ const { publications, books, classes, profile } = await loadObservatoryWorkspace
     font-family: var(--font-mono);
     font-size: 0.8rem;
   }
+
+  .cv-actions, .cv-template-switch { display: flex; align-items: center; gap: 0.5rem; }
+  .cv-template-switch { padding: 0.2rem; border: 1px solid var(--border-subtle); border-radius: 0.45rem; }
+  .cv-template-btn { border: 0; border-radius: 0.3rem; padding: 0.4rem 0.65rem; background: transparent; color: var(--text-muted); font: inherit; cursor: pointer; }
+  .cv-template-btn.is-active { background: var(--bg-surface); color: var(--text-primary); box-shadow: 0 1px 4px #0002; }
+  .cv-latex-btn { color: var(--text-primary); text-decoration: none; border: 1px solid var(--border-subtle); border-radius: 0.375rem; padding: 0.45rem 0.7rem; white-space: nowrap; }
 
   .cv-back {
     color: var(--accent);
@@ -253,6 +289,15 @@ const { publications, books, classes, profile } = await loadObservatoryWorkspace
     margin-bottom: 2.25rem;
   }
 
+  .cv-areas { margin: 0; color: var(--text-secondary); line-height: 1.6; }
+  .cv-areas strong { color: var(--text-primary); }
+  .cv-short-only { display: none; }
+  .cv-document[data-cv-mode="short"] .cv-short-only { display: initial; }
+  .cv-document[data-cv-mode="short"] .cv-section.cv-short-only { display: block; }
+  .cv-document[data-cv-mode="short"] .cv-long-only { display: none !important; }
+  .cv-document[data-cv-mode="short"] li.cv-long-only { display: none !important; }
+  .cv-document[data-cv-mode="short"] .cv-section h2 { margin-bottom: 0.7rem; }
+
   .cv-section h2 {
     font-family: var(--font-mono);
     font-size: 0.82rem;
@@ -306,8 +351,34 @@ const { publications, books, classes, profile } = await loadObservatoryWorkspace
       color: #000;
     }
 
+    .cv-document[data-cv-mode="short"] .cv-short-only { display: initial !important; }
+    .cv-document[data-cv-mode="short"] .cv-section.cv-short-only { display: block !important; }
+    .cv-document[data-cv-mode="short"] .cv-long-only { display: none !important; }
+    .cv-document[data-cv-mode="long"] .cv-short-only { display: none !important; }
+    .cv-document[data-cv-mode="long"] .cv-long-only { display: list-item !important; }
+    .cv-document[data-cv-mode="long"] .cv-section.cv-long-only { display: block !important; }
+
     li {
       break-inside: avoid;
     }
+  }
+
+  @media (max-width: 600px) {
+    .cv-document { width: 100%; max-width: none; box-sizing: border-box; padding: 1.25rem 1rem 3rem; }
+    .cv-toolbar { align-items: flex-start; gap: 0.8rem; flex-direction: column; margin-bottom: 1.5rem; }
+    .cv-actions { width: 100%; justify-content: space-between; flex-wrap: wrap; }
+    .cv-template-switch { flex: 1 0 100%; }
+    .cv-latex-btn, .cv-print-btn { flex: 1; text-align: center; }
+    .cv-header { display: block; margin-bottom: 1.4rem; padding-bottom: 1.15rem; }
+    .cv-header > div { width: 100%; margin-bottom: 1rem; }
+    .cv-header h1 { font-size: 1.8rem; }
+    .cv-contact-list { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0.55rem; text-align: left; width: 100%; }
+    .cv-contact-list > div { display: grid; grid-template-columns: 6.5rem minmax(0, 1fr); align-items: baseline; gap: 0.65rem; }
+    .cv-contact-list dt { margin: 0; text-align: left; }
+    .cv-contact-list dd { min-width: 0; overflow-wrap: anywhere; }
+    .cv-list { padding-left: 1.1rem; gap: 0.55rem; line-height: 1.55; font-size: 0.96rem; }
+    .cv-section { margin-bottom: 1.35rem; }
+    .cv-section h2 { letter-spacing: 0.08em; margin-bottom: 0.75rem; }
+    .cv-bio-paragraph { line-height: 1.58; }
   }
 </style>

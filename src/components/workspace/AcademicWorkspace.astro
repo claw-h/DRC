@@ -233,6 +233,7 @@ const sortedBooks = [...books].sort((a, b) => b.data.year - a.data.year);
 
         <!-- Tab Panel 1: Record Seminar Evaluation -->
         <div id="panel-ledger-eval" role="tabpanel" aria-labelledby="btn-ledger-tab-eval">
+          <p id="ledger-review-status" role="status" aria-live="polite" style="font-size:0.82rem; color:var(--text-muted);">Your review will be visible after instructor approval.</p>
           <form id="ledger-review-form" class="ledger-form">
             <input type="hidden" id="ledger-form-course-id" name="courseId" value="" />
             <input type="hidden" id="ledger-form-rating" name="rating" value="5.0 / 5.0" />
@@ -240,26 +241,26 @@ const sortedBooks = [...books].sort((a, b) => b.data.year - a.data.year);
             <div class="ledger-form-grid">
               <div class="ledger-field-wrap">
                 <label class="ledger-label" for="ledger-input-author">NAME / SCHOLAR INITIALS</label>
-                <input type="text" id="ledger-input-author" name="author" required placeholder="e.g. Ananya S." class="ledger-feint-input" />
+                <input type="text" id="ledger-input-author" name="author" maxlength="80" required placeholder="e.g. Ananya S." class="ledger-feint-input" />
               </div>
               <div class="ledger-field-wrap">
                 <label class="ledger-label" for="ledger-input-role">PROGRAMME / COHORT</label>
-                <input type="text" id="ledger-input-role" name="role" required placeholder="e.g. BA (Hons.) Philosophy · ASP" class="ledger-feint-input" />
+                <input type="text" id="ledger-input-role" name="role" maxlength="120" required placeholder="e.g. BA (Hons.) Philosophy · ASP" class="ledger-feint-input" />
               </div>
               <div class="ledger-field-wrap">
                 <label class="ledger-label" for="ledger-input-term">SEMESTER</label>
-                <input type="text" id="ledger-input-term" name="term" required class="ledger-feint-input" />
+                <input type="text" id="ledger-input-term" name="term" maxlength="80" required class="ledger-feint-input" />
               </div>
             </div>
 
             <div class="ledger-field-wrap">
               <label class="ledger-label" for="ledger-input-highlight">SEMINAR HIGHLIGHT / TAKEAWAY</label>
-              <input type="text" id="ledger-input-highlight" name="highlight" placeholder="Brief headline summary of your seminar experience..." class="ledger-feint-input" />
+              <input type="text" id="ledger-input-highlight" name="highlight" maxlength="180" placeholder="Brief headline summary of your seminar experience..." class="ledger-feint-input" />
             </div>
 
             <div class="ledger-field-wrap">
               <label class="ledger-label" for="ledger-input-quote">SCHOLARLY EVALUATION &amp; REFLECTION</label>
-              <textarea id="ledger-input-quote" name="quote" rows="3" required placeholder="Share your reflection on the readings, seminar discussions, and intellectual arc..." class="ledger-feint-textarea"></textarea>
+              <textarea id="ledger-input-quote" name="quote" maxlength="3000" rows="3" required placeholder="Share your reflection on the readings, seminar discussions, and intellectual arc..." class="ledger-feint-textarea"></textarea>
             </div>
 
             <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 1rem; margin-block-start: 0.5rem;">
@@ -326,6 +327,7 @@ const sortedBooks = [...books].sort((a, b) => b.data.year - a.data.year);
       academicYear: cls.data.academicYear,
       term: cls.data.term,
       level: cls.data.level,
+      acceptingReviews: Boolean(cls.data.acceptingReviews),
       schedule: cls.data.schedule,
       summary: cls.data.summary,
       weeks: cls.data.weeks || []
@@ -1000,8 +1002,6 @@ const sortedBooks = [...books].sort((a, b) => b.data.year - a.data.year);
 
     // 9. Tactile 3D Artefact Modals Controller (Codex, Tome, Ledger)
     private initArtefactModals() {
-      const STORAGE_PREFIX = 'drc_course_reviews_';
-
       // 1. Parse unified manifest catalogs
       const manifest = document.getElementById('drc-artefact-manifest');
       const parseJsonDataset = (raw: string | null | undefined): any[] => {
@@ -1037,7 +1037,7 @@ const sortedBooks = [...books].sort((a, b) => b.data.year - a.data.year);
         author: string;
         role: string;
         term: string;
-        rating?: string;
+        rating?: string | number;
         highlight?: string;
         quote: string;
         num: number;
@@ -1074,7 +1074,7 @@ const sortedBooks = [...books].sort((a, b) => b.data.year - a.data.year);
         termTag.textContent = rev.term;
         const ratingTag = document.createElement('span');
         ratingTag.className = 'review-rating-tag';
-        ratingTag.textContent = `★ ${rev.rating || '5.0 / 5.0'}`;
+        ratingTag.textContent = `★ ${typeof rev.rating === 'number' ? `${rev.rating.toFixed(1)} / 5.0` : (rev.rating || '5.0 / 5.0')}`;
         badges.append(termTag, ratingTag);
 
         top.append(left, badges);
@@ -1106,19 +1106,26 @@ const sortedBooks = [...books].sort((a, b) => b.data.year - a.data.year);
         return card;
       };
 
-      // 3. Hydrate saved reviews from localStorage on load
-      classList.forEach((cls) => {
+      // Load approved public reviews from the backend. Legacy frontmatter reviews
+      // are included by the endpoint so older classes remain visible.
+      classList.forEach(async (cls) => {
         const listEl = this.querySelector<HTMLElement>(`[data-reviews-list="${cls.id}"]`);
         if (!listEl) return;
         try {
-          const saved = JSON.parse(localStorage.getItem(STORAGE_PREFIX + cls.id) || '[]');
-          if (Array.isArray(saved)) {
-            saved.forEach((item, idx) => {
-              const count = listEl.children.length + idx + 1;
-              listEl.prepend(createReviewCardElement({ ...item, num: count }));
-            });
-          }
-        } catch {}
+          const response = await fetch(`/api/public/reviews?classId=${encodeURIComponent(cls.id)}`);
+          if (!response.ok) return;
+          const payload = await response.json();
+          if (!Array.isArray(payload.reviews)) return;
+          listEl.replaceChildren();
+          payload.reviews.forEach((item: any, idx: number) => listEl.appendChild(createReviewCardElement({ ...item, num: idx + 1 })));
+          const ratings = payload.reviews.map((item: any) => Number.parseFloat(String(item.rating || '').replace(/[^0-9.]/g, ''))).filter((rating: number) => Number.isFinite(rating) && rating > 0);
+          const score = this.querySelector<HTMLElement>(`[data-review-score="${cls.id}"]`);
+          if (score && ratings.length) {
+            const average = (ratings.reduce((sum: number, rating: number) => sum + rating, 0) / ratings.length).toFixed(1);
+            score.textContent = `★ ${average} / 5.0 · COHORT AVERAGE`;
+            score.hidden = false;
+          } else if (score) score.hidden = true;
+        } catch { /* Keep server-rendered legacy reviews visible if offline. */ }
       });
 
       // 4. Modal references
@@ -1410,6 +1417,7 @@ const sortedBooks = [...books].sort((a, b) => b.data.year - a.data.year);
       const ratingReadout = document.getElementById('ledger-rating-readout');
       const ratingInput = document.getElementById('ledger-form-rating') as HTMLInputElement | null;
       const submitBtn = document.getElementById('btn-ledger-submit');
+      const reviewStatus = document.getElementById('ledger-review-status');
 
       const switchLedgerTab = (target: 'eval' | 'curr') => {
         if (target === 'eval') {
@@ -1445,6 +1453,9 @@ const sortedBooks = [...books].sort((a, b) => b.data.year - a.data.year);
       const openLedger = (courseId: string, initialTab: 'eval' | 'curr' = 'eval') => {
         const cls = classMap.get(courseId);
         if (!cls || !ledgerDialog) return;
+        const reviewsEnabled = Boolean(cls.acceptingReviews);
+        if (tabEval) tabEval.hidden = !reviewsEnabled;
+        if (!reviewsEnabled && initialTab === 'eval') initialTab = 'curr';
 
         const folioTag = document.getElementById('ledger-folio-tag');
         const eyebrow = document.getElementById('ledger-dialog-eyebrow');
@@ -1466,7 +1477,8 @@ const sortedBooks = [...books].sort((a, b) => b.data.year - a.data.year);
         if (sched) sched.textContent = cls.schedule;
 
         if (courseIdInput) courseIdInput.value = cls.id;
-        if (termInput) termInput.value = `${cls.term} 2025–2026`;
+        if (termInput) termInput.value = `${cls.term} ${cls.academicYear}`;
+        if (reviewStatus) reviewStatus.textContent = 'Your review will be visible after instructor approval.';
 
         if (weeksContainer) {
           weeksContainer.innerHTML = '';
@@ -1496,46 +1508,39 @@ const sortedBooks = [...books].sort((a, b) => b.data.year - a.data.year);
         applyInkTransition(ledgerDialog.querySelector('.artefact-modal-body'));
       };
 
-      ledgerForm?.addEventListener('submit', (e) => {
+      ledgerForm?.addEventListener('submit', async (e) => {
         e.preventDefault();
         const fd = new FormData(ledgerForm);
         const courseId = String(fd.get('courseId') || '');
-        const listEl = this.querySelector<HTMLElement>(`[data-reviews-list="${courseId}"]`);
-
-        const newRev = {
+        const newReview = {
+          classId: courseId,
           author: String(fd.get('author') || 'Seminar Participant').trim(),
           role: String(fd.get('role') || 'Ashoka University').trim(),
           term: String(fd.get('term') || '2025–2026').trim(),
-          rating: String(fd.get('rating') || '5.0 / 5.0').trim(),
+          rating: Number.parseInt(String(fd.get('rating') || '5'), 10),
           highlight: String(fd.get('highlight') || '').trim(),
           quote: String(fd.get('quote') || '').trim(),
         };
-        if (!newRev.quote) return;
-
-        if (listEl) {
-          const nextNum = listEl.children.length + 1;
-          listEl.prepend(createReviewCardElement({ ...newRev, num: nextNum }));
-        }
-
+        if (!newReview.quote || !courseId) return;
+        const submit = submitBtn as HTMLButtonElement | null;
+        if (submit) { submit.disabled = true; submit.textContent = 'Sending review…'; }
         try {
-          const existing = JSON.parse(localStorage.getItem(STORAGE_PREFIX + courseId) || '[]');
-          existing.push(newRev);
-          localStorage.setItem(STORAGE_PREFIX + courseId, JSON.stringify(existing));
-        } catch {}
-
-        if (submitBtn) {
-          submitBtn.textContent = '✓ Recorded into Academic Ledger';
-          submitBtn.classList.add('ink-record-active');
+          const response = await fetch('/api/public/reviews', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(newReview),
+          });
+          const result = await response.json();
+          if (!response.ok) throw new Error(result.error || 'Could not send review.');
+          if (reviewStatus) reviewStatus.textContent = result.message || 'Your review was received and is awaiting approval.';
+          if (submit) { submit.textContent = '✓ Received · Awaiting Approval'; submit.classList.add('ink-record-active'); }
+          setTimeout(() => {
+            ledgerForm.reset();
+            if (submit) { submit.disabled = false; submit.textContent = '✓ Record into Seminar Ledger'; submit.classList.remove('ink-record-active'); }
+            smoothCloseModal(ledgerDialog);
+          }, 1100);
+        } catch (error: any) {
+          if (submit) { submit.disabled = false; submit.textContent = '✓ Record into Seminar Ledger'; }
+          if (reviewStatus) reviewStatus.textContent = error?.message || 'Could not send review. Please try again.';
         }
-
-        setTimeout(() => {
-          ledgerForm.reset();
-          if (submitBtn) {
-            submitBtn.textContent = '✓ Record into Seminar Ledger';
-            submitBtn.classList.remove('ink-record-active');
-          }
-          smoothCloseModal(ledgerDialog);
-        }, 750);
       });
 
       // 8. Delegated click triggers for all 3 buttons!

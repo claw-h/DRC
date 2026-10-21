@@ -133,6 +133,10 @@ export async function generateObservatoryBackup(): Promise<Buffer> {
       name: 'database-dump/classes.json',
       content: JSON.stringify(dbData.classes, null, 2),
     });
+    archiveFiles.push({
+      name: 'database-dump/class_reviews.json',
+      content: JSON.stringify(dbData.class_reviews, null, 2),
+    });
 
     // 4. Generate portable Markdown collections from Turso tables
     for (const pub of dbData.publications) {
@@ -193,6 +197,7 @@ export async function generateObservatoryBackup(): Promise<Buffer> {
         summary: String(cls.summary || ''),
         weeks: cls.weeks ? JSON.parse(String(cls.weeks)) : [],
         reviews: cls.reviews ? JSON.parse(String(cls.reviews)) : [],
+        acceptingReviews: Boolean(cls.accepting_reviews),
       };
       const md = `---\n${yaml.dump(frontmatter, { lineWidth: -1 })}---\n\n${frontmatter.summary}\n`;
       archiveFiles.push({

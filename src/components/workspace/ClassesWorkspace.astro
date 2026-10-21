@@ -107,6 +107,8 @@ const { classes } = Astro.props;
       {classes.map((cls, idx) => {
         const c = cls.data;
         const reviews = c.reviews || [];
+        const ratedReviews = reviews.map((review: any) => Number.parseFloat(String(review.rating || '').replace(/[^0-9.]/g, ''))).filter((rating: number) => Number.isFinite(rating) && rating > 0);
+        const averageRating = ratedReviews.length ? (ratedReviews.reduce((sum: number, rating: number) => sum + rating, 0) / ratedReviews.length).toFixed(1) : '';
         return (
           <article
             class:list={['class-syllabus-entry', { 'entry-hidden': idx !== 0 }]}
@@ -193,16 +195,16 @@ const { classes } = Astro.props;
                   </h4>
                 </div>
                 <div class="reviews-header-actions">
-                  <span class="review-score-pill tabular">
-                    ★ 5.0 / 5.0 · COHORT CONSENSUS
+                  <span class="review-score-pill tabular" data-review-score={c.id} hidden={!averageRating}>
+                    {averageRating ? `★ ${averageRating} / 5.0 · COHORT AVERAGE` : ''}
                   </span>
-                  <button
+                  {c.acceptingReviews && <button
                     type="button"
                     class="pill btn-toggle-review-form tabular"
                     data-toggle-review-form={c.id}
                   >
-                    + Add Seminar Review
-                  </button>
+                    + Write a Review
+                  </button>}
                   <button
                     type="button"
                     class="pill btn-open-class-ledger tabular"

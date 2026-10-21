@@ -29,7 +29,7 @@ const {
   citationMeta,
 } = Astro.props;
 
-const showMobileNav = !isAdmin && !Astro.url.pathname.startsWith('/offline');
+const showMobileNav = !isAdmin && !Astro.url.pathname.startsWith('/offline') && Astro.url.pathname !== '/cv';
 const mobileNavActive = Astro.url.pathname.startsWith('/publications/')
   ? 'publications'
   : Astro.url.searchParams.get('section') === 'books'

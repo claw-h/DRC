@@ -42,4 +42,5 @@ reviews:
     rating: "4.9 / 5.0"
     highlight: "Essential for anyone interested in embodiment, perception, and lived time."
     quote: "Prof. Cordry's lectures on Merleau-Ponty and Fanon's corporeal schema were the highlight of my semester. He encourages slow, careful philosophical attention."
+acceptingReviews: false
 ---

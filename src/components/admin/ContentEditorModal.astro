@@ -667,6 +667,15 @@
                     </div>
                   </label>
                 </div>
+
+                <div class="class-review-controls" id="class-review-controls">
+                  <button type="button" id="wb-class-accept-reviews" class="atelier-review-toggle" aria-pressed="false" aria-label="Accept public student reviews">
+                    <span class="atelier-review-toggle-track" aria-hidden="true"><span></span></span>
+                    <span class="atelier-review-toggle-copy"><strong id="class-review-toggle-title">Public reviews paused</strong><small id="class-review-setting-note">Students cannot submit reviews for this class.</small></span>
+                    <span class="atelier-review-toggle-state" id="class-review-toggle-state">OFF</span>
+                  </button>
+                  <button type="button" id="btn-manage-class-reviews" class="study-btn study-btn--ledger study-btn--sm" disabled>Manage Reviews <span id="class-review-count"></span></button>
+                </div>
               </fieldset>
 
               <!-- Fieldset 2: Description -->
@@ -1015,6 +1024,22 @@
   </div>
 </dialog>
 
+<dialog id="atelier-reviews-dialog" class="atelier-reviews-dialog" aria-labelledby="atelier-reviews-title">
+  <div class="atelier-reviews-shell">
+    <header class="atelier-reviews-header">
+      <div><span class="hub-kicker">CLASS REVIEW LEDGER</span><h3 id="atelier-reviews-title">Class reviews</h3><p id="atelier-reviews-course"></p></div>
+      <button type="button" id="btn-close-atelier-reviews" class="study-btn study-btn--ghost study-btn--sm" aria-label="Close reviews">✕</button>
+    </header>
+    <div class="atelier-reviews-toolbar">
+      <label>Status <select id="atelier-review-filter"><option value="all">All reviews</option><option value="pending">Pending</option><option value="approved">Approved</option><option value="rejected">Rejected</option></select></label>
+      <label>Sort <select id="atelier-review-sort"><option value="newest">Newest first</option><option value="oldest">Oldest first</option><option value="rating">Highest rating</option><option value="term">Term</option></select></label>
+      <span id="atelier-review-summary" class="tabular"></span>
+    </div>
+    <div id="atelier-review-message" class="atelier-review-message" role="status" aria-live="polite"></div>
+    <div id="atelier-reviews-list" class="atelier-reviews-list" aria-live="polite"></div>
+  </div>
+</dialog>
+
 <script>
   interface OpenContentEditorOptions {
     type?: 'publications' | 'books' | 'classes';
@@ -1074,6 +1099,122 @@
     savedCallback: null as ((item: any) => void) | null,
     lastFocused: null as HTMLElement | null,
   };
+
+  const reviewDialog = document.getElementById('atelier-reviews-dialog') as HTMLDialogElement | null;
+  const reviewsListEl = document.getElementById('atelier-reviews-list');
+  const reviewMessageEl = document.getElementById('atelier-review-message');
+  let activeClassReviews: any[] = [];
+  let activeReviewClassId = '';
+
+  function setReviewToggle(enabled: boolean) {
+    const toggle = document.getElementById('wb-class-accept-reviews') as HTMLButtonElement | null;
+    if (!toggle) return;
+    toggle.setAttribute('aria-pressed', enabled ? 'true' : 'false');
+    toggle.setAttribute('aria-label', enabled ? 'Pause public reviews for this class' : 'Enable public reviews for this class');
+    toggle.dataset.enabled = enabled ? 'true' : 'false';
+    const title = document.getElementById('class-review-toggle-title');
+    const state = document.getElementById('class-review-toggle-state');
+    const note = document.getElementById('class-review-setting-note');
+    if (title) title.textContent = enabled ? 'Accepting public reviews' : 'Public reviews paused';
+    if (state) state.textContent = enabled ? 'ON' : 'OFF';
+    if (note) note.textContent = enabled ? 'Students can submit; each review waits for your approval.' : 'Students cannot submit reviews for this class.';
+  }
+
+  function renderClassReviews() {
+    if (!reviewsListEl) return;
+    const filter = (document.getElementById('atelier-review-filter') as HTMLSelectElement | null)?.value || 'all';
+    const sort = (document.getElementById('atelier-review-sort') as HTMLSelectElement | null)?.value || 'newest';
+    const items = activeClassReviews.filter((review) => filter === 'all' || review.status === filter);
+    items.sort((a, b) => {
+      if (sort === 'oldest') return String(a.createdAt || '').localeCompare(String(b.createdAt || ''));
+      if (sort === 'rating') return Number(b.rating || 0) - Number(a.rating || 0);
+      if (sort === 'term') return String(a.term || '').localeCompare(String(b.term || ''));
+      return String(b.createdAt || '').localeCompare(String(a.createdAt || ''));
+    });
+    const fragment = document.createDocumentFragment();
+    for (const review of items) {
+      const card = document.createElement('article');
+      card.className = 'atelier-review-card';
+      const header = document.createElement('header');
+      const author = document.createElement('strong'); author.textContent = review.author || 'Student';
+      const meta = document.createElement('span'); meta.textContent = `${review.role || ''} · ${review.term || ''} · ★ ${review.rating || '—'}`;
+      const status = document.createElement('span'); status.className = `atelier-review-status is-${review.status || 'approved'}`; status.textContent = review.legacy ? 'Legacy · Approved' : (review.status || 'pending');
+      header.append(author, meta, status);
+      const quote = document.createElement('p'); quote.textContent = review.quote || '';
+      card.append(header);
+      if (review.highlight) { const highlight = document.createElement('p'); highlight.className = 'atelier-review-highlight'; highlight.textContent = review.highlight; card.append(highlight); }
+      card.append(quote);
+      if (!review.legacy) {
+        const actions = document.createElement('div'); actions.className = 'atelier-review-actions';
+        const addAction = (label: string, action: string, className = '') => {
+          const button = document.createElement('button'); button.type = 'button'; button.className = `study-btn study-btn--sm ${className}`; button.dataset.reviewAction = action; button.dataset.reviewId = review.id; button.textContent = label; actions.append(button);
+        };
+        if (review.status !== 'approved') addAction('Approve', 'approved', 'study-btn--ignite');
+        if (review.status !== 'rejected') addAction('Reject', 'rejected', 'study-btn--ledger');
+        addAction('Remove', 'removed', 'study-btn--hazard');
+        card.append(actions);
+      }
+      fragment.append(card);
+    }
+    reviewsListEl.replaceChildren(fragment);
+    const pending = activeClassReviews.filter((review) => review.status === 'pending').length;
+    const approved = activeClassReviews.filter((review) => review.status === 'approved').length;
+    const summary = document.getElementById('atelier-review-summary');
+    if (summary) summary.textContent = `${pending} pending · ${approved} approved`;
+    const count = document.getElementById('class-review-count');
+    if (count) count.textContent = `(${pending} pending)`;
+    if (!items.length && reviewsListEl) {
+      const empty = document.createElement('p'); empty.className = 'atelier-reviews-empty'; empty.textContent = filter === 'all' ? 'No reviews have been submitted for this class.' : `No ${filter} reviews.`;
+      reviewsListEl.append(empty);
+    }
+  }
+
+  async function openClassReviews() {
+    const classId = ATELIER_STATE.activeId;
+    if (!classId || ATELIER_STATE.activeType !== 'classes' || !reviewDialog) return;
+    activeReviewClassId = classId;
+    const courseTitle = (document.getElementById('wb-class-title') as HTMLInputElement | null)?.value || classId;
+    const courseCode = (document.getElementById('wb-class-code') as HTMLInputElement | null)?.value || '';
+    const title = document.getElementById('atelier-reviews-course');
+    if (title) title.textContent = `${courseCode} · ${courseTitle}`;
+    if (reviewMessageEl) reviewMessageEl.textContent = 'Loading class reviews…';
+    if (!reviewDialog.open) reviewDialog.showModal();
+    const result = await (window as any).postAdmin?.('/api/admin/reviews', { action: 'list', classId });
+    if (!result?.ok) { if (reviewMessageEl) reviewMessageEl.textContent = result?.error || 'Could not load reviews.'; return; }
+    activeClassReviews = Array.isArray(result.reviews) ? result.reviews : [];
+    setReviewToggle(Boolean(result.acceptingReviews));
+    if (reviewMessageEl) reviewMessageEl.textContent = result.acceptingReviews ? 'Public submissions are enabled. New reviews wait for your approval.' : 'Public submissions are paused. Approved reviews remain visible.';
+    renderClassReviews();
+  }
+
+  document.getElementById('btn-manage-class-reviews')?.addEventListener('click', openClassReviews);
+  document.getElementById('btn-close-atelier-reviews')?.addEventListener('click', () => reviewDialog?.close());
+  document.getElementById('atelier-review-filter')?.addEventListener('change', renderClassReviews);
+  document.getElementById('atelier-review-sort')?.addEventListener('change', renderClassReviews);
+  reviewsListEl?.addEventListener('click', async (event) => {
+    const button = (event.target as HTMLElement).closest<HTMLButtonElement>('[data-review-action]');
+    if (!button || !activeReviewClassId) return;
+    button.disabled = true;
+    const result = await (window as any).postAdmin?.('/api/admin/reviews', { action: 'moderate', reviewId: button.dataset.reviewId, status: button.dataset.reviewAction });
+    if (!result?.ok) { if (reviewMessageEl) reviewMessageEl.textContent = result?.error || 'Could not update review.'; button.disabled = false; return; }
+    if (reviewMessageEl) reviewMessageEl.textContent = 'Review updated.';
+    await openClassReviews();
+  });
+
+  document.getElementById('wb-class-accept-reviews')?.addEventListener('click', async (event) => {
+    const toggle = event.currentTarget as HTMLButtonElement;
+    const previous = toggle.getAttribute('aria-pressed') === 'true';
+    const next = !previous;
+    setReviewToggle(next);
+    if (!ATELIER_STATE.activeId || ATELIER_STATE.activeType !== 'classes') { setDirty(true); return; }
+    toggle.disabled = true;
+    const result = await (window as any).postAdmin?.('/api/admin/reviews', { action: 'toggle-submissions', classId: ATELIER_STATE.activeId, enabled: next });
+    toggle.disabled = false;
+    if (!result?.ok) { setReviewToggle(previous); (window as any).notify?.(result?.error || 'Could not save review setting.', 'error'); return; }
+    const item = (window as any).__DRC_CATALOG?.classes?.find((record: any) => record.id === ATELIER_STATE.activeId);
+    if (item) item.data.acceptingReviews = next;
+    (window as any).notify?.(next ? 'Public reviews enabled for this class.' : 'Public reviews paused for this class.', 'success');
+  });
 
   // Helper to slugify
   function slugify(input: string): string {
@@ -2178,6 +2319,7 @@
         level: (document.getElementById('wb-class-level') as HTMLSelectElement)?.value || 'Seminar',
         location: (document.getElementById('wb-class-location') as HTMLInputElement)?.value.trim(),
         syllabusPdf: (document.getElementById('wb-class-pdf') as HTMLInputElement)?.value.trim(),
+        acceptingReviews: (document.getElementById('wb-class-accept-reviews') as HTMLButtonElement)?.getAttribute('aria-pressed') === 'true',
         description: (document.getElementById('wb-class-desc') as HTMLTextAreaElement)?.value.trim(),
         weeks,
       };
@@ -2388,6 +2530,9 @@
         });
       }
     } else if (targetType === 'classes') {
+      setReviewToggle(Boolean(d.acceptingReviews));
+      const manageReviewsButton = document.getElementById('btn-manage-class-reviews') as HTMLButtonElement | null;
+      if (manageReviewsButton) manageReviewsButton.disabled = !ATELIER_STATE.activeId;
       const codeInput = document.getElementById('wb-class-code') as HTMLInputElement | null;
       if (codeInput) codeInput.value = d.courseCode || '';
       const titleInput = document.getElementById('wb-class-title') as HTMLInputElement | null;
@@ -2543,6 +2688,9 @@
       pubForm?.reset();
       bookForm?.reset();
       classForm?.reset();
+      setReviewToggle(false);
+      const manageReviewsButton = document.getElementById('btn-manage-class-reviews') as HTMLButtonElement | null;
+      if (manageReviewsButton) manageReviewsButton.disabled = true;
 
       // Clear repeater rows
       const chContainer = document.getElementById('wb-chapters-container');
@@ -2558,6 +2706,63 @@
 </script>
 
 <style>
+  .class-review-controls { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:stretch; gap:.75rem; width:100%; min-width:0; box-sizing:border-box; margin-block-start:1rem; padding:clamp(.65rem, 2vw, .9rem); border:1px solid var(--border-subtle); border-radius:10px; background:var(--bg-surface); }
+  .atelier-review-toggle { display:grid; grid-template-columns:auto minmax(0,1fr) auto; align-items:center; gap:.8rem; width:100%; min-width:0; min-height:4.15rem; padding:.7rem .85rem; border:1px solid var(--border-subtle); border-radius:8px; background:var(--bg-elevated); color:var(--text-primary); text-align:start; cursor:pointer; touch-action:manipulation; transition:transform .16s ease, border-color .16s ease, background-color .16s ease, box-shadow .16s ease; }
+  .atelier-review-toggle:hover:not(:disabled) { border-color:color-mix(in oklab, var(--accent) 65%, var(--border-subtle)); box-shadow:0 4px 14px color-mix(in oklab, var(--accent) 12%, transparent); }
+  .atelier-review-toggle:active:not(:disabled) { transform:scale(.985); }
+  .atelier-review-toggle:focus-visible { outline:3px solid color-mix(in oklab, var(--accent) 55%, transparent); outline-offset:2px; }
+  .atelier-review-toggle:disabled { cursor:wait; opacity:.7; }
+  .atelier-review-toggle-track { display:flex; align-items:center; flex:0 0 auto; width:2.75rem; height:1.55rem; padding:.16rem; box-sizing:border-box; border-radius:999px; background:var(--border-subtle); transition:background-color .18s ease, box-shadow .18s ease; }
+  .atelier-review-toggle-track > span { width:1.2rem; height:1.2rem; border-radius:50%; background:var(--bg-surface); box-shadow:0 1px 4px #0005; transform:translateX(0); transition:transform .18s cubic-bezier(.2,.8,.2,1), background-color .18s ease; }
+  .atelier-review-toggle[aria-pressed="true"] .atelier-review-toggle-track { background:var(--accent); box-shadow:0 0 0 3px color-mix(in oklab, var(--accent) 14%, transparent); }
+  .atelier-review-toggle[aria-pressed="true"] .atelier-review-toggle-track > span { transform:translateX(1.17rem); background:#fff; }
+  .atelier-review-toggle-copy { display:grid; min-width:0; gap:.22rem; }
+  .atelier-review-toggle-copy strong { font-size:.87rem; line-height:1.3; overflow-wrap:anywhere; }
+  .atelier-review-toggle-copy small { color:var(--text-muted); font-size:.74rem; line-height:1.4; overflow-wrap:anywhere; }
+  .atelier-review-toggle-state { justify-self:end; padding:.28rem .48rem; border:1px solid var(--border-subtle); border-radius:999px; color:var(--text-muted); font:600 .64rem var(--font-mono); letter-spacing:.08em; }
+  .atelier-review-toggle[aria-pressed="true"] .atelier-review-toggle-state { color:var(--accent); border-color:color-mix(in oklab, var(--accent) 50%, var(--border-subtle)); background:color-mix(in oklab, var(--accent) 10%, transparent); }
+  #btn-manage-class-reviews { align-self:stretch; min-width:max-content; white-space:normal; }
+  .atelier-reviews-dialog { position:fixed; inset:0; margin:auto; width:min(860px, calc(100vw - 2rem)); height:min(84dvh, 900px); max-width:none; max-height:min(84dvh, 900px); min-height:0; padding:0; border:1px solid var(--border-subtle); border-radius:14px; background:var(--bg-surface); color:var(--text-primary); box-shadow:0 24px 100px #0008; }
+  .atelier-reviews-dialog::backdrop { background:#08090bb8; backdrop-filter:blur(5px); }
+  .atelier-reviews-shell { display:flex; flex-direction:column; height:100%; min-height:0; overflow:hidden; }
+  .atelier-reviews-header { display:flex; justify-content:space-between; align-items:flex-start; gap:1rem; padding:1.25rem 1.5rem; border-block-end:1px solid var(--border-subtle); }
+  .atelier-reviews-header h3 { margin:.2rem 0; font:600 1.5rem var(--font-serif); }
+  .atelier-reviews-header p { margin:0; color:var(--text-muted); font-size:.85rem; }
+  .atelier-reviews-toolbar { display:flex; align-items:end; gap:.8rem; flex-wrap:wrap; padding:1rem 1.5rem; border-block-end:1px solid var(--border-subtle); }
+  .atelier-reviews-toolbar label { display:grid; gap:.3rem; color:var(--text-muted); font-size:.72rem; text-transform:uppercase; letter-spacing:.08em; }
+  .atelier-reviews-toolbar select { min-height:2.5rem; padding:.4rem .65rem; border:1px solid var(--border-subtle); border-radius:6px; background:var(--bg-elevated); color:var(--text-primary); }
+  #atelier-review-summary { margin-inline-start:auto; color:var(--accent); font-size:.78rem; }
+  .atelier-review-message { padding:.65rem 1.5rem 0; color:var(--text-muted); font-size:.8rem; }
+  .atelier-reviews-list { display:grid; flex:1 1 auto; min-height:0; gap:.75rem; padding:1rem 1.5rem 1.5rem; overflow:auto; overscroll-behavior:contain; align-content:start; }
+  :global(.atelier-review-card) { min-width:0; padding:1rem; border:1px solid var(--border-subtle); border-radius:9px; background:var(--bg-elevated); overflow-wrap:anywhere; }
+  :global(.atelier-review-card header) { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:.3rem .85rem; align-items:start; }
+  :global(.atelier-review-card header strong) { min-width:0; font-family:var(--font-serif); line-height:1.35; overflow-wrap:anywhere; }
+  :global(.atelier-review-card header span:nth-child(2)) { grid-column:1; color:var(--text-muted); font-size:.78rem; line-height:1.45; overflow-wrap:anywhere; }
+  :global(.atelier-review-status) { grid-column:2; grid-row:1 / span 2; justify-self:end; padding:.25rem .55rem; border-radius:999px; background:color-mix(in oklab, var(--accent) 14%, transparent); color:var(--accent); font-size:.7rem; text-transform:uppercase; white-space:nowrap; }
+  :global(.atelier-review-status.is-rejected) { color:#b26458; background:#b2645818; }
+  :global(.atelier-review-card > p) { margin:.8rem 0 0; line-height:1.6; white-space:pre-wrap; overflow-wrap:anywhere; }
+  :global(.atelier-review-card .atelier-review-highlight) { color:var(--accent); font-family:var(--font-serif); font-style:italic; }
+  :global(.atelier-review-actions) { display:flex; flex-wrap:wrap; gap:.5rem; margin-block-start:.85rem; }
+  :global(.atelier-reviews-empty) { padding:2rem; color:var(--text-muted); text-align:center; }
+  @media (max-width:700px) {
+    .class-review-controls { grid-template-columns:minmax(0,1fr); }
+    .atelier-review-toggle { min-height:4.5rem; padding:.75rem; }
+    #btn-manage-class-reviews { width:100%; min-width:0; min-height:2.85rem; }
+    .atelier-reviews-dialog { position:fixed; inset:0; width:100vw; height:100dvh; max-height:100dvh; margin:0; border:0; border-radius:0; }
+    .atelier-reviews-shell { height:100%; max-height:100dvh; padding-block-end:env(safe-area-inset-bottom); }
+    .atelier-reviews-header { padding:calc(1rem + env(safe-area-inset-top)) 1rem .9rem; }
+    .atelier-reviews-header h3 { font-size:1.25rem; }
+    .atelier-reviews-toolbar { padding:.75rem 1rem; gap:.55rem; }
+    .atelier-reviews-toolbar label { flex:1; min-width:8rem; }
+    .atelier-reviews-toolbar select { width:100%; }
+    #atelier-review-summary { width:100%; margin:0; }
+    .atelier-review-message { padding-inline:1rem; }
+    .atelier-reviews-list { padding:.75rem 1rem 1rem; }
+    :global(.atelier-review-card header) { grid-template-columns:minmax(0,1fr); }
+    :global(.atelier-review-card header span:nth-child(2)), :global(.atelier-review-status) { grid-column:1; grid-row:auto; justify-self:start; }
+    .atelier-review-actions button { flex:1; min-height:2.65rem; }
+  }
+
   /* =========================================================================
      Strict Zero-Scroll Co-Present Content Atelier Modal
      ========================================================================= */

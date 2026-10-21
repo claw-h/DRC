@@ -965,11 +965,18 @@
       max-block-size: calc(100dvh - var(--chrome-height) - var(--public-mobile-bar-size));
     }
 
-    .artefact-modal { display: none !important; }
+    .artefact-modal:not(#class-ledger-dialog) { display: none !important; }
+    #class-ledger-dialog[open] { display: block !important; inline-size: 100vw; block-size: 100dvh; max-inline-size: none; max-block-size: none; inset: 0; margin: 0; overflow: auto; }
+    #class-ledger-dialog[open] .artefact-slab-shell { inline-size: 100%; min-block-size: 100%; max-block-size: none; border-radius: 0; border: 0; padding-block-end: env(safe-area-inset-bottom); }
+    #class-ledger-dialog .artefact-modal-body { padding: 1rem 1rem calc(1.25rem + env(safe-area-inset-bottom)); }
     .btn-open-pub-codex,
-    .btn-open-book-tome,
+    .btn-open-book-tome { display: none !important; }
     .btn-open-class-ledger,
-    .btn-toggle-review-form { display: none !important; }
+    .btn-toggle-review-form { display: inline-flex !important; align-items: center; justify-content: center; min-block-size: 44px; }
+
+    .reviews-header-actions { align-items: stretch; }
+    .reviews-header-actions .pill { min-block-size: 44px; }
+    .course-reviews-list { display: grid; gap: .75rem; }
 
     .mobile-back-bar {
       display: flex;

@@ -647,6 +647,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     }
 
     let reviews: any[] = [];
+    let existingAcceptingReviews = false;
     if (existingId) {
       try {
         const oldFile = await fs.readFile(path.resolve(process.cwd(), `src/data/classes/${existingId}.md`), 'utf8');
@@ -654,6 +655,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
         if (oldMatch) {
           const oldData = yaml.load(oldMatch[1]) as any;
           if (Array.isArray(oldData?.reviews)) reviews = oldData.reviews;
+          existingAcceptingReviews = Boolean(oldData?.acceptingReviews);
         }
       } catch {}
     }
@@ -670,6 +672,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       summary,
       weeks,
       reviews,
+      acceptingReviews: typeof body.acceptingReviews === 'boolean' ? body.acceptingReviews : existingAcceptingReviews,
     };
 
     // Persist to Turso Edge Database
