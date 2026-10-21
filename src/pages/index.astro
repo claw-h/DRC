@@ -131,8 +131,17 @@ const { publications, books, classes, profile, systemState } = await loadObserva
       const targetEl = document.getElementById(targetId);
       currentStageNum = stageNum;
       stageWheelAccum = 0;
-      isStageLocked = true;
+      document.body.dataset.mobileView = stageNum === 1 ? 'sky' : stageNum === 2 ? 'identity' : 'workspace';
 
+      if (window.matchMedia('(max-width: 767px)').matches) {
+        const mobileView = document.body.dataset.mobileView;
+        document.body.dataset.stage = targetId;
+        isStageLocked = false;
+        window.dispatchEvent(new CustomEvent('drc:stage-snap', { detail: { stage: stageNum, mobileView } }));
+        return;
+      }
+
+      isStageLocked = true;
       document.body.dataset.stage = targetId;
 
       if (targetEl) {
@@ -151,24 +160,29 @@ const { publications, books, classes, profile, systemState } = await loadObserva
     (window as any).__drcSnapToStage = snapToStage;
 
     const syncStageFromScroll = () => {
+      if (window.matchMedia('(max-width: 767px)').matches) return;
       if (isStageLocked) return;
       const y = window.scrollY;
       const vh = window.innerHeight || 1;
       if (y < vh * 0.45) {
         currentStageNum = 1;
         document.body.dataset.stage = 'stage-1';
+        document.body.dataset.mobileView = 'sky';
       } else if (y < vh * 1.55) {
         currentStageNum = 2;
         document.body.dataset.stage = 'stage-2';
+        document.body.dataset.mobileView = 'identity';
       } else {
         currentStageNum = 3;
         document.body.dataset.stage = 'stage-3';
+        document.body.dataset.mobileView = 'workspace';
       }
     };
 
     syncStageFromScroll();
     window.addEventListener('scroll', syncStageFromScroll, { passive: true });
     window.addEventListener('resize', () => {
+      if (window.matchMedia('(max-width: 767px)').matches) return;
       const activeEl = document.getElementById(`stage-${currentStageNum}`);
       if (activeEl) {
         window.scrollTo({ top: activeEl.offsetTop, behavior: 'instant' as ScrollBehavior });
@@ -229,11 +243,14 @@ const { publications, books, classes, profile, systemState } = await loadObserva
       });
     });
 
-    // Touch swipe snapping on Stage 1 & Stage 2 for mobile/tablet
+    // Touch remains native on mobile; views switch through the mobile tab bar and star breadcrumb.
     let touchStartY = 0;
     let touchStartedOnSky = false;
     window.addEventListener('touchstart', (e: TouchEvent) => {
-      if (window.matchMedia('(max-width: 767px)').matches) return;
+      if (window.matchMedia('(max-width: 767px)').matches) {
+        touchStartedOnSky = false;
+        return;
+      }
       touchStartedOnSky = Boolean((e.target as Element | null)?.closest?.('.sky-interactive-canvas'));
       if (touchStartedOnSky) return;
       if (currentStageNum === 3) return;
@@ -241,7 +258,10 @@ const { publications, books, classes, profile, systemState } = await loadObserva
     }, { passive: true });
 
     window.addEventListener('touchend', (e: TouchEvent) => {
-      if (window.matchMedia('(max-width: 767px)').matches) return;
+      if (window.matchMedia('(max-width: 767px)').matches) {
+        touchStartedOnSky = false;
+        return;
+      }
       if (touchStartedOnSky) {
         touchStartedOnSky = false;
         return;

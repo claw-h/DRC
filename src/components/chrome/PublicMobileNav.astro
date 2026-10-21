@@ -1,11 +1,11 @@
 ---
 interface Props {
-  active?: 'explore' | 'publications' | 'books' | 'classes';
+  active?: 'identity' | 'publications' | 'books' | 'classes';
 }
 
-const { active = 'explore' } = Astro.props;
+const { active } = Astro.props;
 const destinations = [
-  { id: 'explore', label: 'Explore', href: '/#stage-1', icon: '✦' },
+  { id: 'identity', label: 'Identity', href: '/#stage-2', icon: '◉' },
   { id: 'publications', label: 'Papers', href: '/?section=publications', icon: 'Ⅰ' },
   { id: 'books', label: 'Books', href: '/?section=books', icon: 'Ⅱ' },
   { id: 'classes', label: 'Teaching', href: '/?section=classes', icon: 'Ⅲ' },
@@ -26,30 +26,39 @@ const destinations = [
   ))}
 </nav>
 
+<button type="button" class="mobile-sky-breadcrumb" data-mobile-sky-back aria-label="Return to constellation sky" title="Return to constellation sky">
+  <span aria-hidden="true">✦</span>
+</button>
+
 <script>
   const tabs = [...document.querySelectorAll<HTMLAnchorElement>('[data-public-mobile-tab]')];
+  const skyBack = document.querySelector<HTMLButtonElement>('[data-mobile-sky-back]');
   const rootPage = document.documentElement.classList.contains('portfolio-scroller');
 
   const activate = (section: string, updateHistory = false) => {
     if (!rootPage) return;
-    if (section === 'explore') {
-      (window as any).__drcSnapToStage?.(1);
-      if (updateHistory) history.pushState({ section }, '', '/#stage-1');
+    if (section === 'identity') {
+      (window as any).__drcSnapToStage?.(2);
+      if (updateHistory) history.pushState({ section: 'identity' }, '', '/#stage-2');
       return;
     }
 
     const viewButton = document.querySelector<HTMLButtonElement>(`.nav-strip-btn[data-target-view="view-${section}"]`);
     if (!viewButton) return;
     viewButton.click();
-    if (document.body.dataset.stage !== 'stage-3') {
-      (window as any).__drcSnapToStage?.(3);
-    }
+    (window as any).__drcSnapToStage?.(3);
     if (updateHistory) history.pushState({ ...(history.state || {}), section }, '', `/?section=${section}`);
   };
 
+  skyBack?.addEventListener('click', () => {
+    (window as any).__drcSnapToStage?.(1);
+    history.pushState({ section: 'sky' }, '', '/#stage-1');
+    syncActive('sky');
+  });
+
   tabs.forEach((tab) => {
     tab.addEventListener('click', (event) => {
-      const section = tab.dataset.publicMobileTab || 'explore';
+      const section = tab.dataset.publicMobileTab || 'identity';
       if (!rootPage) return;
       event.preventDefault();
       activate(section, true);
@@ -58,9 +67,16 @@ const destinations = [
   });
 
   function syncActive(section?: string) {
-    const current = section || (document.body.dataset.stage === 'stage-1'
-      ? 'explore'
-      : document.querySelector<HTMLButtonElement>('.nav-strip-btn[aria-current="page"]')?.dataset.targetView?.replace('view-', '') || 'explore');
+    const inferred = document.body.dataset.mobileView === 'identity'
+      ? 'identity'
+      : document.body.dataset.mobileView === 'workspace'
+        ? document.querySelector<HTMLButtonElement>('.nav-strip-btn[aria-current="page"]')?.dataset.targetView?.replace('view-', '')
+        : document.body.dataset.mobileView === 'sky' || document.body.dataset.stage === 'stage-1'
+          ? 'sky'
+          : document.body.dataset.stage === 'stage-2'
+            ? 'identity'
+            : document.querySelector<HTMLButtonElement>('.nav-strip-btn[aria-current="page"]')?.dataset.targetView?.replace('view-', '');
+    const current = section || inferred;
     tabs.forEach((tab) => {
       if (tab.dataset.publicMobileTab === current) tab.setAttribute('aria-current', 'page');
       else tab.removeAttribute('aria-current');
@@ -71,16 +87,20 @@ const destinations = [
     const requested = new URLSearchParams(location.search).get('section');
     if (requested && ['publications', 'books', 'classes'].includes(requested)) {
       requestAnimationFrame(() => activate(requested));
+    } else if (location.hash === '#stage-2') {
+      requestAnimationFrame(() => activate('identity'));
     }
     const stageObserver = new MutationObserver(() => syncActive());
-    stageObserver.observe(document.body, { attributes: true, attributeFilter: ['data-stage'] });
+    stageObserver.observe(document.body, { attributes: true, attributeFilter: ['data-stage', 'data-mobile-view'] });
     document.querySelectorAll<HTMLButtonElement>('.nav-strip-btn[data-target-view]').forEach((button) => {
       const viewObserver = new MutationObserver(() => syncActive());
       viewObserver.observe(button, { attributes: true, attributeFilter: ['aria-current'] });
     });
     window.addEventListener('popstate', () => {
-      const section = new URLSearchParams(location.search).get('section') || 'explore';
-      activate(section);
+      const section = new URLSearchParams(location.search).get('section')
+        || (location.hash === '#stage-2' ? 'identity' : location.hash === '#stage-1' ? 'sky' : 'sky');
+      if (section !== 'sky') activate(section);
+      else (window as any).__drcSnapToStage?.(1);
       syncActive(section);
     });
   }
@@ -88,6 +108,7 @@ const destinations = [
 
 <style>
   .public-mobile-tabbar { display: none; }
+  .mobile-sky-breadcrumb { display: none; }
 
   @media (max-width: 767px) {
     .public-mobile-tabbar {
@@ -123,5 +144,102 @@ const destinations = [
     .public-mobile-tab:active { background: color-mix(in oklab, var(--accent) 12%, transparent); }
     .public-mobile-tab-icon { font-size: 1.15rem; line-height: 1.1; }
     .public-mobile-tab-label { font: 600 0.66rem/1.1 var(--font-mono); letter-spacing: 0.04em; }
+    .mobile-sky-breadcrumb {
+      display: none;
+      position: fixed;
+      z-index: 50;
+      inset-block-start: calc(var(--header-height) + 0.45rem + env(safe-area-inset-top, 0px));
+      inset-inline-start: 0.75rem;
+      inline-size: 44px;
+      block-size: 44px;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid var(--border-subtle);
+      border-radius: 50%;
+      background: color-mix(in oklab, var(--bg-surface) 92%, transparent);
+      color: var(--accent-gold, var(--accent));
+      box-shadow: 0 5px 20px rgb(0 0 0 / .25);
+      font-size: 1.2rem;
+      -webkit-tap-highlight-color: transparent;
+    }
+    body[data-mobile-view="identity"] .mobile-sky-breadcrumb { display: inline-flex; }
+  }
+</style>
+
+<style is:global>
+  @media (max-width: 767px) {
+    html.portfolio-scroller,
+    html.portfolio-scroller body {
+      inline-size: 100%;
+      block-size: 100%;
+      overflow: hidden !important;
+      overscroll-behavior: none;
+    }
+
+    body[data-portfolio-root="true"][data-mobile-view="sky"] #stage-2,
+    body[data-portfolio-root="true"][data-mobile-view="sky"] #stage-3,
+    body[data-portfolio-root="true"][data-mobile-view="identity"] #stage-1,
+    body[data-portfolio-root="true"][data-mobile-view="identity"] #stage-3,
+    body[data-portfolio-root="true"][data-mobile-view="workspace"] #stage-1,
+    body[data-portfolio-root="true"][data-mobile-view="workspace"] #stage-2 { display: none !important; }
+
+    body[data-portfolio-root="true"][data-mobile-view="sky"] #stage-1 {
+      display: flex !important;
+      position: fixed !important;
+      inset: 0 !important;
+      z-index: 10;
+      inline-size: 100%;
+      min-block-size: 0 !important;
+      block-size: 100dvh !important;
+      padding: 0.75rem;
+      padding-block-end: calc(var(--public-mobile-bar-size, 60px) + 0.75rem);
+      opacity: 1 !important;
+      transform: none !important;
+    }
+
+    body[data-portfolio-root="true"][data-mobile-view="identity"] #stage-2 {
+      display: flex !important;
+      position: fixed !important;
+      inset: 0 !important;
+      z-index: 10;
+      inline-size: 100%;
+      min-block-size: 0 !important;
+      block-size: 100dvh !important;
+      justify-content: flex-start;
+      align-items: stretch;
+      overflow-x: hidden !important;
+      overflow-y: auto !important;
+      overscroll-behavior: contain;
+      -webkit-overflow-scrolling: touch;
+      padding-block-start: calc(var(--header-height) + 44px + 1rem + env(safe-area-inset-top, 0px));
+      padding-block-end: calc(var(--public-mobile-bar-size, 60px) + 0.75rem);
+      padding-inline: 0.75rem;
+      opacity: 1 !important;
+      transform: none !important;
+      scroll-behavior: auto;
+    }
+
+    body[data-portfolio-root="true"][data-mobile-view="identity"] #stage-2 .pullup-card {
+      inline-size: 100%;
+      max-inline-size: 720px;
+      max-block-size: none !important;
+      margin-inline: auto;
+      overflow: visible !important;
+      align-self: flex-start;
+    }
+
+    body[data-portfolio-root="true"][data-mobile-view="workspace"] #stage-3 {
+      display: block !important;
+      position: fixed !important;
+      inset: 0 !important;
+      z-index: 5;
+      inline-size: 100%;
+      min-block-size: 0 !important;
+      block-size: 100dvh !important;
+      opacity: 1 !important;
+      transform: none !important;
+    }
+
+    body[data-mobile-view="identity"] .nav-strip-wrapper { display: none !important; }
   }
 </style>

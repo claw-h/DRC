@@ -36,7 +36,7 @@ const mobileNavActive = Astro.url.pathname.startsWith('/publications/')
     ? 'books'
     : Astro.url.searchParams.get('section') === 'classes'
       ? 'classes'
-      : 'explore';
+        : undefined;
 ---
 
 <!DOCTYPE html>
@@ -169,7 +169,7 @@ const mobileNavActive = Astro.url.pathname.startsWith('/publications/')
       </script>
     )}
   </head>
-  <body data-stage="stage-1" data-portfolio-root={isPortfolioRoot ? 'true' : undefined}>
+  <body data-stage="stage-1" data-mobile-view={isPortfolioRoot ? 'sky' : undefined} data-portfolio-root={isPortfolioRoot ? 'true' : undefined}>
     <slot />
     {showMobileNav && <PublicMobileNav active={mobileNavActive as any} />}
     {showMobileNav && <div id="pwa-network-status" role="status" aria-live="polite" hidden>Offline · showing saved pages where available</div>}
