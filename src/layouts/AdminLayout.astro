@@ -647,6 +647,7 @@ const activeItem = navItems.find((item) => {
       if (metaColorScheme) metaColorScheme.content = targetTheme;
       try { localStorage.setItem('drc-admin-theme', targetTheme); } catch {}
 
+      window.dispatchEvent(new CustomEvent('drc-theme-changed', { detail: { scheme: targetTheme } }));
       (window as any).notify?.(`Admin Theme switched to ${targetTheme === 'dark' ? 'Observatory Dark' : 'Daylight Light'}`, 'info');
       syncAdminToggles();
     });

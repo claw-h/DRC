@@ -46,13 +46,13 @@ const mobileNavActive = Astro.url.pathname.startsWith('/publications/')
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>{title}</title>
     <meta name="description" content={description} />
+    <link id="site-favicon" rel="icon" href="/icons/drc-mark.svg" type="image/svg+xml" />
     {!isAdmin && <>
       <meta name="theme-color" content="#070a16" />
       <meta name="mobile-web-app-capable" content="yes" />
       <meta name="apple-mobile-web-app-capable" content="yes" />
       <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
       <link rel="manifest" href="/manifest.webmanifest" />
-      <link rel="icon" href="/icons/drc-mark.svg" type="image/svg+xml" />
       <link rel="apple-touch-icon" href="/icons/icon-192.png" />
     </>}
 
@@ -111,6 +111,21 @@ const mobileNavActive = Astro.url.pathname.startsWith('/publications/')
           window.location.reload();
         };
       } catch {}
+    </script>
+    <script is:inline>
+      (() => {
+        const favicon = document.getElementById('site-favicon');
+        const systemTheme = window.matchMedia('(prefers-color-scheme: dark)');
+        const syncFavicon = (scheme) => {
+          if (favicon) favicon.href = scheme === 'light' ? '/icons/drc-mark-light.svg' : '/icons/drc-mark.svg';
+        };
+        syncFavicon(document.documentElement.getAttribute('data-theme') || (systemTheme.matches ? 'dark' : 'light'));
+        window.addEventListener('drc-theme-changed', (event) => syncFavicon(event.detail?.scheme));
+        systemTheme.addEventListener('change', (event) => {
+          const preferenceKey = document.documentElement.hasAttribute('data-admin-page') ? 'drc-admin-theme' : 'color-scheme';
+          if (!localStorage.getItem(preferenceKey)) syncFavicon(event.matches ? 'dark' : 'light');
+        });
+      })();
     </script>
 
     <!-- Scholar typography: Newsreader & IM Fell English (Oxford Fell types) -->
