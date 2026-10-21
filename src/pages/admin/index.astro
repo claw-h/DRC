@@ -2,11 +2,11 @@
 export const prerender = false;
 
 import AdminLayout from '../../layouts/AdminLayout.astro';
-import { getCollection } from 'astro:content';
+import { getPublicationsList, getBooksList, getClassesList } from '../../lib/turso';
 
-const publications = (await getCollection('publications').catch(() => [])).sort((a, b) => b.data.year - a.data.year);
-const books = (await getCollection('books').catch(() => [])).sort((a, b) => b.data.year - a.data.year);
-const classes = await getCollection('classes').catch(() => []);
+const publications = await getPublicationsList();
+const books = await getBooksList();
+const classes = await getClassesList();
 
 const totalCount = publications.length + books.length + classes.length;
 ---

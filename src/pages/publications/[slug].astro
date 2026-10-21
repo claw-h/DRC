@@ -1,28 +1,33 @@
 ---
-import { getCollection, render } from 'astro:content';
+export const prerender = false;
+
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import PersistentHeader from '../../components/chrome/PersistentHeader.astro';
 import { getFacultyProfile } from '../../lib/system-state';
+import { getPublicationsList, getBooksList, getClassesList } from '../../lib/turso';
 
-export async function getStaticPaths() {
-  const publications = await getCollection('publications');
-  const books = await getCollection('books');
-  const classes = await getCollection('classes');
+const { slug } = Astro.params;
+const publications = await getPublicationsList();
+const books = await getBooksList();
+const classes = await getClassesList();
 
-  return publications.map((pub) => ({
-    params: { slug: pub.data.id },
-    props: {
-      pub,
-      pubCount: publications.length,
-      bookCount: books.length,
-      classCount: classes.length,
-    },
-  }));
+const pub = publications.find((p) => p.data.id === slug);
+if (!pub) {
+  return Astro.redirect('/#stage-3');
 }
 
-const { pub, pubCount, bookCount, classCount } = Astro.props;
-const { Content } = await render(pub);
+const pubCount = publications.length;
+const bookCount = books.length;
+const classCount = classes.length;
 const profile = await getFacultyProfile();
+
+let Content: any = null;
+if (typeof (pub as any).render === 'function') {
+  try {
+    const rendered = await (pub as any).render();
+    Content = rendered.Content;
+  } catch {}
+}
 ---
 
 <BaseLayout
@@ -87,7 +92,7 @@ const profile = await getFacultyProfile();
             <p>{sec.body}</p>
           </section>
         ))}
-        <Content />
+        {Content && <Content />}
       </div>
 
       {pub.data.citationBibtex && (

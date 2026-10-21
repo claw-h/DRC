@@ -494,7 +494,9 @@ const profile = await getFacultyProfile();
   window.addEventListener('drc:media-updated', (e: any) => {
     const detail = e.detail;
     if (detail?.imageUrl && cardPortraitImg) {
-      cardPortraitImg.src = `${detail.imageUrl}?t=${Date.now()}`;
+      cardPortraitImg.src = detail.imageUrl.startsWith('data:')
+        ? detail.imageUrl
+        : `${detail.imageUrl}?t=${Date.now()}`;
     }
   });
 

@@ -1,18 +1,16 @@
 ---
-import { getCollection } from 'astro:content';
+export const prerender = false;
+
 import BaseLayout from '../layouts/BaseLayout.astro';
 import ConstellationStage from '../components/sky/ConstellationStage.astro';
 import PersistentHeader from '../components/chrome/PersistentHeader.astro';
 import AcademicWorkspace from '../components/workspace/AcademicWorkspace.astro';
 import { getFacultyProfile, getSystemState } from '../lib/system-state';
+import { getPublicationsList, getBooksList, getClassesList } from '../lib/turso';
 
-const publications = (await getCollection('publications')).sort(
-  (a, b) => b.data.year - a.data.year
-);
-const books = (await getCollection('books')).sort(
-  (a, b) => b.data.year - a.data.year
-);
-const classes = await getCollection('classes');
+const publications = await getPublicationsList();
+const books = await getBooksList();
+const classes = await getClassesList();
 
 const profile = await getFacultyProfile();
 const systemState = await getSystemState();

@@ -486,8 +486,11 @@ const activeItem = navItems.find((item) => {
     window.addEventListener('drc:media-updated', (e: any) => {
       const detail = e.detail;
       if (detail?.imageUrl) {
-        document.querySelectorAll<HTMLImageElement>('img[src*="duncan-cordry-portrait"]').forEach((img) => {
-          img.src = `${detail.imageUrl}?t=${Date.now()}`;
+        const newSrc = detail.imageUrl.startsWith('data:')
+          ? detail.imageUrl
+          : `${detail.imageUrl}?t=${Date.now()}`;
+        document.querySelectorAll<HTMLImageElement>('.header-avatar-img, .id-card-photo, img[src*="duncan-cordry-portrait"]').forEach((img) => {
+          img.src = newSrc;
         });
       }
     });

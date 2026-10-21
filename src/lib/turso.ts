@@ -6,8 +6,8 @@ let cachedClient: Client | null = null;
 export function getTursoClient(): Client | null {
   if (cachedClient) return cachedClient;
 
-  const url = process.env.TURSO_DATABASE_URL;
-  const authToken = process.env.TURSO_AUTH_TOKEN;
+  const url = process.env.TURSO_DATABASE_URL || (import.meta as any).env?.TURSO_DATABASE_URL;
+  const authToken = process.env.TURSO_AUTH_TOKEN || (import.meta as any).env?.TURSO_AUTH_TOKEN;
 
   if (!url) {
     return null;
@@ -399,5 +399,154 @@ export async function exportAllDataForBackup() {
     return null;
   }
 }
+
+// -------------------------------------------------------------
+// Live Database Collection Fetchers
+// -------------------------------------------------------------
+export async function fetchPublicationsFromDb(): Promise<Array<{ id: string; data: any }> | null> {
+  const db = getTursoClient();
+  if (!db) return null;
+
+  try {
+    const rs = await db.execute('SELECT * FROM publications ORDER BY year DESC');
+    if (!rs.rows.length) return null;
+
+    return rs.rows.map((row) => ({
+      id: String(row.id),
+      data: {
+        id: String(row.id),
+        title: String(row.title),
+        subtitle: (row.subtitle as string) || undefined,
+        year: Number(row.year),
+        venue: String(row.venue),
+        volumeIssue: (row.volume_issue as string) || undefined,
+        coAuthors: row.co_authors ? JSON.parse(String(row.co_authors)) : [],
+        abstract: String(row.abstract || ''),
+        doi: (row.doi as string) || undefined,
+        pdfUrl: (row.pdf_url as string) || undefined,
+        citationBibtex: String(row.citation_bibtex || ''),
+        sections: row.sections ? JSON.parse(String(row.sections)) : [],
+        references: row.references_data ? JSON.parse(String(row.references_data)) : [],
+      },
+    }));
+  } catch (err) {
+    console.error('[Turso] fetchPublicationsFromDb error:', err);
+    return null;
+  }
+}
+
+export async function fetchBooksFromDb(): Promise<Array<{ id: string; data: any }> | null> {
+  const db = getTursoClient();
+  if (!db) return null;
+
+  try {
+    const rs = await db.execute('SELECT * FROM books ORDER BY year DESC');
+    if (!rs.rows.length) return null;
+
+    return rs.rows.map((row) => ({
+      id: String(row.id),
+      data: {
+        id: String(row.id),
+        title: String(row.title),
+        subtitle: (row.subtitle as string) || undefined,
+        year: Number(row.year),
+        publisher: String(row.publisher),
+        isbn: String(row.isbn),
+        pages: Number(row.pages),
+        coverImage: String(row.cover_image),
+        synopsis: String(row.synopsis || ''),
+        endorsements: row.endorsements ? JSON.parse(String(row.endorsements)) : [],
+        chapters: row.chapters ? JSON.parse(String(row.chapters)) : [],
+        purchaseLinks: row.purchase_links ? JSON.parse(String(row.purchase_links)) : [],
+      },
+    }));
+  } catch (err) {
+    console.error('[Turso] fetchBooksFromDb error:', err);
+    return null;
+  }
+}
+
+export async function fetchClassesFromDb(): Promise<Array<{ id: string; data: any }> | null> {
+  const db = getTursoClient();
+  if (!db) return null;
+
+  try {
+    const rs = await db.execute('SELECT * FROM classes');
+    if (!rs.rows.length) return null;
+
+    return rs.rows.map((row) => ({
+      id: String(row.id),
+      data: {
+        id: String(row.id),
+        courseCode: String(row.course_code),
+        title: String(row.title),
+        academicYear: String(row.academic_year),
+        term: String(row.term),
+        level: String(row.level),
+        schedule: String(row.schedule),
+        syllabusPdf: (row.syllabus_pdf as string) || undefined,
+        summary: String(row.summary || ''),
+        weeks: row.weeks ? JSON.parse(String(row.weeks)) : [],
+        reviews: row.reviews ? JSON.parse(String(row.reviews)) : [],
+      },
+    }));
+  } catch (err) {
+    console.error('[Turso] fetchClassesFromDb error:', err);
+    return null;
+  }
+}
+
+// -------------------------------------------------------------
+async function loadStaticFallback(collectionName: 'publications' | 'books' | 'classes') {
+  try {
+    // Dynamic import to prevent crash in non-Astro Node environments
+    const { getCollection } = await import('astro:content');
+    return await getCollection(collectionName);
+  } catch {
+    return [];
+  }
+}
+
+// -------------------------------------------------------------
+// Unified Getters (Live Turso DB First -> Local Collections Fallback)
+// -------------------------------------------------------------
+export async function getPublicationsList(): Promise<any[]> {
+  try {
+    const fromDb = await fetchPublicationsFromDb();
+    if (fromDb && fromDb.length > 0) return fromDb;
+  } catch {}
+  try {
+    const fromStatic = await loadStaticFallback('publications');
+    return fromStatic.sort((a: any, b: any) => b.data.year - a.data.year);
+  } catch {
+    return [];
+  }
+}
+
+export async function getBooksList(): Promise<any[]> {
+  try {
+    const fromDb = await fetchBooksFromDb();
+    if (fromDb && fromDb.length > 0) return fromDb;
+  } catch {}
+  try {
+    const fromStatic = await loadStaticFallback('books');
+    return fromStatic.sort((a: any, b: any) => b.data.year - a.data.year);
+  } catch {
+    return [];
+  }
+}
+
+export async function getClassesList(): Promise<any[]> {
+  try {
+    const fromDb = await fetchClassesFromDb();
+    if (fromDb && fromDb.length > 0) return fromDb;
+  } catch {}
+  try {
+    return await loadStaticFallback('classes');
+  } catch {
+    return [];
+  }
+}
+
 
 
