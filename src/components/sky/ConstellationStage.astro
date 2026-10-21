@@ -5213,7 +5213,7 @@ const { featuredConstellationId = null } = Astro.props;
     }
 
     private handlePointerMove(e: MouseEvent) {
-      const rect = this.canvasRect || (this.canvasRect = this.canvas.getBoundingClientRect());
+      const rect = this.canvas.getBoundingClientRect();
       this.mousePos.x = e.clientX - rect.left;
       this.mousePos.y = e.clientY - rect.top;
 
@@ -5253,6 +5253,12 @@ const { featuredConstellationId = null } = Astro.props;
     private findStarAtPosition(x: number, y: number) {
       if (!this.currentConstellation || !this.currentConstellation.stars) return null;
 
+      // Pointer coordinates are canvas-relative, while the sky renderer lays
+      // stars out in viewport coordinates. Convert back before comparing.
+      const rect = this.canvas.getBoundingClientRect();
+      const pointerX = x + rect.left;
+      const pointerY = y + rect.top;
+
       const w = window.innerWidth;
       const h = window.innerHeight;
       const cx = w * 0.5;
@@ -5265,7 +5271,7 @@ const { featuredConstellationId = null } = Astro.props;
         const z = calculateStarDepth(mag, distLy);
         const px = cx + (s[0] - 5000) * scale + this.parallax.x * z;
         const py = cy + (s[1] - 5000) * scale + this.parallax.y * z;
-        if (Math.hypot(x - px, y - py) < 22) {
+        if (Math.hypot(pointerX - px, pointerY - py) < 22) {
           return s;
         }
       }
