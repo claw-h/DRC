@@ -2065,6 +2065,45 @@ const activeItem = navItems.find((item) => {
     .admin-header {
       padding: 0.6rem 0.35rem !important;
       gap: 0.5rem !important;
+      flex-wrap: nowrap !important;
+    }
+
+    /* Keep the utility trigger visible when a long module title is active. */
+    .admin-header-lead {
+      flex: 1 1 0%;
+      min-width: 0;
+      overflow: hidden;
+    }
+
+    .header-nav-station {
+      flex: 1 1 0%;
+      min-width: 0;
+      gap: 0.45rem;
+    }
+
+    .header-module-dropdown {
+      flex: 1 1 0%;
+      min-width: 0;
+      max-width: 100%;
+    }
+
+    .header-module-badge {
+      width: 100%;
+      max-width: 100%;
+      min-width: 0;
+      overflow: hidden;
+    }
+
+    .module-title {
+      flex: 1 1 auto;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .admin-header-actions {
+      flex: 0 0 auto;
+      margin-left: auto;
     }
 
     /* Hide desktop actions in header on mobile */
